@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Property — StayDekho Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --red:#8B1717; --red-dark:#6b1010; --red-light:#fef2f2;
+      --green:#16a34a; --green-light:#f0fdf4;
+      --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb;
+      --gray-400:#9ca3af; --gray-500:#6b7280; --gray-600:#4b5563; --gray-800:#1f2937;
+      --white:#fff; --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.1);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:#f5f0eb;color:var(--gray-800);min-height:100vh;}
+
+    /* TOP BAR */
+    .topbar{
+      position:sticky;top:0;z-index:100;
+      background:rgba(255,255,255,.95);backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--gray-200);
+      padding:14px 32px;display:flex;align-items:center;gap:16px;
+    }
+    .topbar-back{
+      display:inline-flex;align-items:center;gap:6px;color:var(--gray-500);
+      text-decoration:none;font-size:.85rem;font-weight:600;
+      padding:8px 14px;border:1.5px solid var(--gray-200);border-radius:10px;
+      transition:all .2s;
+    }
+    .topbar-back:hover{color:var(--gray-800);border-color:var(--gray-400);}
+    .topbar-title{font-size:1.1rem;font-weight:800;flex:1;}
+    .topbar-actions{display:flex;gap:10px;}
+    .btn{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:10px 20px;border-radius:10px;font-size:.88rem;font-weight:700;
+      border:none;cursor:pointer;transition:all .2s;font-family:inherit;
+    }
+    .btn-primary{background:var(--red);color:#fff;}
+    .btn-primary:hover{background:var(--red-dark);}
+    .btn-outline{background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-200);}
+    .btn-outline:hover{border-color:var(--gray-400);}
+    .btn-green{background:var(--green);color:#fff;}
+    .btn-green:hover{background:#15803d;}
+    .btn-danger{background:#fff;color:#dc2626;border:1.5px solid #fecaca;}
+    .btn-danger:hover{background:#fef2f2;}
+    .btn-sm{padding:7px 14px;font-size:.8rem;}
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+    /* LAYOUT */
+    .page{max-width:960px;margin:0 auto;padding:32px 24px 80px;}
+    .section{background:#fff;border-radius:16px;border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden;}
+    .section-header{
+      padding:18px 24px;border-bottom:1px solid var(--gray-100);
+      display:flex;align-items:center;gap:10px;
+    }
+    .section-icon{
+      width:34px;height:34px;border-radius:9px;background:var(--red-light);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .section-icon svg{width:16px;height:16px;color:var(--red);stroke:var(--red);}
+    .section-title{font-size:.92rem;font-weight:800;}
+    .section-body{padding:24px;}
+
+    /* FORM */
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .field-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+    .field{display:flex;flex-direction:column;gap:6px;}
+    .field.full{grid-column:1/-1;}
+    label{font-size:.78rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.07em;}
+    input[type=text],input[type=number],input[type=time],select,textarea{
+      width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;
+      font-family:inherit;font-size:.9rem;color:var(--gray-800);background:#fff;
+      outline:none;transition:border-color .2s;
+    }
+    input:focus,select:focus,textarea:focus{border-color:var(--red);}
+    textarea{resize:vertical;min-height:100px;line-height:1.6;}
+    .hint{font-size:.73rem;color:var(--gray-400);margin-top:3px;}
+
+    /* STATUS TOGGLE */
+    .status-toggle{display:flex;gap:10px;}
+    .status-opt{
+      flex:1;padding:10px;border:2px solid var(--gray-200);border-radius:10px;
+      text-align:center;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;
+    }
+    .status-opt.active-opt{border-color:var(--green);background:var(--green-light);color:var(--green);}
+    .status-opt.inactive-opt{border-color:#dc2626;background:#fef2f2;color:#dc2626;}
+
+    /* AMENITIES */
+    .amenity-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+    .amenity-tag{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 12px;background:var(--red-light);color:var(--red);
+      border-radius:20px;font-size:.82rem;font-weight:600;
+    }
+    .amenity-tag button{
+      background:none;border:none;cursor:pointer;color:var(--red);
+      font-size:1rem;line-height:1;padding:0;opacity:.7;transition:opacity .15s;
+    }
+    .amenity-tag button:hover{opacity:1;}
+    .add-row{display:flex;gap:10px;}
+    .add-row input{flex:1;}
+
+    /* RULES */
+    .rule-item{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 14px;border:1.5px solid var(--gray-200);
+      border-radius:10px;margin-bottom:10px;background:#fafafa;
+    }
+    .rule-item:hover{background:#fff;border-color:var(--gray-300);}
+    .rule-drag{cursor:grab;color:var(--gray-400);font-size:1.1rem;flex-shrink:0;}
+    .rule-icon-sel{
+      padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:8px;
+      font-size:.8rem;font-family:inherit;background:#fff;cursor:pointer;outline:none;
+      flex-shrink:0;
+    }
+    .rule-text-input{
+      flex:1;border:none;background:transparent;font-family:inherit;
+      font-size:.88rem;color:var(--gray-800);outline:none;padding:0;
+    }
+    .rule-del{
+      background:none;border:none;cursor:pointer;color:var(--gray-400);
+      font-size:1.1rem;padding:4px;transition:color .15s;flex-shrink:0;
+    }
+    .rule-del:hover{color:#dc2626;}
+
+    /* IMAGES */
+    .images-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+    .img-item{border:1.5px solid var(--gray-200);border-radius:12px;overflow:hidden;background:#fafafa;}
+    .img-item img{width:100%;height:110px;object-fit:cover;display:block;}
+    .img-item-body{padding:10px;}
+    .img-cat-input{
+      width:100%;border:1.5px solid var(--gray-200);border-radius:7px;
+      padding:6px 9px;font-size:.78rem;font-family:inherit;outline:none;
+      background:#fff;transition:border-color .2s;
+    }
+    .img-cat-input:focus{border-color:var(--red);}
+    .img-del-btn{
+      display:flex;align-items:center;gap:5px;margin-top:7px;
+      background:none;border:none;cursor:pointer;color:var(--gray-400);
+      font-size:.75rem;font-weight:600;padding:0;transition:color .15s;
+    }
+    .img-del-btn:hover{color:#dc2626;}
+    .img-url-field{display:flex;gap:8px;margin-bottom:10px;}
+    .img-url-field input{flex:1;}
+    .img-cat-field{display:flex;gap:8px;}
+    .img-cat-field input{flex:1;}
+    .add-img-box{
+      border:2px dashed var(--gray-200);border-radius:12px;padding:20px;
+      background:#fafafa;
+    }
+    .add-img-box h4{font-size:.82rem;font-weight:700;margin-bottom:12px;color:var(--gray-600);}
+
+    /* REGEN */
+    .regen-box{
+      background:var(--red-light);border:1.5px solid #fecaca;border-radius:12px;
+      padding:16px 18px;display:flex;align-items:center;gap:14px;margin-top:16px;
+    }
+    .regen-box p{font-size:.82rem;color:var(--gray-600);flex:1;line-height:1.5;}
+    .regen-box strong{color:var(--red);}
+
+    /* TOAST */
+    #toast{
+      position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);
+      background:#1a0a0a;color:#fff;padding:12px 24px;border-radius:28px;
+      font-size:.85rem;font-weight:600;z-index:9999;opacity:0;
+      transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;
+    }
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    #toast.success{background:#16a34a;}
+    #toast.error{background:#dc2626;}
+
+    /* SPINNER */
+    .spin{
+      display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);
+      border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    @media(max-width:700px){
+      .topbar{padding:12px 16px;}
+      .page{padding:20px 14px 60px;}
+      .field-grid,.field-grid-3{grid-template-columns:1fr;}
+      .images-grid{grid-template-columns:1fr 1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <a class="topbar-back" href="admin.html">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Admin
+  </a>
+  <div class="topbar-title" id="page-title">Edit Property</div>
+  <div class="topbar-actions">
+    <a class="btn btn-outline btn-sm" id="view-btn" href="#" target="_blank">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      View Live
+    </a>
+    <button class="btn btn-primary" id="save-btn" onclick="saveAll()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save Changes
+    </button>
+  </div>
+</div>
+
+<div class="page" id="page">
+  <div style="text-align:center;padding:60px;color:var(--gray-400)" id="loading-state">
+    <div class="spin" style="border-color:rgba(139,23,23,.3);border-top-color:var(--red);margin:0 auto 12px;width:28px;height:28px;"></div>
+    Loading property…
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+/* ── Auth guard ──────────────────────────────────────── */
+if (!isLoggedIn() || !isAdmin()) {
+  location.href = 'login.html';
+}
+
+const propId = new URLSearchParams(location.search).get('id');
+if (!propId) { document.getElementById('loading-state').textContent = 'No property ID in URL.'; }
+
+let PROP = null;
+let amenities = [];
+let rules = [];
+let images = [];
+
+/* ── Load ────────────────────────────────────────────── */
+async function loadProperty() {
+  try {
+    const { property } = await api.getProperty(propId);
+    PROP = property;
+    document.getElementById('page-title').textContent = `Edit: ${property.name}`;
+    document.getElementById('view-btn').href = `property.html?id=${propId}`;
+    amenities = [...(property.amenities || [])];
+    rules     = [...(property.rules || getDefaultRules())];
+    images    = [...(property.categorized_images || [])];
+    buildForm();
+  } catch(e) {
+    document.getElementById('loading-state').textContent = 'Failed to load property: ' + e.message;
+  }
+}
+
+function getDefaultRules() {
+  return [
+    { icon:'clock',     text:'Check-in after {checkin} · Check-out before {checkout}' },
+    { icon:'nosmoking', text:'No smoking inside the property' },
+    { icon:'party',     text:'Events / parties allowed with prior permission' },
+    { icon:'pet',       text:'Pets welcome — please inform us in advance' },
+    { icon:'quiet',     text:'Quiet hours after 11:00 PM' },
+    { icon:'cancel',    text:'Free cancellation up to 7 days before check-in' },
+  ];
+}
+
+/* ── Build form ──────────────────────────────────────── */
+function buildForm() {
+  const p = PROP;
+  document.getElementById('page').innerHTML = `
+
+    <!-- ① Basic Info -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_INFO}</div>
+        <span class="section-title">Basic Information</span>
+      </div>
+      <div class="section-body">
+        <div class="field-grid" style="margin-bottom:16px">
+          <div class="field">
+            <label>Property Name</label>
+            <input type="text" id="f-name" value="${esc(p.name||'')}" placeholder="e.g. Lakeside Villa"/>
+          </div>
+          <div class="field">
+            <label>Location</label>
+            <input type="text" id="f-location" value="${esc(p.location||'')}" placeholder="e.g. Udaipur, Rajasthan"/>
+          </div>
+          <div class="field">
+            <label>Price per Night (₹)</label>
+            <input type="number" id="f-price" value="${p.price||''}" min="0" placeholder="7500"/>
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <div class="status-toggle">
+              <div class="status-opt ${p.status==='Active'?'active-opt':''}" id="opt-active" onclick="setStatus('Active')">✓ Active</div>
+              <div class="status-opt ${p.status!=='Active'?'inactive-opt':''}" id="opt-inactive" onclick="setStatus('Inactive')">✗ Inactive</div>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea id="f-desc" rows="4" placeholder="Describe this property…">${esc(p.description||'')}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② Capacity -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_CAPACITY}</div>
+        <span class="section-title">Capacity &amp; Layout</span>
+      </div>
+      <div class="section-body">
+        <div class="field-grid-3">
+          <div class="field">
+            <label>Bedrooms (BHK)</label>
+            <input type="number" id="f-beds" value="${p.beds||4}" min="1" max="20"/>
+            <span class="hint">Affects Room 1, 2… categories</span>
+          </div>
+          <div class="field">
+            <label>Bathrooms</label>
+            <input type="number" id="f-bathrooms" value="${p.bathrooms||3}" min="1" max="20"/>
+            <span class="hint">Affects Bathroom 1, 2… categories</span>
+          </div>
+          <div class="field">
+            <label>Max Guests</label>
+            <input type="number" id="f-guests" value="${p.guests||10}" min="1" max="100"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ Check-in / Check-out -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_CLOCK}</div>
+        <span class="section-title">Check-in &amp; Check-out Times</span>
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>Check-in Time</label>
+            <input type="text" id="f-checkin" value="${esc(p.checkin_time||'2:00 PM')}" placeholder="2:00 PM"/>
+            <span class="hint">e.g. 1:00 PM, 2:00 PM, 3:00 PM</span>
+          </div>
+          <div class="field">
+            <label>Check-out Time</label>
+            <input type="text" id="f-checkout" value="${esc(p.checkout_time||'11:00 AM')}" placeholder="11:00 AM"/>
+            <span class="hint">e.g. 10:00 AM, 11:00 AM, 12:00 PM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ Amenities -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_AMENITY}</div>
+        <span class="section-title">Amenities</span>
+      </div>
+      <div class="section-body">
+        <div class="amenity-tags" id="amenity-tags"></div>
+        <div class="add-row">
+          <input type="text" id="amenity-input" placeholder="e.g. Swimming Pool, WiFi, AC, Chef…" onkeydown="if(event.key==='Enter'){addAmenity();event.preventDefault();}"/>
+          <button class="btn btn-outline btn-sm" onclick="addAmenity()">+ Add</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Press Enter or click Add. Click × on a tag to remove it.</p>
+      </div>
+    </div>
+
+    <!-- ⑤ House Rules -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_RULES}</div>
+        <span class="section-title">House Rules</span>
+      </div>
+      <div class="section-body">
+        <div id="rules-list"></div>
+        <button class="btn btn-outline btn-sm" onclick="addRule()" style="margin-top:4px">+ Add Rule</button>
+        <p class="hint" style="margin-top:8px">Use <code>{checkin}</code> and <code>{checkout}</code> as placeholders for check-in/out times.</p>
+      </div>
+    </div>
+
+    <!-- ⑤b Add-ons -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_RULES}</div>
+        <span class="section-title">Add-on Services</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Add-ons (one per line — <code>name | description | price</code>)</label>
+          <textarea id="f-addons" rows="4" placeholder="Chef on demand | Indian cuisine | 1500
+Airport pickup | Sedan | 2500">${(p.addons || []).map(a => typeof a === 'string' ? a : [a.name||'', a.description||'', a.price != null ? a.price : ''].join(' | ').replace(/\s*\|\s*$/,'')).join('\n')}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤c Map + FOMO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_INFO}</div>
+        <span class="section-title">Map &amp; FOMO controls</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Google Maps URL</label>
+          <input type="text" id="f-map-url" value="${esc(p.map_url || '')}" placeholder="https://maps.google.com/..."/>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>FOMO: bookings this week <span class="hint">(blank = auto)</span></label>
+            <input type="number" id="f-fomo-bookings" value="${p.fomo_bookings != null ? p.fomo_bookings : ''}"/>
+          </div>
+          <div class="field">
+            <label>FOMO: people viewing right now</label>
+            <input type="number" id="f-fomo-viewers" value="${p.fomo_viewers != null ? p.fomo_viewers : ''}"/>
+          </div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:600">
+            <input type="checkbox" id="f-fomo-enabled" ${p.fomo_enabled !== false ? 'checked' : ''}/>
+            Show FOMO badges on this property
+          </label>
+        </div>
+        <div class="field">
+          <label>Brochure (PDF)</label>
+          <div id="brochure-current" style="font-size:13px;color:var(--gray-500);margin-bottom:6px">
+            ${p.brochure_url ? `Current: <a href="${esc(p.brochure_url)}" target="_blank">${esc(p.brochure_url)}</a>` : 'No brochure uploaded yet.'}
+          </div>
+          <input type="file" id="f-brochure-file" accept="application/pdf" onchange="uploadBrochureNow()"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑥ Images -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_IMAGE}</div>
+        <span class="section-title">Photos &amp; Categories</span>
+      </div>
+      <div class="section-body">
+        <div class="images-grid" id="images-grid"></div>
+
+        <!-- Add new image -->
+        <div class="add-img-box">
+          <h4>+ Add New Photo</h4>
+          <div class="img-url-field">
+            <input type="text" id="new-img-url" placeholder="Paste Unsplash or any image URL…"/>
+          </div>
+          <div class="img-cat-field">
+            <input type="text" id="new-img-cat" placeholder="Category — e.g. Exterior, Room 1, Pool…"/>
+            <button class="btn btn-outline btn-sm" onclick="addImage()">Add Photo</button>
+          </div>
+        </div>
+
+        <div class="regen-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <p><strong>Re-generate Room &amp; Bathroom photos</strong><br>Replaces all Room/Bathroom images to match the current BHK &amp; bathroom count above. Exterior, Lounge, Pool etc. are preserved.</p>
+          <button class="btn btn-danger btn-sm" onclick="regenRoomImages()">Re-generate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save -->
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding-top:8px">
+      <a href="admin.html" class="btn btn-outline">Cancel</a>
+      <button class="btn btn-primary" onclick="saveAll()">
+        ${ICON_SAVE} Save All Changes
+      </button>
+    </div>
+  `;
+
+  renderAmenityTags();
+  renderRules();
+  renderImages();
+}
+
+/* ── Status toggle ───────────────────────────────────── */
+let currentStatus = PROP ? PROP.status : 'Active';
+function setStatus(s) {
+  currentStatus = s;
+  document.getElementById('opt-active').className   = 'status-opt' + (s==='Active'   ? ' active-opt'   : '');
+  document.getElementById('opt-inactive').className = 'status-opt' + (s==='Inactive' ? ' inactive-opt' : '');
+}
+
+/* ── Amenities ───────────────────────────────────────── */
+function renderAmenityTags() {
+  const el = document.getElementById('amenity-tags');
+  if (!el) return;
+  el.innerHTML = amenities.length
+    ? amenities.map((a,i) => `<span class="amenity-tag">${esc(a)}<button onclick="removeAmenity(${i})" title="Remove">×</button></span>`).join('')
+    : '<span style="color:var(--gray-400);font-size:.82rem">No amenities yet — add some below.</span>';
+}
+function addAmenity() {
+  const inp = document.getElementById('amenity-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  val.split(',').forEach(v => { const s=v.trim(); if(s && !amenities.includes(s)) amenities.push(s); });
+  inp.value = '';
+  renderAmenityTags();
+}
+function removeAmenity(i) { amenities.splice(i,1); renderAmenityTags(); }
+
+/* ── Rules ───────────────────────────────────────────── */
+const ICON_OPTS = [
+  {v:'clock',l:'⏰ Clock'},{v:'nosmoking',l:'🚭 No Smoking'},{v:'party',l:'👥 Guests/Party'},
+  {v:'pet',l:'🐾 Pets'},{v:'quiet',l:'🔇 Quiet'},{v:'cancel',l:'✅ Cancellation'},
+  {v:'key',l:'🔑 Key'},{v:'info',l:'ℹ️ Info'},
+];
+function renderRules() {
+  const el = document.getElementById('rules-list');
+  if (!el) return;
+  if (!rules.length) { el.innerHTML = '<p style="color:var(--gray-400);font-size:.82rem">No rules yet.</p>'; return; }
+  el.innerHTML = rules.map((r,i) => `
+    <div class="rule-item" id="rule-${i}">
+      <span class="rule-drag" title="Drag to reorder">⠿</span>
+      <select class="rule-icon-sel" onchange="rules[${i}].icon=this.value">
+        ${ICON_OPTS.map(o=>`<option value="${o.v}"${r.icon===o.v?' selected':''}>${o.l}</option>`).join('')}
+      </select>
+      <input class="rule-text-input" type="text" value="${esc(r.text||'')}"
+        placeholder="Rule text…"
+        oninput="rules[${i}].text=this.value"/>
+      <button class="rule-del" onclick="removeRule(${i})" title="Delete">×</button>
+    </div>`).join('');
+}
+function addRule() {
+  rules.push({ icon:'info', text:'' });
+  renderRules();
+  // Focus last input
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.rule-text-input');
+    if (inputs.length) inputs[inputs.length-1].focus();
+  }, 50);
+}
+function removeRule(i) { rules.splice(i,1); renderRules(); }
+
+/* ── Images ──────────────────────────────────────────── */
+function renderImages() {
+  const el = document.getElementById('images-grid');
+  if (!el) return;
+  if (!images.length) { el.innerHTML = '<p style="color:var(--gray-400);font-size:.82rem;grid-column:1/-1">No images yet.</p>'; return; }
+  el.innerHTML = images.map((img,i) => `
+    <div class="img-item">
+      <img src="${esc(img.url)}" alt="${esc(img.cat)}" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=60'"/>
+      <div class="img-item-body">
+        <input class="img-cat-input" type="text" value="${esc(img.cat||'')}"
+          placeholder="Category" oninput="images[${i}].cat=this.value"/>
+        <button class="img-del-btn" onclick="removeImage(${i})">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          Remove
+        </button>
+      </div>
+    </div>`).join('');
+}
+function removeImage(i) { images.splice(i,1); renderImages(); }
+function addImage() {
+  const url = document.getElementById('new-img-url').value.trim();
+  const cat = document.getElementById('new-img-cat').value.trim() || 'Exterior';
+  if (!url) { toast('Paste an image URL first', 'error'); return; }
+  images.push({ url, cat });
+  document.getElementById('new-img-url').value = '';
+  document.getElementById('new-img-cat').value = '';
+  renderImages();
+  toast('Photo added', 'success');
+}
+
+/* ── Re-generate room/bathroom images ───────────────────*/
+const ROOM_POOL = [
+  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1560185007-cde436f6a4d0?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1615460549969-36fa19521a4f?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1631049421450-348ccd7f8949?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1598928636135-d146006ff4be?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1505693314120-0d443867891c?auto=format&fit=crop&w=1200&q=80',
+];
+const BATH_POOL = [
+  'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1620626011761-996317702149?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1604709177225-055f99402ea3?auto=format&fit=crop&w=1200&q=80',
+];
+
+function regenRoomImages() {
+  const beds  = parseInt(document.getElementById('f-beds').value)  || PROP.beds;
+  const baths = parseInt(document.getElementById('f-bathrooms').value) || PROP.bathrooms;
+  // Keep non-room non-bathroom images
+  const kept = images.filter(img => !/^(Room|Bathroom)\s+\d+$/i.test(img.cat));
+  const newImgs = [...kept];
+  for (let i=0;i<beds;i++)  newImgs.push({ url: ROOM_POOL[i%ROOM_POOL.length], cat:`Room ${i+1}` });
+  for (let i=0;i<baths;i++) newImgs.push({ url: BATH_POOL[i%BATH_POOL.length], cat:`Bathroom ${i+1}` });
+  images = newImgs;
+  renderImages();
+  toast(`Re-generated: ${beds} rooms + ${baths} bathrooms`, 'success');
+}
+
+async function uploadBrochureNow() {
+  const file = document.getElementById('f-brochure-file').files[0];
+  if (!file) return;
+  try {
+    const { url } = await api.uploadBrochure(propId, file);
+    document.getElementById('brochure-current').innerHTML = `Current: <a href="${url}" target="_blank">${url}</a>`;
+    toast('Brochure uploaded', 'success');
+  } catch (e) { toast('Brochure upload failed: ' + e.message, 'error'); }
+}
+
+function parseAddonsTextarea(text) {
+  return String(text || '').split('\n').map(s => s.trim()).filter(Boolean).map(line => {
+    const [name, description, price] = line.split('|').map(s => s.trim());
+    const obj = { name };
+    if (description) obj.description = description;
+    if (price && !isNaN(Number(price))) obj.price = Number(price);
+    return obj;
+  });
+}
+
+/* ── Save ────────────────────────────────────────────── */
+async function saveAll() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Saving…';
+
+  // Optional newer fields (added to admin in 2026 update)
+  const mapEl   = document.getElementById('f-map-url');
+  const addonEl = document.getElementById('f-addons');
+  const fomoBE  = document.getElementById('f-fomo-bookings');
+  const fomoVE  = document.getElementById('f-fomo-viewers');
+  const fomoEE  = document.getElementById('f-fomo-enabled');
+
+  const body = {
+    name:          document.getElementById('f-name').value.trim(),
+    location:      document.getElementById('f-location').value.trim(),
+    price:         parseInt(document.getElementById('f-price').value)||0,
+    beds:          parseInt(document.getElementById('f-beds').value)||4,
+    bathrooms:     parseInt(document.getElementById('f-bathrooms').value)||3,
+    guests:        parseInt(document.getElementById('f-guests').value)||10,
+    description:   document.getElementById('f-desc').value.trim(),
+    checkin_time:  document.getElementById('f-checkin').value.trim(),
+    checkout_time: document.getElementById('f-checkout').value.trim(),
+    status:        currentStatus,
+    amenities:     amenities.join(','),
+    rules,
+    images,
+    ...(mapEl   ? { map_url: mapEl.value.trim() } : {}),
+    ...(addonEl ? { addons:  parseAddonsTextarea(addonEl.value) } : {}),
+    ...(fomoBE  ? { fomo_bookings: fomoBE.value === '' ? null : Number(fomoBE.value) } : {}),
+    ...(fomoVE  ? { fomo_viewers:  fomoVE.value === '' ? null : Number(fomoVE.value) } : {}),
+    ...(fomoEE  ? { fomo_enabled:  fomoEE.checked } : {}),
+  };
+
+  try {
+    await api.updateProperty(propId, body);
+    toast('Saved successfully!', 'success');
+    setTimeout(() => { btn.disabled=false; btn.innerHTML=`${ICON_SAVE} Save All Changes`; }, 1200);
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+    btn.disabled=false;
+    btn.innerHTML=`${ICON_SAVE} Save All Changes`;
+  }
+}
+
+/* ── SVG icons ───────────────────────────────────────── */
+const ICON_INFO     = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+const ICON_CAPACITY = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
+const ICON_CLOCK    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const ICON_AMENITY  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+const ICON_RULES    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
+const ICON_IMAGE    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+const ICON_SAVE     = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+
+/* ── Toast ───────────────────────────────────────────── */
+let _tt;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' '+type : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.className='', 3000);
+}
+
+/* ── Escape helper ───────────────────────────────────── */
+function esc(s) {
+  return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ── Init ────────────────────────────────────────────── */
+loadProperty();
+</script>
+</body>
+</html>

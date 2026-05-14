@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Property — StayDekho</title>
+
+  <!-- SEO / OG — filled by JS after load -->
+  <meta name="description" content="Premium group stay — StayDekho"/>
+  <meta property="og:site_name" content="StayDekho"/>
+  <meta property="og:type" content="website"/>
+  <meta id="og-title"       property="og:title"       content="StayDekho"/>
+  <meta id="og-description" property="og:description" content="Premium group stay — StayDekho"/>
+  <meta id="og-image"       property="og:image"       content=""/>
+  <meta id="og-url"         property="og:url"         content=""/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+
+  <style>
+  /* ═══════════════════════════════════════════
+     BLACK-SCREEN BUG FIX — overscroll, stacking, safety
+  ═══════════════════════════════════════════ */
+  html, body { background: #ffffff !important; }
+  /* iOS Safari overscroll glow shows the document's base color, which used
+     to inherit from the dark navbar's stacking context. Force white. */
+  body { background-color: #ffffff; }
+  /* The lightbox + category gallery + mobile bk panel are fixed/inset:0 with
+     dark backgrounds. Some browsers were briefly painting them while scrolling
+     past the About section due to a stale `display` value. Force-hide when
+     they don't have the `.open` class. */
+  #lightbox:not(.open), #cat-gallery-modal:not(.open) { display: none !important; }
+  /* Establish a stable stacking context for the article body so a child
+     iframe (Google Maps) can never paint over later sections. */
+  .prop-layout { position: relative; z-index: 1; isolation: isolate; }
+  .prop-section { position: relative; z-index: 1; background: #fff; }
+  .map-wrap, .map-wrap iframe { background: #fff; }
+
+  /* ═══════════════════════════════════════════
+     NAV — always white on property page (no dark hero)
+  ═══════════════════════════════════════════ */
+  #navbar.nav-top .nav-inner {
+    background: rgba(255,255,255,.96) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(139,23,23,.08);
+    box-shadow: 0 2px 18px rgba(0,0,0,.06);
+  }
+  #navbar.nav-top .nav-links a { color: var(--gray-600) !important; }
+  #navbar.nav-top .nav-links a:hover { color: var(--red) !important; background: var(--red-light) !important; }
+  #navbar.nav-top .logo-stay, #navbar.nav-top .logo-dekh { color: var(--red) !important; }
+  #navbar.nav-top .logo-o svg circle.lens { stroke: var(--red) !important; }
+  #navbar.nav-top .logo-o svg line.handle { stroke: var(--red) !important; }
+  #navbar.nav-top .nav-login { color: var(--gray-600) !important; border-color: var(--gray-200) !important; }
+  #navbar.nav-top .nav-hamburger span { background: var(--dark) !important; }
+
+  /* ═══════════════════════════════════════════
+     SKELETON LOADER
+  ═══════════════════════════════════════════ */
+  @keyframes shimmer {
+    0%   { background-position: -700px 0; }
+    100% { background-position:  700px 0; }
+  }
+  .sk {
+    background: linear-gradient(90deg,#f0ece8 25%,#e8e4e0 50%,#f0ece8 75%);
+    background-size: 700px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 10px;
+  }
+  .sk-gallery {
+    display: grid; grid-template-columns: 1.6fr 1fr;
+    grid-template-rows: 240px 185px; gap: 6px;
+    border-radius: 16px; overflow: hidden; margin-bottom: 16px;
+  }
+  .sk-gallery .sk-main { grid-row: 1/3; border-radius: 0; }
+  .sk-gallery .sk-thumb { border-radius: 0; }
+  .sk-title  { height: 36px; width: 55%; margin-bottom: 12px; }
+  .sk-meta   { height: 18px; width: 40%; margin-bottom: 28px; }
+  .sk-stats  { height: 80px; border-radius: 14px; margin-bottom: 32px; }
+  .sk-para   { height: 14px; margin-bottom: 8px; }
+  .sk-para:last-child { width: 70%; }
+
+  /* ═══════════════════════════════════════════
+     GALLERY
+  ═══════════════════════════════════════════ */
+  .gallery-wrap {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    grid-template-rows: 240px 185px;
+    gap: 6px; border-radius: 16px; overflow: hidden;
+    position: relative; margin-bottom: 16px;
+  }
+  .gallery-wrap img {
+    width: 100%; height: 100%; object-fit: cover; cursor: pointer;
+    transition: filter .25s;
+  }
+  .gallery-wrap img:hover { filter: brightness(.88); }
+  .gallery-main { grid-row: 1/3; }
+  /* Only 2 thumbs shown on desktop grid (2 rows right col) */
+  .gallery-thumb:nth-child(n+4) { display: none; }
+  .gallery-show-btn {
+    position: absolute; bottom: 16px; right: 16px;
+    background: #fff; border: 1.5px solid #e0dbd5;
+    border-radius: 10px; padding: 9px 18px;
+    font-size: .82rem; font-weight: 700; cursor: pointer; color: #1a0a0a;
+    display: flex; align-items: center; gap: 7px;
+    transition: box-shadow .2s, background .2s;
+    box-shadow: 0 2px 12px rgba(0,0,0,.10);
+  }
+  .gallery-show-btn:hover { background: #f5f0eb; box-shadow: 0 4px 18px rgba(0,0,0,.14); }
+
+  /* ═══════════════════════════════════════════
+     CATEGORY CHIPS (below gallery)
+  ═══════════════════════════════════════════ */
+  .cat-tabs {
+    display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto;
+    padding: 10px 0 18px; scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .cat-tabs::-webkit-scrollbar { display: none; }
+  .cat-chip {
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    padding: 7px 15px; border-radius: 24px; border: 1.5px solid var(--gray-200);
+    background: #fff; font-size: .8rem; font-weight: 600; cursor: pointer;
+    transition: all .18s; color: var(--dark); flex-shrink: 0;
+  }
+  .cat-chip:hover { border-color: var(--dark); background: #faf8f5; }
+  .cat-chip.active { background: var(--dark); color: #fff; border-color: var(--dark); }
+  .cat-chip-count { font-size: .72rem; font-weight: 500; opacity: .65; }
+
+  /* ═══════════════════════════════════════════
+     CATEGORY GALLERY MODAL
+  ═══════════════════════════════════════════ */
+  #cat-gallery-modal {
+    display: none; position: fixed; inset: 0;
+    background: #fff; z-index: 100000; overflow-y: auto;
+  }
+  #cat-gallery-modal.open { display: block; }
+  .cg-header {
+    position: sticky; top: 0; background: #fff; z-index: 10;
+    padding: 14px 28px; border-bottom: 1px solid #ede9e4;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .cg-close {
+    width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--gray-200);
+    background: #fff; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 1.3rem; line-height: 1; flex-shrink: 0;
+    transition: background .18s; color: var(--dark); font-weight: 300;
+  }
+  .cg-close:hover { background: #f5f0eb; }
+  .cg-modal-title { font-weight: 800; font-size: 1rem; white-space: nowrap; flex-shrink: 0; }
+  .cg-cat-tabs {
+    display: flex; gap: 8px; overflow-x: auto; flex: 1;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .cg-cat-tabs::-webkit-scrollbar { display: none; }
+  .cg-body { padding: 28px; }
+  .cg-section { margin-bottom: 36px; }
+  .cg-section-title {
+    font-size: .78rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--gray-400); margin-bottom: 14px;
+  }
+  .cg-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .cg-grid img {
+    width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 10px;
+    cursor: pointer; display: block; transition: opacity .2s;
+  }
+  .cg-grid img:hover { opacity: .88; }
+  .cg-empty { text-align: center; padding: 60px; color: var(--gray-400); font-size: .95rem; }
+  @media (max-width: 900px) {
+    .cg-grid { grid-template-columns: repeat(2, 1fr); }
+    .cg-body  { padding: 18px; }
+  }
+  @media (max-width: 600px) {
+    .cg-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .cg-header { padding: 12px 16px; gap: 10px; }
+    .cg-body   { padding: 14px; }
+  }
+
+  /* ═══════════════════════════════════════════
+     LIGHTBOX
+  ═══════════════════════════════════════════ */
+  #lightbox {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.95); z-index: 99999;
+    align-items: center; justify-content: center;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img  { max-width: 88vw; max-height: 88vh; border-radius: 10px; object-fit: contain; }
+  .lb-close {
+    position: fixed; top: 20px; right: 26px; color: #fff; font-size: 2rem;
+    cursor: pointer; background: none; border: none; font-weight: 300;
+    line-height: 1; opacity: .8; transition: opacity .2s;
+  }
+  .lb-close:hover { opacity: 1; }
+  .lb-arrow {
+    position: fixed; top: 50%; transform: translateY(-50%); color: #fff;
+    font-size: 2.2rem; cursor: pointer; background: rgba(255,255,255,.1);
+    border: none; padding: 12px 18px; border-radius: 50%;
+    transition: background .2s; line-height: 1;
+  }
+  .lb-arrow:hover { background: rgba(255,255,255,.2); }
+  .lb-prev { left: 20px; } .lb-next { right: 20px; }
+  .lb-counter {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.7); font-size: .85rem;
+  }
+
+  /* ═══════════════════════════════════════════
+     TITLE ROW
+  ═══════════════════════════════════════════ */
+  .prop-title-row {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 16px;
+    flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .prop-title {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(1.6rem,3vw,2.1rem); color: var(--dark); margin: 0 0 8px;
+  }
+  .prop-meta {
+    display: flex; align-items: center; gap: 10px;
+    font-size: .88rem; color: var(--gray-500); flex-wrap: wrap;
+  }
+  .prop-meta .sep { color: var(--gray-200); }
+  .prop-meta .loc { display: inline-flex; align-items: center; gap: 4px; color: var(--gray-500); }
+  .prop-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* ═══════════════════════════════════════════
+     QUICK STATS
+  ═══════════════════════════════════════════ */
+  .quick-stats {
+    display: flex; align-items: stretch;
+    border: 1px solid var(--gray-200); border-radius: var(--radius);
+    overflow: hidden; margin-bottom: 32px;
+  }
+  .qs-item { flex: 1; padding: 18px 20px; text-align: center; border-right: 1px solid var(--gray-200); }
+  .qs-item:last-child { border-right: none; }
+  .qs-val { font-size: 1.1rem; font-weight: 800; color: var(--dark); margin-bottom: 3px; }
+  .qs-lbl { font-size: .72rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+
+  /* ═══════════════════════════════════════════
+     CONTENT SECTIONS
+  ═══════════════════════════════════════════ */
+  .prop-section { margin-bottom: 36px; padding-bottom: 36px; border-bottom: 1px solid var(--gray-100); }
+  .prop-section:last-child { border-bottom: none; }
+  .prop-section h3 { font-size: 1.15rem; font-weight: 800; margin: 0 0 16px; }
+  .prop-section p  { color: var(--gray-600); line-height: 1.8; font-size: .95rem; margin: 0; }
+
+  /* ═══════════════════════════════════════════
+     AMENITIES
+  ═══════════════════════════════════════════ */
+  .amenities-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .amenity-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border: 1px solid var(--gray-200);
+    border-radius: 10px; font-size: .88rem; font-weight: 500;
+    transition: border-color .2s, background .2s;
+  }
+  .amenity-item:hover { border-color: var(--red); background: #fff8f8; }
+  .amenity-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--red); }
+  .amenity-icon svg { width: 20px; height: 20px; display: block; }
+
+  /* ═══════════════════════════════════════════
+     REVIEWS
+  ═══════════════════════════════════════════ */
+  .reviews-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; }
+  .review-card {
+    background: var(--off-white); border-radius: var(--radius-sm);
+    padding: 18px; border: 1px solid var(--gray-100);
+  }
+  .review-stars { color: #D4A017; font-size: 1rem; margin-bottom: 10px; letter-spacing: 2px; }
+  .review-text  { font-size: .88rem; color: var(--gray-600); line-height: 1.7; margin-bottom: 14px; }
+  .review-author { display: flex; align-items: center; gap: 10px; }
+  .review-avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--red); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .9rem; flex-shrink: 0;
+  }
+  .review-name { font-weight: 700; font-size: .85rem; }
+  .review-date { font-size: .75rem; color: var(--gray-400); }
+
+  /* ── Review submit form ── */
+  .review-form {
+    margin-top: 24px; padding: 20px; background: #fff;
+    border: 1.5px solid var(--gray-200); border-radius: 14px;
+  }
+  .review-form h4 { font-size: .95rem; font-weight: 800; margin: 0 0 14px; }
+  .star-picker { display: flex; gap: 6px; margin-bottom: 14px; }
+  .star-picker span {
+    font-size: 1.6rem; cursor: pointer; color: #ccc;
+    transition: color .15s, transform .15s; line-height: 1;
+  }
+  .star-picker span.active { color: #D4A017; }
+  .star-picker span:hover  { transform: scale(1.15); color: #D4A017; }
+  .review-textarea {
+    width: 100%; min-height: 80px; border: 1.5px solid var(--gray-200);
+    border-radius: 10px; padding: 10px 13px; font-family: inherit;
+    font-size: .88rem; resize: vertical; outline: none;
+    transition: border-color .2s; box-sizing: border-box;
+  }
+  .review-textarea:focus { border-color: var(--red); }
+
+  /* ═══════════════════════════════════════════
+     LAYOUT (desktop 70 / 30)
+  ═══════════════════════════════════════════ */
+  .prop-layout { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 44px; align-items: start; }
+  .prop-sticky { position: sticky; top: 90px; }
+
+  /* ═══════════════════════════════════════════
+     BOOKING WIDGET
+  ═══════════════════════════════════════════ */
+  .bk-widget {
+    background: #fff; border: 1.5px solid #e0dbd5; border-radius: 22px;
+    padding: 28px; box-shadow: 0 8px 40px rgba(0,0,0,.10);
+  }
+  .bk-price { font-size: 1.6rem; font-weight: 800; color: var(--dark); }
+  .bk-price span { font-size: .95rem; font-weight: 500; color: var(--gray-400); }
+  .bk-rating { font-size: .85rem; color: var(--gray-500); margin: 4px 0 20px; display: flex; align-items: center; gap: 5px; }
+  .bk-dates {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border: 1.5px solid #e0dbd5; border-radius: 12px; overflow: hidden; margin-bottom: 0;
+  }
+  .bk-date-field { padding: 12px 14px; cursor: pointer; transition: background .15s; }
+  .bk-date-field:first-child { border-right: 1px solid #e0dbd5; }
+  .bk-date-field:hover { background: #faf8f5; }
+  .bk-date-field label {
+    display: block; font-size: .62rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .1em; color: var(--dark); margin-bottom: 4px; cursor: pointer;
+  }
+  .bk-date-field input {
+    border: none; outline: none; font-family: inherit; font-size: .9rem;
+    color: var(--gray-600); background: transparent; width: 100%; cursor: pointer;
+  }
+  .bk-guests {
+    border: 1.5px solid #e0dbd5; border-top: none; border-radius: 0 0 12px 12px;
+    padding: 12px 14px; cursor: pointer; margin-bottom: 16px; transition: background .15s;
+  }
+  .bk-guests:hover { background: #faf8f5; }
+  .bk-guests label { display: block; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--dark); margin-bottom: 4px; }
+  .bk-guests-row { display: flex; align-items: center; justify-content: space-between; }
+  .bk-guest-count { font-size: .9rem; color: var(--gray-600); font-weight: 500; }
+  .bk-guest-btns  { display: flex; align-items: center; gap: 12px; }
+  .bk-guest-btn {
+    width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #e0dbd5;
+    background: #fff; font-size: 1.1rem; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: all .15s;
+    font-weight: 700; color: var(--dark); line-height: 1;
+  }
+  .bk-guest-btn:hover   { border-color: var(--dark); }
+  .bk-guest-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .bk-breakdown { margin: 16px 0; }
+  .bk-row { display: flex; justify-content: space-between; font-size: .88rem; color: var(--gray-600); padding: 6px 0; }
+  .bk-row.total { border-top: 1px solid var(--gray-200); margin-top: 6px; padding-top: 12px; font-size: .95rem; font-weight: 800; color: var(--dark); }
+  .bk-note { font-size: .75rem; color: var(--gray-400); text-align: center; margin-top: 10px; line-height: 1.5; }
+  .bk-wa-btn {
+    width: 100%; background: #25D366; color: #fff; border: none; border-radius: 14px;
+    padding: 13px 20px; font-weight: 700; font-size: .88rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 10px; transition: background .2s;
+  }
+  .bk-wa-btn:hover { background: #1da851; }
+
+  /* ═══════════════════════════════════════════
+     HOST CARD
+  ═══════════════════════════════════════════ */
+  .host-card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 22px; margin-top: 16px; }
+  .host-avatar {
+    width: 52px; height: 52px; border-radius: 50%; background: var(--red); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.2rem; flex-shrink: 0;
+  }
+
+  /* ═══════════════════════════════════════════
+     MAP SECTION
+  ═══════════════════════════════════════════ */
+  .map-wrap {
+    border-radius: 14px; overflow: hidden; height: 280px;
+    border: 1px solid var(--gray-200);
+  }
+  .map-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  /* ═══════════════════════════════════════════
+     SIMILAR PROPERTIES
+  ═══════════════════════════════════════════ */
+  .similar-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  .sim-card {
+    border: 1px solid var(--gray-200); border-radius: 16px; overflow: hidden;
+    transition: box-shadow .2s, transform .2s; cursor: pointer; background: #fff;
+    text-decoration: none; color: inherit; display: block;
+  }
+  .sim-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.12); transform: translateY(-3px); }
+  .sim-card img { width: 100%; height: 160px; object-fit: cover; display: block; }
+  .sim-card-body { padding: 14px; }
+  .sim-card-title { font-weight: 700; font-size: .9rem; margin-bottom: 4px; color: var(--dark); }
+  .sim-card-loc   { font-size: .78rem; color: var(--gray-400); margin-bottom: 6px; }
+  .sim-card-price { font-size: .9rem; font-weight: 800; color: var(--red); }
+  .sim-card-price span { font-weight: 400; color: var(--gray-400); font-size: .75rem; }
+
+  /* ═══════════════════════════════════════════
+     TOAST
+  ═══════════════════════════════════════════ */
+  #toast {
+    position: fixed; bottom: 90px; left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: #1a0a0a; color: #fff;
+    padding: 12px 24px; border-radius: 28px;
+    font-size: .85rem; font-weight: 600;
+    z-index: 99998; opacity: 0;
+    transition: opacity .3s, transform .3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  #toast.show    { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { background: #1b5e20; }
+  #toast.error   { background: #b71c1c; }
+
+
+  /* ═══════════════════════════════════════════
+     MOBILE BOOKING SHEET
+  ═══════════════════════════════════════════ */
+  #mob-sheet-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    z-index: 10000; transition: opacity .3s;
+  }
+  #mob-sheet-overlay.open { display: block; }
+  #mob-sheet {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10001;
+    background: #fff; border-radius: 24px 24px 0 0;
+    padding: 24px 20px 32px; transform: translateY(100%);
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 -8px 40px rgba(0,0,0,.18);
+  }
+  #mob-sheet.open { transform: translateY(0); }
+  .mob-sheet-handle {
+    width: 40px; height: 4px; background: #ddd; border-radius: 4px;
+    margin: 0 auto 20px; display: block;
+  }
+  .mob-sheet-title { font-size: 1rem; font-weight: 800; margin-bottom: 18px; }
+  .mob-sheet-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .mob-date-field {
+    border: 1.5px solid #e0dbd5; border-radius: 12px; padding: 12px 14px;
+  }
+  .mob-date-field label { display: block; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--dark); margin-bottom: 4px; }
+  .mob-date-field input { border: none; outline: none; font-family: inherit; font-size: .9rem; color: var(--gray-600); background: transparent; width: 100%; }
+  .mob-guests-row {
+    border: 1.5px solid #e0dbd5; border-radius: 12px; padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+  }
+  .mob-guests-row label { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--dark); display: block; margin-bottom: 2px; }
+  .mob-sheet-total { font-size: .85rem; color: var(--gray-500); margin-bottom: 18px; text-align: center; }
+  .mob-sheet-total strong { color: var(--dark); }
+
+  /* ═══════════════════════════════════════════
+     RULES LIST + BREADCRUMB
+  ═══════════════════════════════════════════ */
+  .rules-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .rules-list li { display: flex; align-items: center; gap: 12px; font-size: .88rem; color: var(--gray-600); line-height: 1.5; }
+  .rule-icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--red); }
+  .rule-icon svg { width: 18px; height: 18px; display: block; }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--gray-400); margin-bottom: 20px; flex-wrap: wrap; }
+  .breadcrumb a { color: var(--gray-400); transition: color .2s; }
+  .breadcrumb a:hover { color: var(--red); }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE
+  ═══════════════════════════════════════════ */
+  @media (max-width: 1000px) {
+    .prop-layout { grid-template-columns: 1fr; }
+    .prop-sticky { display: none; }
+.gallery-wrap { grid-template-columns: 1fr 1fr; grid-template-rows: 220px 220px; }
+    .gallery-main { grid-row: 1; grid-column: 1/3; }
+    .gallery-wrap .gallery-thumb:nth-child(3) { display: none; }
+    .gallery-wrap .gallery-thumb:nth-child(4) { display: none; }
+    .amenities-grid { grid-template-columns: 1fr 1fr; }
+    .reviews-grid   { grid-template-columns: 1fr; }
+    .similar-grid   { grid-template-columns: 1fr 1fr; }
+    .sk-gallery { grid-template-columns: 1fr 1fr; grid-template-rows: 220px 220px; }
+    .sk-gallery .sk-main { grid-row: 1; grid-column: 1/3; }
+  }
+  @media (max-width: 600px) {
+    .gallery-wrap { grid-template-columns: 1fr; grid-template-rows: 260px; border-radius: 14px; }
+    .gallery-wrap .gallery-thumb { display: none; }
+    .gallery-main { grid-row: 1; grid-column: 1; }
+    .prop-title { font-size: 1.5rem; }
+    .quick-stats { flex-wrap: wrap; }
+    .qs-item { flex: 0 0 50%; border-bottom: 1px solid var(--gray-200); }
+    .qs-item:nth-child(even) { border-right: none; }
+    .amenities-grid { grid-template-columns: 1fr; }
+    .similar-grid   { grid-template-columns: 1fr; }
+    .sk-gallery { grid-template-columns: 1fr; grid-template-rows: 260px; }
+    .sk-gallery .sk-thumb { display: none; }
+    .sk-gallery .sk-main  { grid-row: 1; grid-column: 1; }
+  }
+  /* ── Urgency strip ─────────────────────────── */
+  .urgency-strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    padding:10px 14px;background:#fff9f0;border-radius:10px;
+    border:1.5px solid #fed7aa;margin-bottom:18px;}
+  .urgency-item{display:inline-flex;align-items:center;gap:5px;font-size:.79rem;color:#92400e;font-weight:600;}
+  .urgency-item strong{color:#78350f;}
+
+  /* ── Trust badges ───────────────────────────── */
+  .trust-strip{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 0;border-top:1px solid var(--gray-100);margin-top:10px;}
+  .trust-item{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--gray-600);font-weight:600;background:var(--gray-50);padding:5px 10px;border-radius:20px;}
+
+  /* ── What's Included ────────────────────────── */
+  .included-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;}
+  .included-item{display:flex;flex-direction:column;align-items:center;gap:5px;
+    padding:14px 10px;border-radius:12px;border:1.5px solid var(--gray-100);background:var(--gray-50);text-align:center;}
+  .included-icon{font-size:1.4rem;}
+  .included-val{font-size:.87rem;font-weight:800;color:var(--dark);}
+  .included-lbl{font-size:.68rem;color:var(--gray-400);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+
+  /* ── Availability Calendar ──────────────────── */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cal-nav-btn{width:30px;height:30px;border:1.5px solid var(--gray-200);border-radius:8px;
+    background:#fff;cursor:pointer;font-size:1.1rem;color:var(--gray-500);
+    display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .cal-nav-btn:hover{border-color:var(--red);color:var(--red);}
+  .cal-month-name{font-weight:800;font-size:.9rem;color:var(--dark);}
+  .cal-two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .cal-month-title{font-size:.8rem;font-weight:700;color:var(--gray-600);text-align:center;margin-bottom:7px;}
+  .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:3px;}
+  .cal-dow{text-align:center;font-size:.63rem;font-weight:700;color:var(--gray-400);padding:3px 0;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    font-size:.73rem;border-radius:6px;font-weight:500;cursor:pointer;transition:all .12s;color:var(--gray-700);}
+  .cal-cell.cal-empty{cursor:default;}
+  .cal-cell.cal-past{color:var(--gray-300);cursor:default;}
+  .cal-cell.cal-booked{background:#fef2f2;color:#fca5a5;cursor:not-allowed;text-decoration:line-through;font-size:.66rem;}
+  .cal-cell.cal-avail:hover{background:var(--red-light);color:var(--red);}
+  .cal-cell.cal-today{font-weight:900;color:var(--red);}
+  .cal-cell.cal-ci,.cal-cell.cal-co{background:var(--red)!important;color:#fff!important;font-weight:800;border-radius:8px!important;}
+  .cal-cell.cal-range{background:var(--red-light);color:var(--red);border-radius:0;}
+  .cal-cell.cal-ci{border-radius:8px 0 0 8px!important;}
+  .cal-cell.cal-co{border-radius:0 8px 8px 0!important;}
+  .cal-legend{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;}
+  .cal-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:.71rem;color:var(--gray-500);}
+  .cal-leg-dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .cal-leg-avail{background:var(--gray-100);}
+  .cal-leg-booked{background:#fecaca;}
+  .cal-leg-sel{background:var(--red);}
+  @media(max-width:600px){.cal-two-col{grid-template-columns:1fr;}.cal-two-col .cal-month-block:last-child{display:none;}}
+
+  /* ── Nearby Attractions ─────────────────────── */
+  .nearby-grid{display:flex;flex-direction:column;gap:8px;}
+  .nearby-item{display:flex;align-items:center;gap:12px;
+    padding:11px 14px;border-radius:12px;border:1.5px solid var(--gray-100);background:var(--gray-50);}
+  .nearby-icon{font-size:1.2rem;flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;
+    justify-content:center;background:#fff;border-radius:9px;border:1px solid var(--gray-100);}
+  .nearby-name{font-size:.84rem;font-weight:700;color:var(--gray-700);}
+  .nearby-dist{font-size:.71rem;color:var(--gray-400);margin-top:1px;}
+  .nearby-badge{margin-left:auto;font-size:.69rem;padding:3px 9px;border-radius:20px;
+    background:var(--red-light);color:var(--red);font-weight:700;white-space:nowrap;flex-shrink:0;}
+
+  /* ── FAQ ────────────────────────────────────── */
+  .faq-list{display:flex;flex-direction:column;gap:8px;}
+  .faq-item{border:1.5px solid var(--gray-100);border-radius:12px;overflow:hidden;transition:border-color .2s;}
+  .faq-item.open{border-color:var(--red);}
+  .faq-q{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 16px;cursor:pointer;font-size:.86rem;font-weight:700;color:var(--gray-700);user-select:none;}
+  .faq-q:hover{color:var(--red);}
+  .faq-icon{flex-shrink:0;font-size:1.1rem;transition:transform .25s;color:var(--gray-400);}
+  .faq-item.open .faq-icon{transform:rotate(45deg);color:var(--red);}
+  .faq-a{padding:0 16px;max-height:0;overflow:hidden;font-size:.83rem;color:var(--gray-500);line-height:1.75;
+    transition:max-height .3s ease,padding .2s;}
+  .faq-item.open .faq-a{max-height:300px;padding:0 16px 14px;}
+
+  /* ── Mobile sticky CTA ───────────────────────── */
+  .mob-sticky-bar{
+    display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;
+    background:#fff;border-top:1.5px solid var(--gray-100);
+    padding:10px 16px;align-items:center;justify-content:space-between;
+    box-shadow:0 -4px 20px rgba(0,0,0,.1);
+  }
+  @media(max-width:1000px){.mob-sticky-bar{display:flex;}}
+  .mob-sticky-left{}
+  .mob-sticky-price{font-size:1rem;font-weight:800;color:var(--dark);}
+  .mob-sticky-price span{font-size:.72rem;font-weight:400;color:var(--gray-400);}
+  .mob-sticky-nights{font-size:.72rem;color:var(--gray-500);margin-top:1px;}
+  .mob-sticky-btns{display:flex;gap:8px;}
+
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- ── Lightbox ─────────────────────────────────── -->
+<div id="lightbox" onclick="closeLightboxOutside(event)">
+  <button class="lb-close" onclick="closeLightbox()">×</button>
+  <button class="lb-arrow lb-prev" onclick="prevImg()">&#8249;</button>
+  <img id="lb-img" src="" alt=""/>
+  <button class="lb-arrow lb-next" onclick="nextImg()">&#8250;</button>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
+<!-- ── Category Gallery Modal ───────────────────── -->
+<div id="cat-gallery-modal">
+  <div class="cg-header">
+    <button class="cg-close" onclick="closeCatGallery()">×</button>
+    <span class="cg-modal-title" id="cg-modal-title">All Photos</span>
+    <div class="cg-cat-tabs" id="cg-cat-tabs"></div>
+  </div>
+  <div class="cg-body" id="cg-body"></div>
+</div>
+
+<!-- ── Mobile booking bottom sheet ─────────────── -->
+<div id="mob-sheet-overlay" onclick="closeMobSheet()"></div>
+<div id="mob-sheet">
+  <span class="mob-sheet-handle"></span>
+  <div class="mob-sheet-title">Select Dates &amp; Guests</div>
+  <div class="mob-sheet-dates">
+    <div class="mob-date-field">
+      <label for="mob-checkin">Check-in</label>
+      <input type="date" id="mob-checkin" onchange="onMobDateChange()"/>
+    </div>
+    <div class="mob-date-field">
+      <label for="mob-checkout">Check-out</label>
+      <input type="date" id="mob-checkout" onchange="onMobDateChange()"/>
+    </div>
+  </div>
+  <div class="mob-guests-row">
+    <div>
+      <label>Guests</label>
+      <span id="mob-guest-display" style="font-size:.9rem;color:var(--gray-600);font-weight:500">2 guests</span>
+    </div>
+    <div class="bk-guest-btns">
+      <button class="bk-guest-btn" id="mob-guest-dec" onclick="changeMobGuests(-1)">−</button>
+      <span id="mob-guest-num" style="font-weight:700;min-width:16px;text-align:center">2</span>
+      <button class="bk-guest-btn" id="mob-guest-inc" onclick="changeMobGuests(1)">+</button>
+    </div>
+  </div>
+  <div class="mob-sheet-total" id="mob-sheet-total"></div>
+  <button class="btn btn-primary btn-full btn-lg" id="mob-reserve-btn" onclick="confirmMobBooking()">Reserve Now</button>
+</div>
+
+<!-- ── Toast ────────────────────────────────────── -->
+<div id="toast"></div>
+
+<main style="padding:32px 0 80px">
+  <div class="container">
+
+    <!-- Skeleton loading state -->
+    <div id="property-loading">
+      <div style="display:grid;grid-template-columns:1fr 360px;gap:44px;align-items:start">
+        <div>
+          <div class="sk-gallery">
+            <div class="sk sk-main"></div>
+            <div class="sk sk-thumb"></div>
+            <div class="sk sk-thumb"></div>
+          </div>
+          <div class="sk sk-title"></div>
+          <div class="sk sk-meta"></div>
+          <div class="sk sk-stats"></div>
+          <div class="sk sk-para" style="width:100%"></div>
+          <div class="sk sk-para" style="width:85%"></div>
+          <div class="sk sk-para"></div>
+        </div>
+        <div>
+          <div class="sk" style="height:420px;border-radius:20px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content (filled by JS) -->
+    <div id="property-content" style="display:none"></div>
+
+  </div>
+</main>
+
+
+<!-- Mobile sticky booking bar -->
+<div class="mob-sticky-bar" id="mob-sticky-bar">
+  <div class="mob-sticky-left">
+    <div class="mob-sticky-price">₹<span id="mob-s-price">—</span> <span>/ night</span></div>
+    <div class="mob-sticky-nights" id="mob-s-nights"></div>
+  </div>
+  <div class="mob-sticky-btns">
+    <button class="btn btn-outline btn-sm" onclick="openWAEnquiry()" style="padding:9px 14px">WhatsApp</button>
+    <button class="btn btn-primary btn-sm" onclick="initiateBooking()" style="padding:9px 18px">Reserve</button>
+  </div>
+</div>
+
+<div id="footer-placeholder"></div>
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   GLOBALS
+═══════════════════════════════════════════════════ */
+let PROP      = null;
+let IMAGES    = [];
+let CAT_IMAGES = [];   // [{url, cat}]
+let LB_IDX    = 0;
+let GUESTS    = 2;
+let MOB_GUESTS = 2;
+let REVIEW_RATING = 5;
+let BOOKED_RANGES = [];   // [{checkin, checkout}]
+let DATE_PRICES   = {};   // { 'YYYY-MM-DD': { price, blocked } } — loaded from API
+let CG_ACTIVE_CAT = 'All';
+
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80';
+
+const STAR_SVG  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#D4A017" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+const PIN_SVG   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+const HEART_O   = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+const HEART_F   = `<svg width="15" height="15" viewBox="0 0 24 24" fill="var(--red)" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+const SHARE_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+
+/* ── Helpers ─────────────────────────────────────── */
+function qs(k)  { return new URLSearchParams(location.search).get(k); }
+function fmt(n) { return Number(n).toLocaleString('en-IN'); }
+function esc(s) {
+  return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const AMENITY_ICONS = {
+  pool:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><circle cx="12" cy="5" r="2"/><path d="M12 7v3"/></svg>`,
+  wifi:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>`,
+  ac:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="8" rx="2"/><path d="M12 14v4M8 14v2M16 14v2M6 10h.01M18 10h.01M12 10h.01"/></svg>`,
+  chef:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>`,
+  parking:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`,
+  bbq:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h16M4 14a8 8 0 0 0 16 0M12 14V8M9 5c0-1.1.9-2 2-2h2a2 2 0 0 1 2 2v3H9V5z"/><line x1="10" y1="21" x2="8" y2="21"/><line x1="14" y1="21" x2="16" y2="21"/><line x1="12" y1="21" x2="12" y2="22"/></svg>`,
+  bonfire:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V18M8 22h8"/><path d="M12 18c0-4 4-6 4-10a4 4 0 0 0-8 0c0 4 4 6 4 10z"/></svg>`,
+  kitchen:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20M21 15V2"/><path d="M18 6h.01M15 6h.01M21 6c0-2.8-4.5-4-6-4s-6 1.2-6 4v9h12V6z"/></svg>`,
+  beach:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 22H4"/><path d="M2 14c2-4 6-6 10-4s8 0 10-4"/><path d="M12 10V2"/><path d="M12 2 9 5M12 2l3 3"/></svg>`,
+  gym:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 7V4a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v3"/><path d="M6 17v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3"/><rect x="2" y="7" width="20" height="10" rx="2"/></svg>`,
+  view:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  garden:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12M12 12C12 7 8 4 4 6c4-2 8 1 8 6zM12 12c0-5 4-8 8-6-4-2-8 1-8 6z"/></svg>`,
+  hiking:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"/><path d="M12 6v5l-2 4h4M10 15l-2 5M14 15l2 5M8 11H5l2-4"/></svg>`,
+  dining:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7a4 4 0 0 0 4 4h1v9h2v-9h1a4 4 0 0 0 4-4V2M16 2v20"/></svg>`,
+  heritage: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M9 21V11M15 21V11M3 11h18M12 2 3 7h18z"/></svg>`,
+  jacuzzi:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6a3 3 0 0 1 6 0v4H9z"/><rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 14h.01M12 14h.01M17 14h.01"/></svg>`,
+  ev:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+  default:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+};
+/* ── Rule icon map ──────────────────────────────────── */
+const RULE_ICONS = {
+  clock:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  nosmoking: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+  party:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  pet:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+  quiet:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+  cancel:    `<svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  info:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  key:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>`,
+};
+
+function renderRules(rules, checkin, checkout) {
+  if (!rules || !rules.length) return '<li style="color:var(--gray-400)">No rules specified.</li>';
+  return rules.map(r => {
+    const icon = RULE_ICONS[r.icon] || RULE_ICONS.info;
+    const color = r.icon === 'cancel' ? '#16a34a' : 'var(--red)';
+    const text  = (r.text || '').replace('{checkin}', checkin).replace('{checkout}', checkout);
+    return `<li><span class="rule-icon" style="color:${color}">${icon}</span>${esc(text)}</li>`;
+  }).join('');
+}
+
+function amenityIcon(name) {
+  const n = (name||'').toLowerCase();
+  if (n.includes('pool'))   return AMENITY_ICONS.pool;
+  if (n.includes('wifi'))   return AMENITY_ICONS.wifi;
+  if (n.includes('ac')||n.includes('air')) return AMENITY_ICONS.ac;
+  if (n.includes('chef')||n.includes('cook')) return AMENITY_ICONS.chef;
+  if (n.includes('parking'))return AMENITY_ICONS.parking;
+  if (n.includes('bbq'))    return AMENITY_ICONS.bbq;
+  if (n.includes('bonfire')||n.includes('campfire')) return AMENITY_ICONS.bonfire;
+  if (n.includes('kitchen'))return AMENITY_ICONS.kitchen;
+  if (n.includes('beach'))  return AMENITY_ICONS.beach;
+  if (n.includes('gym'))    return AMENITY_ICONS.gym;
+  if (n.includes('view'))   return AMENITY_ICONS.view;
+  if (n.includes('garden')) return AMENITY_ICONS.garden;
+  if (n.includes('hikin')||n.includes('trek')) return AMENITY_ICONS.hiking;
+  if (n.includes('breakfast')||n.includes('dining')) return AMENITY_ICONS.dining;
+  if (n.includes('fort')||n.includes('heritage')) return AMENITY_ICONS.heritage;
+  if (n.includes('bath')||n.includes('jacuzzi')) return AMENITY_ICONS.jacuzzi;
+  if (n.includes('ev')||n.includes('electric')) return AMENITY_ICONS.ev;
+  return AMENITY_ICONS.default;
+}
+
+/* ── Toast ───────────────────────────────────────── */
+let _toastT;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ' '+type : '');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => t.className = '', 3000);
+}
+
+/* ═══════════════════════════════════════════════════
+   LOAD PROPERTY
+═══════════════════════════════════════════════════ */
+async function loadProperty() {
+  const id = qs('id');
+  if (!id) { showError('Property id missing.'); return; }
+  try {
+    const [{ property, host, reviews }, availRes, dpRes] = await Promise.all([
+      api.getProperty(id),
+      api.getAvailability(id).catch(() => ({ booked: [] })),
+      api.getDatePrices(id).catch(() => ({ date_prices: [] })),
+    ]);
+    PROP = property;
+    BOOKED_RANGES = availRes.booked || [];
+    // Build date-price lookup
+    DATE_PRICES = {};
+    (dpRes.date_prices || []).forEach(r => { DATE_PRICES[r.date] = r; });
+    // Show today's price at top by default
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDp  = DATE_PRICES[todayStr];
+    const todayPrice = (todayDp && todayDp.price) ? todayDp.price : property.price;
+    const priceElInit = document.getElementById('bk-price-display');
+    if (priceElInit) priceElInit.innerHTML = `₹${fmt(todayPrice)} <span>/ night</span>`;
+    document.title = `${property.title} — StayDekho`;
+
+    // Update SEO meta
+    document.getElementById('og-title').setAttribute('content', `${property.title} — StayDekho`);
+    document.getElementById('og-description').setAttribute('content', property.description || 'Premium group stay — StayDekho');
+    document.getElementById('og-image').setAttribute('content', property.main_image || '');
+    document.getElementById('og-url').setAttribute('content', location.href);
+    document.querySelector('meta[name="description"]').setAttribute('content', property.description || 'Premium group stay — StayDekho');
+
+    render(property, host || {}, reviews || []);
+    loadSimilarProperties(property);
+  } catch (e) {
+    showError(e.message || 'Property not found.');
+  }
+}
+
+function showError(msg) {
+  document.getElementById('property-loading').innerHTML = `
+    <div style="font-size:1rem;color:var(--gray-600);margin-bottom:16px">${esc(msg)}</div>
+    <a href="listings.html" class="btn btn-outline">← Back to Listings</a>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════ */
+function render(p, host, reviews) {
+  // Build categorized image array
+  CAT_IMAGES = Array.isArray(p.categorized_images) && p.categorized_images.length
+    ? p.categorized_images
+    : (Array.isArray(p.images) ? p.images.map(u => ({ url: u, cat: 'Exterior' })) : []);
+  if (!CAT_IMAGES.length) CAT_IMAGES = [{ url: FALLBACK_IMG, cat: 'Exterior' }];
+
+  // Flat array for lightbox compatibility
+  IMAGES = CAT_IMAGES.map(i => i.url);
+  // Fill to at least 4 slots so gallery grid always looks full
+  while (IMAGES.length < 4) IMAGES.push(IMAGES[0]);
+
+  const img  = i => IMAGES[i] || IMAGES[0];
+  const avg  = p.rating ? Number(p.rating).toFixed(1) : '4.8';
+  const rcnt = reviews.length || p.review_count || 0;
+  const amens = Array.isArray(p.amenities) ? p.amenities : [];
+  const wished = !!p.wishlisted;
+
+  GUESTS = parseInt(qs('guests')) || 2;
+  if (GUESTS < 1) GUESTS = 1;
+  if (GUESTS > (p.max_guests||10)) GUESTS = p.max_guests||10;
+  MOB_GUESTS = GUESTS;
+
+
+  // WhatsApp link
+  const waMsg = encodeURIComponent(`Hi StayDekho! I'm interested in *${p.title}* (${p.location}). Please share availability and pricing. 🏡`);
+  const waLink = `https://wa.me/${(window.SD||{}).whatsapp||'918769905983'}?text=${waMsg}`;
+
+  const html = `
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="index.html">Home</a><span>›</span>
+      <a href="listings.html">Explore</a><span>›</span>
+      <a href="listings.html?q=${encodeURIComponent((p.location||'').split(',')[0]||'')}">
+        ${esc((p.location||'').split(',')[0]||'Properties')}
+      </a><span>›</span>
+      <span style="color:var(--gray-600)">${esc(p.title)}</span>
+    </nav>
+
+    <!-- 70/30 layout -->
+    <div class="prop-layout">
+
+      <!-- LEFT 70% -->
+      <div>
+
+        <!-- Gallery -->
+        <div class="gallery-wrap" id="gallery-wrap">
+          <img class="gallery-main" src="${esc(img(0))}" alt="${esc(p.title)}"
+            onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
+          <img class="gallery-thumb" src="${esc(img(1))}" alt=""
+            onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
+          <img class="gallery-thumb" src="${esc(img(2))}" alt=""
+            onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
+          <img class="gallery-thumb" src="${esc(img(3))}" alt=""
+            onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
+          <button class="gallery-show-btn" onclick="openCatGallery('All')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Show all photos (${CAT_IMAGES.length || IMAGES.length})
+          </button>
+        </div>
+
+        <!-- Urgency strip (admin-controlled via fomo_enabled / fomo_bookings / fomo_viewers) -->
+        ${(() => {
+          if (p.fomo_enabled === false) return '';
+          const bookings = (p.fomo_bookings != null) ? p.fomo_bookings : (3 + (p.id % 5));
+          const viewers  = (p.fomo_viewers  != null) ? p.fomo_viewers  : (8 + ((p.id * 7) % 14));
+          return `<div class="urgency-strip">
+            <span class="urgency-item">🔥 <strong>${bookings} bookings</strong> this week</span>
+            <span class="urgency-item">👁 <strong>${viewers} people</strong> viewing right now</span>
+          </div>`;
+        })()}
+
+        <!-- Category chip tabs -->
+        <div class="cat-tabs" id="cat-tabs">${buildChipsHtml('All')}</div>
+
+        <!-- Title row -->
+        <div class="prop-title-row">
+          <div>
+            <h1 class="prop-title">${esc(p.title)}</h1>
+            <div class="prop-meta">
+              <span style="display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--dark)">${STAR_SVG} ${avg}</span>
+              <span class="sep">·</span>
+              <span style="text-decoration:underline;cursor:pointer" onclick="document.getElementById('reviews-section').scrollIntoView({behavior:'smooth'})">${rcnt} review${rcnt!==1?'s':''}</span>
+              <span class="sep">·</span>
+              <span class="loc">${PIN_SVG} ${esc(p.location||'')}</span>
+              ${p.badge?`<span class="sep">·</span><span style="color:var(--red);font-weight:700">${esc(p.badge)}</span>`:''}
+            </div>
+          </div>
+          <div class="prop-actions">
+            <button class="btn btn-outline btn-sm" onclick="shareProperty()" style="display:inline-flex;align-items:center;gap:6px">${SHARE_SVG} Share</button>
+            <button class="btn btn-outline btn-sm ${wished?'btn-primary':''}" id="wish-btn"
+              onclick="toggleWishlistBtn()" style="display:inline-flex;align-items:center;gap:6px">
+              ${wished?HEART_F:HEART_O} ${wished?'Saved':'Save'}
+            </button>
+            ${p.brochure_url
+              ? `<a class="btn btn-outline btn-sm" href="${esc(p.brochure_url)}" target="_blank" rel="noopener" download style="display:inline-flex;align-items:center;gap:6px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                  Brochure
+                </a>`
+              : ''}
+          </div>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="quick-stats">
+          <div class="qs-item"><div class="qs-val">${p.beds||'—'} BHK</div><div class="qs-lbl">Bedrooms</div></div>
+          <div class="qs-item"><div class="qs-val">${p.baths||p.bathrooms||'—'}</div><div class="qs-lbl">Bathrooms</div></div>
+          <div class="qs-item"><div class="qs-val">${p.max_guests||p.guests||'—'}</div><div class="qs-lbl">Max Guests</div></div>
+        </div>
+
+        <!-- Check-in / Check-out times -->
+        <div class="checkinout-strip" style="display:flex;gap:12px;margin:14px 0 18px 0;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px;border:1px solid var(--gray-200,#e5e7eb);border-radius:12px;padding:14px 16px;background:#fafafa">
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--gray-500,#6b7280);font-weight:700">Check-in</div>
+            <div style="font-size:1.15rem;font-weight:800;margin-top:4px">${esc(p.checkin_time||'2:00 PM')}</div>
+          </div>
+          <div style="flex:1;min-width:160px;border:1px solid var(--gray-200,#e5e7eb);border-radius:12px;padding:14px 16px;background:#fafafa">
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--gray-500,#6b7280);font-weight:700">Check-out</div>
+            <div style="font-size:1.15rem;font-weight:800;margin-top:4px">${esc(p.checkout_time||'11:00 AM')}</div>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="prop-section">
+          <h3>About This Stay</h3>
+          <p>${esc(p.description||'A beautiful, carefully managed property — details coming soon.')}</p>
+        </div>
+
+        <!-- Amenities -->
+        <div class="prop-section">
+          <h3>Amenities</h3>
+          <div class="amenities-grid">
+            ${amens.length
+              ? amens.map(a=>`<div class="amenity-item"><span class="amenity-icon">${amenityIcon(a)}</span><span>${esc(a)}</span></div>`).join('')
+              : '<div style="color:var(--gray-400);grid-column:1/-1">Amenity details coming soon.</div>'}
+          </div>
+        </div>
+
+        <!-- What's Included -->
+        <div class="prop-section">
+          <h3>What's Included</h3>
+          <div class="included-grid">
+            <div class="included-item"><span class="included-icon">🛏️</span><span class="included-val">${p.beds} BHK</span><span class="included-lbl">Bedrooms</span></div>
+            <div class="included-item"><span class="included-icon">🚿</span><span class="included-val">${p.baths||p.bathrooms}</span><span class="included-lbl">Bathrooms</span></div>
+            <div class="included-item"><span class="included-icon">👥</span><span class="included-val">${p.max_guests||p.guests}</span><span class="included-lbl">Max Guests</span></div>
+            ${amens.some(a=>a.toLowerCase().includes('pool'))?`<div class="included-item"><span class="included-icon">🏊</span><span class="included-val">Private</span><span class="included-lbl">Pool</span></div>`:''}
+            ${amens.some(a=>a.toLowerCase().includes('wifi'))?`<div class="included-item"><span class="included-icon">📶</span><span class="included-val">Free</span><span class="included-lbl">WiFi</span></div>`:''}
+            ${amens.some(a=>a.toLowerCase().includes('ac')||a.toLowerCase().includes('air'))?`<div class="included-item"><span class="included-icon">❄️</span><span class="included-val">All Rooms</span><span class="included-lbl">AC</span></div>`:''}
+            ${amens.some(a=>a.toLowerCase().includes('chef')||a.toLowerCase().includes('cook'))?`<div class="included-item"><span class="included-icon">👨‍🍳</span><span class="included-val">On Request</span><span class="included-lbl">Chef</span></div>`:''}
+            ${amens.some(a=>a.toLowerCase().includes('parking'))?`<div class="included-item"><span class="included-icon">🚗</span><span class="included-val">Free</span><span class="included-lbl">Parking</span></div>`:''}
+            ${amens.some(a=>a.toLowerCase().includes('bbq'))?`<div class="included-item"><span class="included-icon">🔥</span><span class="included-val">Included</span><span class="included-lbl">BBQ</span></div>`:''}
+          </div>
+        </div>
+
+        <!-- Availability Calendar -->
+        <div class="prop-section">
+          <h3 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            Availability
+            <span style="font-size:.74rem;font-weight:500;color:var(--gray-400)">Click date to set check-in</span>
+          </h3>
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+            <span class="cal-month-name" id="cal-month-name">—</span>
+            <button class="cal-nav-btn" onclick="calNext()">›</button>
+          </div>
+          <div id="avail-calendar"></div>
+          <div class="cal-legend">
+            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-avail"></span>Available</span>
+            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-booked"></span>Booked</span>
+            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-sel"></span>Selected</span>
+          </div>
+        </div>
+
+        <!-- Map / Location -->
+        <div class="prop-section">
+          <h3 style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Location</h3>
+          <p style="margin-bottom:14px">
+            ${esc(p.location||'')} — ${esc((p.location||'').split(',').slice(-1)[0]?.trim()||'India')}
+            ${p.map_url ? ` · <a href="${esc(p.map_url)}" target="_blank" rel="noopener" style="color:var(--red,#8B1717);font-weight:600;text-decoration:underline">Open in Google Maps</a>` : ''}
+          </p>
+          <div class="map-wrap">
+            <iframe
+              src="https://maps.google.com/maps?q=${encodeURIComponent(p.location||'India')}&output=embed&z=12"
+              allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+          </div>
+        </div>
+
+        <!-- Nearby Attractions -->
+        ${buildNearbyHtml(p.location)}
+
+        <!-- Add-ons (dynamic, admin-editable) -->
+        ${(p.addons && p.addons.length)
+          ? `<div class="prop-section">
+              <h3>Add-on Services</h3>
+              <div class="addons-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+                ${p.addons.map(a => {
+                  const obj = (typeof a === 'string') ? { name: a } : a;
+                  return `<div style="border:1px solid var(--gray-200,#e5e7eb);border-radius:10px;padding:12px 14px;background:#fff">
+                    <div style="font-weight:700">${esc(obj.name || '')}</div>
+                    ${obj.description ? `<div style="font-size:.84rem;color:var(--gray-500,#6b7280);margin-top:3px">${esc(obj.description)}</div>` : ''}
+                    ${obj.price != null ? `<div style="font-weight:800;color:var(--red,#8B1717);margin-top:6px">₹${fmt(obj.price)}</div>` : ''}
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>`
+          : ''}
+
+        <!-- House Rules (dynamic) -->
+        <div class="prop-section">
+          <h3>House Rules</h3>
+          <ul class="rules-list">
+            ${renderRules(p.rules||[], p.checkin_time||'2:00 PM', p.checkout_time||'11:00 AM')}
+          </ul>
+        </div>
+
+        <!-- FAQ -->
+        <div class="prop-section">
+          <h3>Frequently Asked Questions</h3>
+          <div class="faq-list">${buildFaqHtml()}</div>
+        </div>
+
+        <!-- Reviews -->
+        <div class="prop-section" id="reviews-section">
+          <h3 style="display:flex;align-items:center;gap:8px">
+            ${STAR_SVG} ${avg}
+            <span style="font-weight:500;color:var(--gray-500);font-size:.95rem">· ${rcnt} Review${rcnt!==1?'s':''}</span>
+          </h3>
+          <div class="reviews-grid" id="reviews-grid">
+            ${reviews.length
+              ? reviews.map(r=>reviewCard(r)).join('')
+              : `<div style="color:var(--gray-400);grid-column:1/-1;padding:20px 0">No reviews yet — be the first to experience this stay!</div>`}
+          </div>
+
+          <!-- Review submit form -->
+          <div class="review-form" id="review-form-wrap">
+            ${api.isLoggedIn()
+              ? `<h4>Leave a Review</h4>
+                 <div class="star-picker" id="star-picker">
+                   <span onclick="setReviewRating(1)">★</span>
+                   <span onclick="setReviewRating(2)">★</span>
+                   <span onclick="setReviewRating(3)">★</span>
+                   <span onclick="setReviewRating(4)">★</span>
+                   <span onclick="setReviewRating(5)" class="active">★</span>
+                 </div>
+                 <textarea class="review-textarea" id="review-text" placeholder="Share your experience…" rows="3"></textarea>
+                 <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="submitReview()">Submit Review</button>`
+              : `<div style="text-align:center;padding:10px 0">
+                   <a href="login.html?redirect=${encodeURIComponent(location.href)}" class="btn btn-outline btn-sm">Login to leave a review</a>
+                 </div>`}
+          </div>
+        </div>
+
+      </div><!-- /LEFT -->
+
+      <!-- RIGHT: Booking widget (desktop) -->
+      <div class="prop-sticky">
+        <div class="bk-widget">
+          <div class="bk-price" id="bk-price-display">₹${fmt(p.price)} <span>/ night</span></div>
+          <div class="bk-rating">
+            ${STAR_SVG} <strong>${avg}</strong>
+            <span style="color:var(--gray-300)">·</span>
+            <span>${rcnt} review${rcnt!==1?'s':''}</span>
+            ${p.badge?`<span style="color:var(--gray-300)">·</span><span style="color:var(--red);font-weight:700">${esc(p.badge)}</span>`:''}
+          </div>
+          <div class="bk-dates">
+            <div class="bk-date-field">
+              <label for="bk-checkin">Check-in</label>
+              <input type="date" id="bk-checkin" onchange="updateBreakdown()"/>
+            </div>
+            <div class="bk-date-field">
+              <label for="bk-checkout">Check-out</label>
+              <input type="date" id="bk-checkout" onchange="updateBreakdown()"/>
+            </div>
+          </div>
+          <div class="bk-guests">
+            <label>Guests</label>
+            <div class="bk-guests-row">
+              <span class="bk-guest-count" id="guest-display">${GUESTS} guest${GUESTS!==1?'s':''}</span>
+              <div class="bk-guest-btns">
+                <button class="bk-guest-btn" id="guest-dec" onclick="changeGuests(-1)">−</button>
+                <span id="guest-num" style="font-weight:700;min-width:16px;text-align:center">${GUESTS}</span>
+                <button class="bk-guest-btn" id="guest-inc" onclick="changeGuests(1)">+</button>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full btn-lg" id="reserve-btn" onclick="initiateBooking()" style="margin-bottom:4px">Reserve Now</button>
+          <button class="bk-wa-btn" onclick="openWAEnquiry()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.533 5.861L.057 23.428a.75.75 0 0 0 .916.916l5.567-1.476A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.707 9.707 0 0 1-4.953-1.357l-.355-.21-3.676.974.986-3.589-.231-.369A9.712 9.712 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+            Enquire on WhatsApp
+          </button>
+          <div id="bk-breakdown" class="bk-breakdown"></div>
+          <div class="bk-note">You won't be charged yet · Free cancellation 7 days before</div>
+          <div class="trust-strip">
+            <span class="trust-item">✅ Free cancellation</span>
+            <span class="trust-item">🔒 Secure payment</span>
+            <span class="trust-item">💬 24/7 support</span>
+          </div>
+        </div>
+
+        <!-- Host card -->
+        <div class="host-card">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+            <div class="host-avatar">${esc((host.name||'S').charAt(0).toUpperCase())}</div>
+            <div>
+              <div style="font-weight:700;font-size:.95rem">${esc(host.name||'StayDekho Host')}</div>
+              <div style="font-size:.76rem;color:var(--gray-400)">
+                ${host.created_at?'Host since '+new Date(host.created_at).getFullYear():'Verified Host'}
+              </div>
+            </div>
+          </div>
+          <p style="font-size:.83rem;color:var(--gray-500);line-height:1.6;margin:0 0 14px">Every stay is personally managed by us — we're here for you 24/7.</p>
+          <a href="${waLink}" target="_blank" rel="noopener" class="btn btn-outline btn-full btn-sm" style="display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none">
+            💬 Message Host on WhatsApp
+          </a>
+        </div>
+      </div><!-- /RIGHT -->
+
+    </div><!-- /prop-layout -->
+
+    <!-- Similar Properties -->
+    <div style="margin-top:56px" id="similar-section">
+      <h3 style="font-size:1.2rem;font-weight:800;margin-bottom:20px">More Stays You'll Love</h3>
+
+      <div class="similar-grid" id="similar-grid">
+        <div style="grid-column:1/-1;color:var(--gray-400);text-align:center;padding:20px 0;font-size:.9rem">Loading…</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('property-loading').style.display = 'none';
+  const c = document.getElementById('property-content');
+  c.innerHTML = html;
+  c.style.display = '';
+
+  initDates();
+  initStarPicker();
+  initCalendar();
+  updateMobStickyBar();
+}
+
+/* ── Review card ──────────────────────────────────── */
+function reviewCard(r) {
+  const filled = Math.round(r.rating||5);
+  const stars  = '★'.repeat(filled)+'☆'.repeat(5-filled);
+  const name   = r.user_name||r.name||'Guest';
+  const date   = r.created_at
+    ? new Date(r.created_at).toLocaleDateString('en-IN',{month:'short',year:'numeric'}) : '';
+  return `<div class="review-card">
+    <div class="review-stars">${stars}</div>
+    <p class="review-text">${esc(r.text||r.comment||'Great stay!')}</p>
+    <div class="review-author">
+      <div class="review-avatar">${esc(name.charAt(0).toUpperCase())}</div>
+      <div><div class="review-name">${esc(name)}</div><div class="review-date">${esc(date)}</div></div>
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   STAR PICKER
+═══════════════════════════════════════════════════ */
+function initStarPicker() {
+  REVIEW_RATING = 5;
+  highlightStars(5);
+}
+function setReviewRating(n) {
+  REVIEW_RATING = n;
+  highlightStars(n);
+}
+function highlightStars(n) {
+  const stars = document.querySelectorAll('#star-picker span');
+  stars.forEach((s,i) => s.classList.toggle('active', i < n));
+}
+
+/* ── Submit review ────────────────────────────────── */
+async function submitReview() {
+  if (!PROP) return;
+  const text = document.getElementById('review-text')?.value?.trim();
+  if (!text) { showToast('Please write your experience', 'error'); return; }
+  const btn = document.querySelector('#review-form-wrap .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  try {
+    await api.createReview({ property_id: PROP.id, rating: REVIEW_RATING, text });
+    showToast('Review submitted! Thank you 🙏', 'success');
+    // Refresh reviews in grid
+    const { reviews } = await api.getProperty(PROP.id);
+    const grid = document.getElementById('reviews-grid');
+    if (grid) grid.innerHTML = reviews.length
+      ? reviews.map(r=>reviewCard(r)).join('')
+      : '<div style="color:var(--gray-400);grid-column:1/-1;padding:20px 0">No reviews yet.</div>';
+    // Hide form after submit
+    document.getElementById('review-form-wrap').innerHTML = '<div style="color:var(--gray-500);text-align:center;padding:10px 0">✅ Review submitted</div>';
+  } catch (e) {
+    showToast(e.message||'Failed to submit review', 'error');
+    if (btn) { btn.disabled=false; btn.textContent='Submit Review'; }
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SIMILAR PROPERTIES
+═══════════════════════════════════════════════════ */
+async function loadSimilarProperties(p) {
+  try {
+    const city = (p.location||'').split(',')[0]?.trim();
+    const { properties } = await api.listProperties({ q: city });
+    const others = (properties||[]).filter(x => x.id !== p.id).slice(0, 3);
+    const grid = document.getElementById('similar-grid');
+    if (!grid) return;
+    if (!others.length) {
+      document.getElementById('similar-section').style.display = 'none'; return;
+    }
+    grid.innerHTML = others.map(x => {
+      const img = x.main_image||FALLBACK_IMG;
+      return `<a class="sim-card" href="property.html?id=${x.id}">
+        <img src="${esc(img)}" alt="${esc(x.title||x.name)}" onerror="this.src='${FALLBACK_IMG}'"/>
+        <div class="sim-card-body">
+          <div class="sim-card-title">${esc(x.title||x.name)}</div>
+          <div class="sim-card-loc">📍 ${esc(x.location)}</div>
+          <div class="sim-card-price">₹${fmt(x.price)} <span>/ night</span></div>
+        </div>
+      </a>`;
+    }).join('');
+  } catch(_) {
+    const s = document.getElementById('similar-section');
+    if (s) s.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   DATES & PRICE BREAKDOWN
+═══════════════════════════════════════════════════ */
+function initDates() {
+  const today = new Date();
+  const defCI = new Date(today); defCI.setDate(today.getDate()+1);
+  const defCO = new Date(today); defCO.setDate(today.getDate()+4);
+  const ciStr = qs('checkin')  || defCI.toISOString().split('T')[0];
+  const coStr = qs('checkout') || defCO.toISOString().split('T')[0];
+
+  ['bk-checkin','bk-checkout','mob-checkin','mob-checkout'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.min = today.toISOString().split('T')[0];
+  });
+
+  const ci = document.getElementById('bk-checkin');
+  const co = document.getElementById('bk-checkout');
+  const mci = document.getElementById('mob-checkin');
+  const mco = document.getElementById('mob-checkout');
+  if (ci)  ci.value  = ciStr;
+  if (co)  co.value  = coStr;
+  if (mci) mci.value = ciStr;
+  if (mco) mco.value = coStr;
+
+  if (ci) ci.addEventListener('change', () => {
+    if (co && co.value <= ci.value) {
+      const d = new Date(ci.value); d.setDate(d.getDate()+3);
+      co.value = d.toISOString().split('T')[0];
+    }
+    if (co) co.min = ci.value;
+    updateBreakdown();
+  });
+
+  updateBreakdown();
+  updateMobTotal();
+}
+
+function calcNights(ci, co) {
+  if (!ci||!co) return 0;
+  const d1=new Date(ci), d2=new Date(co);
+  if (d2<=d1) return 0;
+  return Math.round((d2-d1)/86400000);
+}
+// Returns array of { date, price } for each night in [ci, co)
+function nightBreakdown(ci, co) {
+  if (!PROP || !ci || !co) return [];
+  const nights = [];
+  const d = new Date(ci);
+  const end = new Date(co);
+  while (d < end) {
+    const dateStr = d.toISOString().split('T')[0];
+    const custom  = DATE_PRICES[dateStr];
+    nights.push({ date: dateStr, price: (custom && custom.price) ? custom.price : PROP.price, isCustom: !!(custom && custom.price) });
+    d.setDate(d.getDate() + 1);
+  }
+  return nights;
+}
+
+function calcTotal(nights, ci, co) {
+  if (!PROP || !nights) return 0;
+  const breakdown = (ci && co) ? nightBreakdown(ci, co) : null;
+  const base = breakdown ? breakdown.reduce((s, n) => s + n.price, 0) : PROP.price * nights;
+  const gstRate = PROP.price > 7500 ? 0.18 : PROP.price > 1000 ? 0.12 : 0;
+  return base + Math.round(base * gstRate) + Math.round(base * 0.05);
+}
+
+function updateBreakdown() {
+  if (!PROP) return;
+  const ci = document.getElementById('bk-checkin')?.value;
+  const co = document.getElementById('bk-checkout')?.value;
+  const bd = document.getElementById('bk-breakdown');
+  if (!bd) return;
+  const nights = calcNights(ci, co);
+  if (!nights) { bd.innerHTML = ci&&co ? '<div style="color:var(--red);font-size:.82rem">Check-out must be after check-in</div>' : ''; return; }
+
+  const perNight = nightBreakdown(ci, co);
+  const base     = perNight.reduce((s, n) => s + n.price, 0);
+  const gstRate  = PROP.price > 7500 ? 0.18 : PROP.price > 1000 ? 0.12 : 0;
+  const gst      = Math.round(base * gstRate);
+  const svc      = Math.round(base * 0.05);
+  const total    = base + gst + svc;
+
+  // Update top price display — always show avg per night of selected range
+  const priceEl = document.getElementById('bk-price-display');
+  if (priceEl && nights > 0) {
+    const avgPerNight = Math.round(base / nights);
+    priceEl.innerHTML = `₹${fmt(avgPerNight)} <span>/ night</span>`;
+  }
+
+  // Per-night breakdown (show individual dates if ≤14 nights)
+  let nightsHtml;
+  if (nights <= 14) {
+    nightsHtml = perNight.map(n =>
+      `<div class="bk-row" style="font-size:.82rem">
+        <span style="color:var(--gray-500)">${n.date}</span>
+        <span>₹${fmt(n.price)}</span>
+      </div>`
+    ).join('');
+  } else {
+    const avgPrice = Math.round(base / nights);
+    nightsHtml = `<div class="bk-row"><span>₹${fmt(avgPrice)} × ${nights} night${nights>1?'s':''}</span><span>₹${fmt(base)}</span></div>`;
+  }
+
+  bd.innerHTML = `
+    ${nightsHtml}
+    <div class="bk-row"><span>Service fee</span><span>₹${fmt(svc)}</span></div>
+    ${gstRate ? `<div class="bk-row"><span>GST (${gstRate*100}%)</span><span>₹${fmt(gst)}</span></div>` : ''}
+    <div class="bk-row total"><span>Total</span><span>₹${fmt(total)}</span></div>`;
+}
+
+function changeGuests(delta) {
+  if (!PROP) return;
+  const max=PROP.max_guests||PROP.guests||20;
+  GUESTS=Math.max(1,Math.min(max,GUESTS+delta));
+  const d=document.getElementById('guest-display'), n=document.getElementById('guest-num');
+  if(d) d.textContent=`${GUESTS} guest${GUESTS!==1?'s':''}`;
+  if(n) n.textContent=GUESTS;
+  const dec=document.getElementById('guest-dec'), inc=document.getElementById('guest-inc');
+  if(dec) dec.disabled=GUESTS<=1; if(inc) inc.disabled=GUESTS>=max;
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE BOOKING SHEET
+═══════════════════════════════════════════════════ */
+function openMobSheet() {
+  // sync values from desktop widget
+  const ci=document.getElementById('bk-checkin')?.value;
+  const co=document.getElementById('bk-checkout')?.value;
+  const mci=document.getElementById('mob-checkin'), mco=document.getElementById('mob-checkout');
+  if(mci&&ci) mci.value=ci; if(mco&&co) mco.value=co;
+  const mgd=document.getElementById('mob-guest-display'), mgn=document.getElementById('mob-guest-num');
+  MOB_GUESTS=GUESTS;
+  if(mgd) mgd.textContent=`${MOB_GUESTS} guest${MOB_GUESTS!==1?'s':''}`;
+  if(mgn) mgn.textContent=MOB_GUESTS;
+  updateMobTotal();
+  document.getElementById('mob-sheet-overlay').classList.add('open');
+  document.getElementById('mob-sheet').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeMobSheet() {
+  document.getElementById('mob-sheet-overlay').classList.remove('open');
+  document.getElementById('mob-sheet').classList.remove('open');
+  document.body.style.overflow='';
+}
+function onMobDateChange() {
+  const mci=document.getElementById('mob-checkin'), mco=document.getElementById('mob-checkout');
+  if(mci&&mco&&mco.value&&mco.value<=mci.value) {
+    const d=new Date(mci.value); d.setDate(d.getDate()+3);
+    mco.value=d.toISOString().split('T')[0];
+  }
+  if(mci&&mco) mco.min=mci.value;
+  updateMobTotal();
+}
+function changeMobGuests(delta) {
+  if(!PROP) return;
+  const max=PROP.max_guests||PROP.guests||20;
+  MOB_GUESTS=Math.max(1,Math.min(max,MOB_GUESTS+delta));
+  const d=document.getElementById('mob-guest-display'), n=document.getElementById('mob-guest-num');
+  if(d) d.textContent=`${MOB_GUESTS} guest${MOB_GUESTS!==1?'s':''}`;
+  if(n) n.textContent=MOB_GUESTS;
+  const dec=document.getElementById('mob-guest-dec'), inc=document.getElementById('mob-guest-inc');
+  if(dec) dec.disabled=MOB_GUESTS<=1; if(inc) inc.disabled=MOB_GUESTS>=max;
+  updateMobTotal();
+}
+function updateMobTotal() {
+  if(!PROP) return;
+  const ci=document.getElementById('mob-checkin')?.value;
+  const co=document.getElementById('mob-checkout')?.value;
+  const el=document.getElementById('mob-sheet-total');
+  if(!el) return;
+  const nights=calcNights(ci,co);
+  if(!nights) { el.textContent=''; return; }
+  el.innerHTML=`<strong>₹${fmt(calcTotal(nights,ci,co))}</strong> total for ${nights} night${nights>1?'s':''}`;
+}
+function confirmMobBooking() {
+  // Sync mobile inputs to desktop widget then call booking
+  const mci=document.getElementById('mob-checkin')?.value;
+  const mco=document.getElementById('mob-checkout')?.value;
+  const ci=document.getElementById('bk-checkin'), co=document.getElementById('bk-checkout');
+  if(ci&&mci) ci.value=mci; if(co&&mco) co.value=mco;
+  GUESTS=MOB_GUESTS;
+  closeMobSheet();
+  initiateBooking();
+}
+
+/* ═══════════════════════════════════════════════════
+   BOOKING / RAZORPAY
+═══════════════════════════════════════════════════ */
+async function initiateBooking() {
+  if (!PROP) return;
+  if (!api.isLoggedIn()) {
+    showToast('Please login to book', 'error');
+    setTimeout(()=>{window.location.href='login.html?redirect='+encodeURIComponent(location.href);},900);
+    return;
+  }
+  const ci = document.getElementById('bk-checkin')?.value;
+  const co = document.getElementById('bk-checkout')?.value;
+  if (!ci||!co) { showToast('Please select check-in and check-out dates','error'); return; }
+  if (new Date(co)<=new Date(ci)) { showToast('Check-out must be after check-in','error'); return; }
+
+  const btn = document.getElementById('reserve-btn');
+  if (btn) { btn.disabled=true; btn.textContent='Processing…'; }
+
+  try {
+    const bookingRes = await api.createBooking({ property_id:PROP.id, checkin:ci, checkout:co, guests:GUESTS });
+    const booking = bookingRes.booking;
+    let orderRes = null;
+    try { orderRes = await api.createOrder(booking.id); } catch(payErr) {
+      // Razorpay not configured — booking saved, admin will confirm
+      showToast('Booking request sent! Our team will contact you shortly.','success');
+      setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${booking.id}`;},1500);
+      return;
+    }
+
+    if (orderRes?.order_id && orderRes?.key_id) {
+      api.openRazorpay({
+        order_id:orderRes.order_id, amount:orderRes.amount,
+        currency:orderRes.currency||'INR', key_id:orderRes.key_id,
+        booking:orderRes.booking||booking,
+        onSuccess:()=>{ showToast('Payment successful! Redirecting…','success'); setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${booking.id}`;},1200); },
+        onError:(err)=>{ showToast(err.message||'Payment cancelled','error'); if(btn){btn.disabled=false;btn.textContent='Reserve Now';} }
+      });
+    } else {
+      showToast('Booking request sent! Redirecting…','success');
+      setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${booking.id}`;},1200);
+    }
+  } catch(err) {
+    showToast(err.message||'Booking failed. Please try again.','error');
+    if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   WHATSAPP ENQUIRY
+═══════════════════════════════════════════════════ */
+function openWAEnquiry() {
+  if (!PROP) return;
+  const ci=document.getElementById('bk-checkin')?.value||'';
+  const co=document.getElementById('bk-checkout')?.value||'';
+  const datesPart=ci&&co?` Dates: ${ci} to ${co}.`:'';
+  const msg=encodeURIComponent(`Hi StayDekho! I'm interested in *${PROP.title}* (${PROP.location}).${datesPart} Guests: ${GUESTS}. Please share availability and pricing. 🏡`);
+  const wa=(window.SD||{}).whatsapp||'918769905983';
+  window.open(`https://wa.me/${wa}?text=${msg}`,'_blank','noopener');
+}
+
+/* ═══════════════════════════════════════════════════
+   CATEGORY GALLERY
+═══════════════════════════════════════════════════ */
+function getCatList() {
+  const seen = new Set();
+  const cats = ['All'];
+  CAT_IMAGES.forEach(i => {
+    if (i.cat && !seen.has(i.cat)) { seen.add(i.cat); cats.push(i.cat); }
+  });
+  return cats;
+}
+
+function buildChipsHtml(active) {
+  return getCatList().map(cat => {
+    const count = cat === 'All' ? CAT_IMAGES.length : CAT_IMAGES.filter(i => i.cat === cat).length;
+    return `<button class="cat-chip${cat === active ? ' active' : ''}"
+      onclick="handleChipClick('${cat.replace(/'/g,"\\'")}')">${esc(cat)}<span class="cat-chip-count">&thinsp;${count}</span></button>`;
+  }).join('');
+}
+
+function handleChipClick(cat) {
+  // Update chips on main page
+  document.querySelectorAll('.cat-tabs .cat-chip').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim().startsWith(cat));
+  });
+  openCatGallery(cat);
+}
+
+function openCatGallery(cat) {
+  cat = cat || 'All';
+  CG_ACTIVE_CAT = cat;
+  const modal = document.getElementById('cat-gallery-modal');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Tabs inside modal
+  document.getElementById('cg-cat-tabs').innerHTML = getCatList().map(c => {
+    const count = c === 'All' ? CAT_IMAGES.length : CAT_IMAGES.filter(i => i.cat === c).length;
+    return `<button class="cat-chip${c === cat ? ' active' : ''}"
+      onclick="switchCatTab('${c.replace(/'/g,"\\'")}')">${esc(c)}<span class="cat-chip-count">&thinsp;${count}</span></button>`;
+  }).join('');
+
+  renderCatBody(cat);
+  document.addEventListener('keydown', cgKeyHandler);
+}
+
+function switchCatTab(cat) {
+  CG_ACTIVE_CAT = cat;
+  document.querySelectorAll('#cg-cat-tabs .cat-chip').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim().startsWith(cat));
+  });
+  renderCatBody(cat);
+  document.getElementById('cat-gallery-modal').scrollTop = 0;
+}
+
+function renderCatBody(cat) {
+  const titleEl = document.getElementById('cg-modal-title');
+  const bodyEl  = document.getElementById('cg-body');
+
+  if (cat === 'All') {
+    titleEl.textContent = `All Photos (${CAT_IMAGES.length})`;
+    // Group by category
+    const groups = {};
+    CAT_IMAGES.forEach((img, flatIdx) => {
+      const c = img.cat || 'Other';
+      if (!groups[c]) groups[c] = [];
+      groups[c].push({ ...img, flatIdx });
+    });
+    bodyEl.innerHTML = Object.entries(groups).map(([c, imgs]) => `
+      <div class="cg-section">
+        <div class="cg-section-title">${esc(c)} &thinsp;·&thinsp; ${imgs.length} photo${imgs.length!==1?'s':''}</div>
+        <div class="cg-grid">
+          ${imgs.map(img => `<img src="${esc(img.url)}" alt="${esc(c)}"
+            onerror="this.src='${FALLBACK_IMG}'"
+            onclick="openLightboxFromCat(${img.flatIdx})"/>`).join('')}
+        </div>
+      </div>`).join('');
+  } else {
+    const imgs = CAT_IMAGES.map((img, i) => ({ ...img, flatIdx: i })).filter(i => i.cat === cat);
+    titleEl.textContent = `${cat} (${imgs.length})`;
+    if (!imgs.length) {
+      bodyEl.innerHTML = '<div class="cg-empty">No photos in this category.</div>';
+      return;
+    }
+    bodyEl.innerHTML = `<div class="cg-section"><div class="cg-grid">
+      ${imgs.map(img => `<img src="${esc(img.url)}" alt="${esc(cat)}"
+        onerror="this.src='${FALLBACK_IMG}'"
+        onclick="openLightboxFromCat(${img.flatIdx})"/>`).join('')}
+    </div></div>`;
+  }
+}
+
+function openLightboxFromCat(flatIdx) {
+  // Use full CAT_IMAGES for lightbox so arrows navigate correctly
+  IMAGES = CAT_IMAGES.map(i => i.url);
+  closeCatGallery();
+  openLightbox(flatIdx);
+}
+
+function closeCatGallery() {
+  document.getElementById('cat-gallery-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', cgKeyHandler);
+}
+
+function cgKeyHandler(e) {
+  if (e.key === 'Escape') closeCatGallery();
+}
+
+/* ═══════════════════════════════════════════════════
+   LIGHTBOX
+═══════════════════════════════════════════════════ */
+function openLightbox(idx) {
+  LB_IDX=idx;
+  document.getElementById('lightbox').classList.add('open');
+  updateLightboxImg();
+  document.addEventListener('keydown',lbKeyHandler);
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.removeEventListener('keydown',lbKeyHandler);
+}
+function closeLightboxOutside(e) { if(e.target===document.getElementById('lightbox'))closeLightbox(); }
+function updateLightboxImg() {
+  const img=document.getElementById('lb-img'), ctr=document.getElementById('lb-counter');
+  img.src=IMAGES[LB_IDX]||FALLBACK_IMG;
+  img.onerror=()=>{img.src=FALLBACK_IMG;};
+  ctr.textContent=`${LB_IDX+1} / ${IMAGES.length}`;
+}
+function prevImg(){LB_IDX=(LB_IDX-1+IMAGES.length)%IMAGES.length;updateLightboxImg();}
+function nextImg(){LB_IDX=(LB_IDX+1)%IMAGES.length;updateLightboxImg();}
+function lbKeyHandler(e){
+  if(e.key==='ArrowLeft')prevImg();
+  if(e.key==='ArrowRight')nextImg();
+  if(e.key==='Escape')closeLightbox();
+}
+
+/* ═══════════════════════════════════════════════════
+   SHARE + WISHLIST
+═══════════════════════════════════════════════════ */
+function shareProperty() {
+  if(navigator.share){navigator.share({title:document.title,url:location.href});}
+  else{navigator.clipboard.writeText(location.href);showToast('Link copied to clipboard!','success');}
+}
+async function toggleWishlistBtn() {
+  if(!PROP) return;
+  if(!api.isLoggedIn()){
+    showToast('Login to save to wishlist','error');
+    setTimeout(()=>{window.location.href='login.html?redirect='+encodeURIComponent(location.href);},900);
+    return;
+  }
+  const btn=document.getElementById('wish-btn');
+  try {
+    const {wishlisted}=await api.toggleWishlist(PROP.id);
+    btn.innerHTML=(wishlisted?HEART_F:HEART_O)+' '+(wishlisted?'Saved':'Save');
+    btn.classList.toggle('btn-primary',wishlisted);
+    showToast(wishlisted?'❤️ Saved to wishlist':'Removed from wishlist',wishlisted?'success':'');
+  } catch(e){showToast(e.message||'Action failed','error');}
+}
+
+/* ── Scroll to top + mobile sticky bar ─────────── */
+window.addEventListener('scroll',()=>{
+  const el=document.getElementById('scroll-top');
+  if(el) el.classList.toggle('visible',window.scrollY>400);
+  // Show mobile sticky bar after scrolling past gallery
+  const bar=document.getElementById('mob-sticky-bar');
+  if(bar){
+    const gal=document.getElementById('gallery-wrap');
+    const threshold = gal ? gal.offsetTop+gal.offsetHeight+60 : 300;
+    bar.style.display = (window.innerWidth<=1000 && window.scrollY>threshold) ? 'flex' : '';
+  }
+},{passive:true});
+
+/* ═══════════════════════════════════════════════════
+   NEARBY ATTRACTIONS
+═══════════════════════════════════════════════════ */
+const NEARBY_DATA = {
+  'Udaipur':   [
+    {icon:'🏰', name:'City Palace',          dist:'3.2 km', time:'12 min'},
+    {icon:'🚤', name:'Lake Pichola',          dist:'2.8 km', time:'10 min'},
+    {icon:'🌸', name:"Saheliyon ki Bari",     dist:'4.5 km', time:'18 min'},
+    {icon:'🛍️', name:'Hathi Pol Bazaar',      dist:'3.0 km', time:'13 min'},
+  ],
+  'Jaipur':    [
+    {icon:'🏰', name:'Amber Fort',            dist:'11 km',  time:'30 min'},
+    {icon:'🕌', name:'Hawa Mahal',            dist:'6 km',   time:'20 min'},
+    {icon:'🌟', name:'City Palace',           dist:'6.5 km', time:'22 min'},
+    {icon:'🛒', name:'Johari Bazaar',         dist:'5 km',   time:'18 min'},
+  ],
+  'Goa':       [
+    {icon:'🏖️', name:'Baga Beach',            dist:'2 km',   time:'8 min'},
+    {icon:'⛪',  name:'Basilica of Bom Jesus', dist:'12 km',  time:'25 min'},
+    {icon:'🍹', name:"Tito's Lane",           dist:'3 km',   time:'10 min'},
+    {icon:'💦', name:'Dudhsagar Falls',       dist:'60 km',  time:'1.5 hrs'},
+  ],
+  'Mussoorie': [
+    {icon:'🚡', name:'Gun Hill Ropeway',      dist:'1.5 km', time:'8 min'},
+    {icon:'💦', name:'Kempty Falls',          dist:'13 km',  time:'30 min'},
+    {icon:'🌲', name:'Camelback Road',        dist:'0.8 km', time:'5 min'},
+    {icon:'🏔️', name:'Lal Tibba Peak',        dist:'5 km',   time:'18 min'},
+  ],
+  'Jodhpur':   [
+    {icon:'🏰', name:'Mehrangarh Fort',       dist:'2 km',   time:'8 min'},
+    {icon:'🏛️', name:'Umaid Bhawan Palace',   dist:'4 km',   time:'15 min'},
+    {icon:'🌺', name:'Mandore Gardens',       dist:'8 km',   time:'20 min'},
+    {icon:'🛍️', name:'Sardar Market',         dist:'1.5 km', time:'6 min'},
+  ],
+};
+function buildNearbyHtml(location) {
+  const city = (location||'').split(',')[0].trim();
+  let spots = null;
+  for (const [k,v] of Object.entries(NEARBY_DATA)) {
+    if (city.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(city.toLowerCase())) {
+      spots = v; break;
+    }
+  }
+  if (!spots) return '';
+  return `<div class="prop-section">
+    <h3>Nearby Attractions</h3>
+    <div class="nearby-grid">
+      ${spots.map(s=>`<div class="nearby-item">
+        <span class="nearby-icon">${s.icon}</span>
+        <div><div class="nearby-name">${esc(s.name)}</div><div class="nearby-dist">${esc(s.dist)}</div></div>
+        <span class="nearby-badge">${esc(s.time)}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   FAQ
+═══════════════════════════════════════════════════ */
+const FAQ_LIST = [
+  {q:'Is the entire property private for our group?',
+   a:'Yes! All our properties are exclusively yours — no shared spaces with other guests. 100% private villa for your group only.'},
+  {q:'Can we get extra beds or mattresses?',
+   a:'Absolutely. Extra mattresses can be arranged on request at no extra charge. Please inform us at least 24 hours in advance.'},
+  {q:'Is a cook or catering available?',
+   a:"Yes, we can arrange a dedicated cook for breakfast, lunch and dinner as per your group's preferences. Charges apply based on group size."},
+  {q:'What is the check-in / check-out process?',
+   a:'Our team will welcome you at check-in with a full property briefing. Luggage can usually be stored if you arrive early. Checkout involves a quick walkthrough and key handover.'},
+  {q:'Can we host a party or event at the property?',
+   a:'Small group celebrations are welcome. For events with DJ/loud music or groups beyond stated capacity, prior written permission is required.'},
+  {q:'Is the property safe for children and elderly guests?',
+   a:'Yes! All properties are family-friendly. Pool areas have safety measures. Please inform us if you have young children or elderly guests so we can make special arrangements.'},
+];
+function buildFaqHtml() {
+  return FAQ_LIST.map((f,i)=>`
+    <div class="faq-item" id="faq-${i}">
+      <div class="faq-q" onclick="toggleFaq(${i})">
+        <span>${esc(f.q)}</span><span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">${esc(f.a)}</div>
+    </div>`).join('');
+}
+function toggleFaq(i) {
+  const el = document.getElementById('faq-'+i);
+  if (el) el.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════════════
+   AVAILABILITY CALENDAR
+═══════════════════════════════════════════════════ */
+let CAL_YEAR  = new Date().getFullYear();
+let CAL_MONTH = new Date().getMonth();
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function getBookedSet() {
+  const s = new Set();
+  (BOOKED_RANGES||[]).forEach(r => {
+    const ci = new Date(r.checkin+'T00:00:00');
+    const co = new Date(r.checkout+'T00:00:00');
+    for (let d=new Date(ci); d<co; d.setDate(d.getDate()+1)) s.add(d.toISOString().split('T')[0]);
+  });
+  return s;
+}
+function buildCalMonthHtml(year, month) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().split('T')[0];
+  const startDow = new Date(year,month,1).getDay();
+  const lastDate = new Date(year,month+1,0).getDate();
+  const booked = getBookedSet();
+  const ci = document.getElementById('bk-checkin')?.value||'';
+  const co = document.getElementById('bk-checkout')?.value||'';
+  let cells='';
+  for(let i=0;i<startDow;i++) cells+='<div class="cal-cell cal-empty"></div>';
+  for(let d=1;d<=lastDate;d++){
+    const dtStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt=new Date(dtStr+'T00:00:00');
+    const isPast=dt<today, isBooked=booked.has(dtStr);
+    let cls='cal-cell';
+    if(isPast) cls+=' cal-past';
+    else if(isBooked) cls+=' cal-booked';
+    else cls+=' cal-avail';
+    if(dtStr===todayStr) cls+=' cal-today';
+    if(dtStr===ci) cls+=' cal-ci';
+    if(dtStr===co) cls+=' cal-co';
+    if(ci&&co&&dtStr>ci&&dtStr<co) cls+=' cal-range';
+    const ev=(!isPast&&!isBooked)?` onclick="calPickDate('${dtStr}')"`:'' ;
+    cells+=`<div class="${cls}"${ev}>${d}</div>`;
+  }
+  return `<div class="cal-month-block">
+    <div class="cal-month-title">${MONTH_NAMES[month]} ${year}</div>
+    <div class="cal-dow-row">${['S','M','T','W','T','F','S'].map(x=>`<div class="cal-dow">${x}</div>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>
+  </div>`;
+}
+function renderAvailCalendar(){
+  const el=document.getElementById('avail-calendar');
+  const nm=document.getElementById('cal-month-name');
+  if(!el) return;
+  const ny=CAL_MONTH===11?CAL_YEAR+1:CAL_YEAR, nm2=CAL_MONTH===11?0:CAL_MONTH+1;
+  if(nm) nm.textContent=`${MONTH_NAMES[CAL_MONTH].slice(0,3)} – ${MONTH_NAMES[nm2].slice(0,3)} ${ny}`;
+  el.innerHTML=`<div class="cal-two-col">${buildCalMonthHtml(CAL_YEAR,CAL_MONTH)}${buildCalMonthHtml(ny,nm2)}</div>`;
+}
+function calPrev(){CAL_MONTH--;if(CAL_MONTH<0){CAL_MONTH=11;CAL_YEAR--;}renderAvailCalendar();}
+function calNext(){CAL_MONTH++;if(CAL_MONTH>11){CAL_MONTH=0;CAL_YEAR++;}renderAvailCalendar();}
+let CAL_PICK='start';
+function calPickDate(dateStr){
+  const ci=document.getElementById('bk-checkin');
+  const co=document.getElementById('bk-checkout');
+  if(!ci||!co) return;
+  if(CAL_PICK==='start'||(ci.value&&co.value)){
+    ci.value=dateStr;
+    const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+3);
+    co.value=d.toISOString().split('T')[0];
+    CAL_PICK='end';
+  } else {
+    if(dateStr<=ci.value){
+      ci.value=dateStr;
+      const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+3);
+      co.value=d.toISOString().split('T')[0];
+    } else { co.value=dateStr; CAL_PICK='start'; }
+  }
+  updateBreakdown(); updateMobStickyBar(); renderAvailCalendar();
+}
+function initCalendar(){
+  const t=new Date(); CAL_YEAR=t.getFullYear(); CAL_MONTH=t.getMonth(); CAL_PICK='start';
+  renderAvailCalendar();
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE STICKY BAR
+═══════════════════════════════════════════════════ */
+function updateMobStickyBar(){
+  if(!PROP) return;
+  const pe=document.getElementById('mob-s-price');
+  const ne=document.getElementById('mob-s-nights');
+  if(pe) pe.textContent=Number(PROP.price).toLocaleString('en-IN');
+  if(ne){
+    const ci=document.getElementById('bk-checkin')?.value;
+    const co=document.getElementById('bk-checkout')?.value;
+    const n=calcNights(ci,co);
+    ne.textContent=n?`₹${Number(calcTotal(n,ci,co)).toLocaleString('en-IN')} total · ${n} night${n!==1?'s':''}`:'';}
+}
+
+/* ── INIT ──────────────────────────────────────── */
+loadProperty();
+</script>
+</body>
+</html>

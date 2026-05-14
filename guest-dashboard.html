@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Trips — StayDekho</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ── 1. HEADER SCROLL FIX ── */
+    body { padding-top: 72px; background: #f9fafb; }
+    
+    #navbar, #navbar.nav-top, .site-header {
+      background-color: #7b1113 !important; 
+      border-bottom: none !important;
+      box-shadow: none !important;
+      transition: all 0.3s ease !important;
+      z-index: 1000 !important;
+    }
+    #navbar .nav-inner { background-color: transparent !important; }
+    #navbar .nav-links a { color: #ffffff !important; }
+    #navbar .logo-stay, #navbar .logo-dekh { color: #ffffff !important; }
+    #navbar .logo-o svg circle.lens, #navbar .logo-o svg line.handle { stroke: #ffffff !important; }
+    #navbar .nav-login { color: #ffffff !important; border-color: rgba(255,255,255,0.5) !important; background: transparent !important; }
+
+    #navbar.scrolled {
+      background-color: #ffffff !important;
+      box-shadow: 0 2px 14px rgba(0,0,0,.06) !important;
+    }
+    #navbar.scrolled .nav-links a { color: #4b5563 !important; }
+    #navbar.scrolled .logo-stay, #navbar.scrolled .logo-dekh { color: #b91c1c !important; }
+    #navbar.scrolled .logo-o svg circle.lens, #navbar.scrolled .logo-o svg line.handle { stroke: #b91c1c !important; }
+    #navbar.scrolled .nav-login { color: #4b5563 !important; border-color: #e5e7eb !important; background: transparent !important; }
+
+    /* ── 2. CLASSIC HERO SECTION ── */
+    .dashboard-hero {
+      background: linear-gradient(135deg, var(--red-dark, #6b1010), var(--red, #8B1717));
+      padding: 48px 0;
+    }
+
+    /* ── 3. HOVER 3D LIFT EFFECTS ── */
+    .stat-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #e5e7eb;
+    }
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+      border-color: #b91c1c;
+    }
+    .stat-card.red {
+      background: #b91c1c; color: #ffffff; border: none;
+    }
+    .stat-card.red .sub { color: rgba(255,255,255,0.8); }
+    .stat-card.red:hover { box-shadow: 0 12px 24px rgba(185,28,28,0.3); }
+
+    .booking-item {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .booking-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+      border-color: #fca5a5;
+    }
+    
+    .property-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .property-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+
+    /* ── 4. TABS & FORM STYLING ── */
+    .tab-content { display: none; animation: fadeIn 0.4s ease forwards; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #f9fafb;
+    }
+    .form-input:focus { border-color: #b91c1c; background: #ffffff; }
+
+    /* Sidebar */
+    .sidebar-nav a { border-radius: 8px; margin-bottom: 4px; transition: all 0.2s ease;}
+    .sidebar-nav a.active { background: #fee2e2 !important; color: #b91c1c !important; font-weight: 700;}
+    .sidebar-nav a:hover:not(.active) { background: #f3f4f6; padding-left: 20px;}
+    
+    .dashboard-sidebar { background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+    .dashboard-header h3 { font-size: 1.4rem; font-weight: 800; color: #1f2937; margin-bottom: 16px;}
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<section class="dashboard-hero">
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <div>
+      <h2 style="color:#ffffff;font-size: 2.2rem;font-weight: 800;margin-bottom:8px" id="greeting">Hi, Guest</h2>
+      <p style="color:rgba(255,255,255,.8);font-size: 1rem;font-weight: 500;">Manage your trips, saved properties and profile.</p>
+    </div>
+    <div>
+        <a href="listings.html" class="btn" style="background:#ffffff; color:#b91c1c; border-radius: 8px; padding: 12px 24px; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">Explore Stays →</a>
+    </div>
+  </div>
+</section>
+
+<section class="section-sm">
+  <div class="container">
+    <div class="dashboard-layout" style="align-items: start;">
+
+      <aside class="dashboard-sidebar" style="margin-top: -60px; z-index: 10;">
+        <div class="sidebar-profile" style="background: #b91c1c; color:#fff; border-radius: 12px; padding: 24px 16px; text-align: center; margin-bottom: 20px;">
+          <div class="sidebar-avatar" id="side-avatar" style="width:64px;height:64px;margin:0 auto 12px;font-size:24px;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.5);">?</div>
+          <div class="sidebar-name" id="side-name" style="font-size: 1.1rem; font-weight: 700;">—</div>
+          <div class="sidebar-email" id="side-email" style="font-size: 0.8rem; opacity: 0.8;">—</div>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#trips" class="active" onclick="switchTab(event, 'tab-trips', this)">My Trips</a>
+          <a href="#saved" onclick="switchTab(event, 'tab-saved', this)">Saved Properties</a>
+          <a href="#addons" onclick="switchTab(event, 'tab-addons', this)">Add-on Services</a>
+          <a href="#profile" onclick="switchTab(event, 'tab-profile', this)">Edit Profile</a>
+          <a href="#reviews" onclick="switchTab(event, 'tab-reviews', this)">My Reviews</a>
+          <a href="#" onclick="doLogout();return false" style="color:#b91c1c; border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 16px;">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="dashboard-main" style="padding-top: 20px;">
+
+        <div id="tab-trips" class="tab-content active">
+          
+          <div class="stats-row" style="margin-bottom: 40px;">
+            <div class="stat-card red">
+              <div class="label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px; margin-bottom:8px; opacity:0.9;">Total Trips</div>
+              <div class="value" id="stat-total" style="font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom:4px;">0</div>
+              <div class="sub">All bookings</div>
+            </div>
+            <div class="stat-card">
+              <div class="label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px; margin-bottom:8px; color:#9ca3af;">Upcoming</div>
+              <div class="value" id="stat-upcoming" style="font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom:4px; color:#1f2937;">0</div>
+              <div class="sub" style="color:#6b7280; font-size: 12px;">Coming up</div>
+            </div>
+            <div class="stat-card">
+              <div class="label" style="text-transform:uppercase; font-size:11px; letter-spacing:1px; margin-bottom:8px; color:#9ca3af;">Nights Stayed</div>
+              <div class="value" id="stat-nights" style="font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom:4px; color:#1f2937;">0</div>
+              <div class="sub" style="color:#6b7280; font-size: 12px;">Completed trips</div>
+            </div>
+          </div>
+
+          <div class="dashboard-header"><h3>Upcoming Trips</h3></div>
+          <div class="booking-list" id="upcoming-list" style="margin-bottom:40px;">
+              <div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px solid #e5e7eb;">Loading…</div>
+          </div>
+
+          <div class="dashboard-header"><h3>Past Trips</h3></div>
+          <div class="booking-list" id="past-list">
+              <div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">Loading…</div>
+          </div>
+        </div>
+
+        <div id="tab-saved" class="tab-content">
+          <div class="dashboard-header">
+            <h3 style="display:inline-block; margin-right:16px;">Saved Properties (<span id="stat-saved">0</span>)</h3>
+            <a href="listings.html" class="btn btn-outline btn-sm" style="border-radius:99px;">Explore more →</a>
+          </div>
+          <div class="properties-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))" id="saved-grid">
+            <div style="color:#9ca3af;padding:30px 20px; grid-column: 1/-1; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">Loading…</div>
+          </div>
+        </div>
+
+        <div id="tab-addons" class="tab-content">
+          <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h3 style="margin: 0;">Add-on Services</h3>
+            <button class="btn btn-primary btn-sm" style="border-radius:8px;" onclick="document.getElementById('addon-new').classList.toggle('hidden')">+ Request Add-on</button>
+          </div>
+          
+          <div id="addon-new" class="hidden" style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 10px 25px rgba(0,0,0,0.05);border:1px solid #fca5a5;margin-bottom:32px;">
+            <h4 style="font-size:16px; font-weight:700; margin-bottom:20px; color:#1f2937;">Request a New Service</h4>
+            
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="display:block; font-size:12px; font-weight:600; color:#4b5563; margin-bottom:6px; text-transform:uppercase;">For booking</label>
+              <select class="form-input" id="ao-booking"></select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="display:block; font-size:12px; font-weight:600; color:#4b5563; margin-bottom:6px; text-transform:uppercase;">Service Name</label>
+              <input class="form-input" id="ao-name" placeholder="e.g. Chef, Airport pickup, BBQ setup"/>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:24px;">
+              <label style="display:block; font-size:12px; font-weight:600; color:#4b5563; margin-bottom:6px; text-transform:uppercase;">Notes (optional)</label>
+              <textarea class="form-input" id="ao-note" rows="3" placeholder="Any special requests…"></textarea>
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%; padding: 12px; border-radius: 8px; font-size: 15px;" onclick="submitAddonRequest()">Submit Request</button>
+          </div>
+          
+          <h4 style="font-size:15px; font-weight:700; margin-bottom:16px; color:#1f2937;">Your Requests</h4>
+          <div id="addons-list" class="booking-list">
+            <div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">Loading…</div>
+          </div>
+        </div>
+
+        <div id="tab-profile" class="tab-content">
+          <div class="dashboard-header"><h3>Edit Profile</h3></div>
+          <div style="background:#fff;border-radius:12px;padding:32px;box-shadow:0 4px 15px rgba(0,0,0,0.03);border:1px solid #e5e7eb;max-width:600px">
+            
+            <div style="display:flex; align-items:center; gap:24px; margin-bottom:32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
+              <img id="pf-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=144&q=80" alt="avatar" style="width:90px; height:90px; border-radius:50%; object-fit:cover; border:3px solid #fee2e2; padding:3px;"/>
+              <div>
+                <label class="btn btn-outline" style="cursor:pointer; border-radius:99px; border-color:#b91c1c; color:#b91c1c;">
+                  Change photo
+                  <input type="file" id="pf-avatar-file" accept="image/*" style="display:none" onchange="uploadAvatarFile()"/>
+                </label>
+                <p style="font-size:13px;color:#9ca3af;margin-top:8px">JPG/PNG/WEBP, max 5 MB</p>
+              </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:20px;">
+              <label style="display:block; font-size:12px; font-weight:600; color:#4b5563; margin-bottom:6px; text-transform:uppercase;">Full Name</label>
+              <input class="form-input" id="pf-name"/>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:32px;">
+              <label style="display:block; font-size:12px; font-weight:600; color:#4b5563; margin-bottom:6px; text-transform:uppercase;">Phone Number</label>
+              <input class="form-input" id="pf-phone"/>
+            </div>
+            
+            <button class="btn btn-primary" style="padding: 12px 24px; border-radius: 8px; font-size: 15px;" onclick="saveProfile()">Save Changes</button>
+          </div>
+        </div>
+
+        <div id="tab-reviews" class="tab-content">
+          <div class="dashboard-header"><h3>My Reviews</h3></div>
+          <div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">
+            You haven't submitted any reviews yet. Complete a trip to share your experience!
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="position:fixed;bottom:20px;right:24px;background:#b91c1c;color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:99;">↑</button>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  const PIN = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+  const STAR = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#facc15" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  const HEART_FILL = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#b91c1c" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+
+  function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmt(n) { return Number(n||0).toLocaleString('en-IN'); }
+  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { month:'short', day:'numeric', year:'numeric' }) : ''; }
+
+  if (!api.isLoggedIn()) { api.requireLogin(); }
+
+  let myBookingsForAddons = [];
+
+  /* Header Scroll Fix */
+  document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+      const header = document.querySelector('#navbar') || document.querySelector('.site-header') || document.querySelector('header');
+      if (header) {
+        window.addEventListener('scroll', () => {
+          if (window.scrollY > 50) header.classList.add('scrolled');
+          else header.classList.remove('scrolled');
+        });
+        if (window.scrollY > 50) header.classList.add('scrolled');
+      }
+    }, 150); 
+  });
+
+  // TABS LOGIC
+  function switchTab(e, tabId, clickedEl) {
+    if(e) e.preventDefault();
+    
+    // Update Sidebar Active state
+    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+    clickedEl.classList.add('active');
+    
+    // Update Tab Content visibility
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  async function load() {
+    try {
+      const user = await api.me();
+      document.getElementById('greeting').textContent = `Hi, ${user.name.split(' ')[0]}`;
+      document.getElementById('side-avatar').textContent = user.name.charAt(0).toUpperCase();
+      document.getElementById('side-name').textContent = user.name;
+      document.getElementById('side-email').textContent = user.email;
+      document.getElementById('pf-name').value = user.name || '';
+      document.getElementById('pf-phone').value = user.phone || '';
+      if (user.avatar_url) document.getElementById('pf-avatar').src = user.avatar_url;
+
+      const [trips, wl, addons] = await Promise.all([
+        api.myTrips(), api.wishlist(),
+        api.listMyAddonRequests().catch(() => ({ requests: [] })),
+      ]);
+      myBookingsForAddons = trips.bookings || [];
+      renderBookings(trips.bookings || []);
+      renderWishlist(wl.properties || []);
+      renderAddons(addons.requests || [], trips.bookings || []);
+    } catch (err) {
+      showToast(err.message || 'Failed to load dashboard', 'error');
+    }
+  }
+
+  function renderAddons(requests, bookings) {
+    const sel = document.getElementById('ao-booking');
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = bookings.filter(b => b.check_out >= today && b.status !== 'cancelled');
+    sel.innerHTML = upcoming.length
+      ? upcoming.map(b => `<option value="${b.id}">${esc(b.title)} · ${fmtDate(b.check_in)}</option>`).join('')
+      : `<option value="">No upcoming bookings</option>`;
+
+    const list = document.getElementById('addons-list');
+    list.innerHTML = requests.length ? requests.map(r => `
+      <div class="booking-item" style="padding:16px;">
+        <div class="booking-info" style="flex:1">
+          <div class="booking-name" style="font-weight:700;">${esc(r.addon)}</div>
+          <div class="booking-dates" style="font-size:13px; color:#6b7280; margin-top:4px;">${esc(r.property_name || '—')} ${r.checkin ? '· ' + fmtDate(r.checkin) : ''}</div>
+          ${r.note ? `<div style="color:#9ca3af;font-size:13px;margin-top:8px;font-style:italic;">"${esc(r.note)}"</div>` : ''}
+          <span class="booking-status ${r.status==='approved'||r.status==='fulfilled'?'upcoming':r.status==='rejected'?'':'pending'}" style="margin-top:12px; display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">● ${r.status}</span>
+        </div>
+      </div>`).join('') : '<div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">No add-on requests yet.</div>';
+  }
+
+  async function submitAddonRequest() {
+    const booking_id = document.getElementById('ao-booking').value;
+    const addon      = document.getElementById('ao-name').value.trim();
+    const note       = document.getElementById('ao-note').value.trim();
+    if (!addon) return showToast('Please enter a service name', 'error');
+    try {
+      await api.createAddonRequest({ booking_id: booking_id || null, addon, note });
+      showToast('Request submitted', 'success');
+      document.getElementById('ao-name').value = '';
+      document.getElementById('ao-note').value = '';
+      document.getElementById('addon-new').classList.add('hidden');
+      load();
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function uploadAvatarFile() {
+    const file = document.getElementById('pf-avatar-file').files[0];
+    if (!file) return;
+    try {
+      const { url } = await api.uploadAvatar(file);
+      document.getElementById('pf-avatar').src = url;
+      showToast('Profile photo updated', 'success');
+    } catch (err) { showToast(err.message || 'Upload failed', 'error'); }
+  }
+
+  function renderBookings(bookings) {
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = bookings.filter(b => b.check_out >= today && b.status !== 'cancelled');
+    const past = bookings.filter(b => b.check_out < today || b.status === 'completed' || b.status === 'cancelled');
+
+    document.getElementById('stat-total').textContent = bookings.length;
+    document.getElementById('stat-upcoming').textContent = upcoming.length;
+    document.getElementById('stat-nights').textContent = past.reduce((n,b) => n + (b.nights||0), 0);
+
+    document.getElementById('upcoming-list').innerHTML = upcoming.length
+      ? upcoming.map(b => bookingItem(b, true)).join('')
+      : '<div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">No upcoming trips — <a href="listings.html" style="color:#b91c1c; font-weight:600; text-decoration:underline;">explore stays</a>.</div>';
+    
+    document.getElementById('past-list').innerHTML = past.length
+      ? past.map(b => bookingItem(b, false)).join('')
+      : '<div style="color:#9ca3af;padding:30px 20px; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">No past trips yet.</div>';
+  }
+
+  function bookingItem(b, isUpcoming) {
+    const statusClass = b.status === 'pending' ? 'pending' : b.status === 'completed' ? 'completed' : b.status === 'cancelled' ? '' : 'upcoming';
+    
+    let statusLabel = b.status;
+    let badgeColor = '#9ca3af'; 
+    let badgeBg = '#f3f4f6';
+    
+    if(b.status === 'confirmed') { statusLabel = 'Confirmed'; badgeColor = '#15803d'; badgeBg = '#dcfce7'; }
+    else if(b.status === 'pending') { statusLabel = 'Payment Pending'; badgeColor = '#b45309'; badgeBg = '#ffedd5'; }
+    else if(b.status === 'completed') { statusLabel = 'Completed'; badgeColor = '#1f2937'; badgeBg = '#e5e7eb'; }
+    else if(b.status === 'cancelled') { statusLabel = 'Cancelled'; badgeColor = '#b91c1c'; badgeBg = '#fee2e2'; }
+    
+    const cancelBtn = isUpcoming && b.status !== 'cancelled'
+      ? `<button class="btn btn-sm" style="border:1px solid #fca5a5; color:#b91c1c; background:transparent;" onclick="cancelBooking(${b.id})">Cancel</button>` : '';
+
+    // Bulletproof Image Fallback  
+    const imageUrl = b.main_image || b.image || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80';
+      
+    return `
+      <div class="booking-item" id="booking-${b.id}">
+        <img class="booking-img" src="${esc(imageUrl)}" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'" alt="${esc(b.title)}" style="width:140px; height:110px; object-fit:cover; border-radius:8px; flex-shrink:0;"/>
+        <div class="booking-info" style="flex:1;">
+          <div class="booking-name" style="font-size:1.15rem; font-weight:700; color:#1f2937; margin-bottom:4px;">${esc(b.title)}</div>
+          <div class="booking-dates" style="font-size:13px; color:#6b7280; margin-bottom:12px;">${PIN} ${esc(b.location||b.city||'')} · <strong>${fmtDate(b.check_in)} – ${fmtDate(b.check_out)}</strong> · ${b.nights} nights · ${b.guests} guests</div>
+          
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+             <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; padding:4px 10px; border-radius:99px; color:${badgeColor}; background:${badgeBg};">● ${statusLabel}</span>
+             <div class="booking-actions" style="display:flex; gap:8px;">
+              <a href="property.html?id=${b.property_id}" class="btn btn-primary btn-sm" style="border-radius:6px;">View Stay</a>
+              ${cancelBtn}
+            </div>
+          </div>
+        </div>
+        <div class="booking-amount" style="text-align:right; font-size:1.25rem; font-weight:800; color:#1f2937;">₹${fmt(b.total)}</div>
+      </div>`;
+  }
+
+  function renderWishlist(items) {
+    document.getElementById('stat-saved').textContent = items.length;
+    const grid = document.getElementById('saved-grid');
+    if (!items.length) { grid.innerHTML = '<div style="color:#9ca3af;padding:30px 20px; grid-column: 1/-1; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">Nothing saved yet. <a href="listings.html" style="color:#b91c1c; font-weight:600; text-decoration:underline;">Explore</a></div>'; return; }
+    
+    grid.innerHTML = items.map(p => `
+      <a href="property.html?id=${p.id}" class="property-card" style="display:block; text-decoration:none; color:inherit; background:#fff; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+        <div class="card-img-wrap" style="position:relative; aspect-ratio:4/3; overflow:hidden;">
+          <img src="${esc(p.main_image)}" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'" alt="${esc(p.title)}" loading="lazy" style="width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease;"/>
+          <button class="card-wishlist active" data-property-id="${p.id}" onclick="event.preventDefault();event.stopPropagation();unsave(${p.id},this)" style="position:absolute; top:12px; right:12px; background:#fff; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">${HEART_FILL}</button>
+        </div>
+        <div class="card-body" style="padding:16px;">
+          <div class="card-location" style="font-size:12px; color:#6b7280; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">${PIN} ${esc(p.location||p.city||'')}</div>
+          <div class="card-title" style="font-size:15px; font-weight:700; color:#1f2937; margin-bottom:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(p.title)}</div>
+          <div class="card-footer" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f3f4f6; padding-top:12px;">
+            <div class="card-price" style="font-weight:800; font-size:15px; color:#b91c1c;">₹${fmt(p.price)} <span style="font-size:12px; font-weight:500; color:#9ca3af;">/ night</span></div>
+            <div class="card-rating" style="font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px;"><span class="star">${STAR}</span> ${p.rating||'—'}</div>
+          </div>
+        </div>
+      </a>`).join('');
+  }
+
+  async function unsave(id, btn) {
+    try {
+      await api.toggleWishlist(id);
+      btn.closest('.property-card').remove();
+      const el = document.getElementById('stat-saved');
+      el.textContent = Math.max(0, Number(el.textContent) - 1);
+      showToast('Removed from wishlist', '');
+      
+      if(document.getElementById('saved-grid').children.length === 0) {
+        document.getElementById('saved-grid').innerHTML = '<div style="color:#9ca3af;padding:30px 20px; grid-column: 1/-1; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">Nothing saved yet. <a href="listings.html" style="color:#b91c1c; font-weight:600; text-decoration:underline;">Explore</a></div>';
+      }
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function cancelBooking(id) {
+    if (!confirm('Cancel this booking?')) return;
+    try {
+      await api.cancelBooking(id);
+      showToast('Booking cancelled', 'success');
+      const fresh = await api.myTrips();
+      renderBookings(fresh.bookings || []);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function saveProfile() {
+    try {
+      await api.updateMe({
+        name: document.getElementById('pf-name').value.trim(),
+        phone: document.getElementById('pf-phone').value.trim()
+      });
+      showToast('Profile updated', 'success');
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  window.cancelBooking = cancelBooking;
+  window.unsave = unsave;
+  window.saveProfile = saveProfile;
+  window.submitAddonRequest = submitAddonRequest;
+  window.uploadAvatarFile   = uploadAvatarFile;
+
+  load();
+
+  window.addEventListener('scroll', () => {
+    const scrollTopBtn = document.getElementById('scroll-top');
+    if(scrollTopBtn) {
+        scrollTopBtn.classList.toggle('visible', window.scrollY > 300);
+        if(window.scrollY > 300) {
+            scrollTopBtn.style.opacity = '1';
+            scrollTopBtn.style.pointerEvents = 'auto';
+        } else {
+            scrollTopBtn.style.opacity = '0';
+            scrollTopBtn.style.pointerEvents = 'none';
+        }
+    }
+  }, { passive: true });
+</script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cancellation Policy — StayDekho</title>
+  <meta name="description" content="Understand StayDekho's cancellation and refund policies. Flexible, Moderate, and Strict options explained clearly."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ── HEADER OVERRIDE FIX (CSS) ── */
+    #nav-placeholder {
+      position: relative;
+      z-index: 1000;
+    }
+
+    /* ── CANCELLATION HERO ── */
+    .cancel-hero {
+      background: linear-gradient(150deg, var(--red-vdark, #5a0c0e) 0%, var(--red-dark, #7b1113) 40%, var(--red, #b91c1c) 100%);
+      padding: 100px 0 48px; /* Added top padding to ensure it doesn't hide behind header */
+      min-height: 180px; display: flex; align-items: center;
+      position: relative; overflow: hidden;
+    }
+    .cancel-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .cancel-hero-content { position: relative; }
+    .cancel-hero h1 { color: #ffffff; font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin-bottom: 8px; }
+    .cancel-hero .last-updated { color: rgba(255,255,255,.8); font-size: 13px; margin: 0; }
+
+    /* ── POLICY CARDS ── */
+    .policy-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+      margin-top: 12px;
+    }
+    .policy-card {
+      background: #ffffff; border-radius: 12px; padding: 32px 24px;
+      border: 2px solid #e5e7eb;
+      transition: box-shadow 0.3s, transform 0.3s, border-color 0.3s;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .policy-card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.1); transform: translateY(-4px); }
+    .policy-card.featured { border-color: #b91c1c; }
+    .policy-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .policy-card h3 { font-size: 1.2rem; font-weight: 700; color: #1f2937; margin: 0; }
+    .strictness-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 99px;
+      font-size: 11px; font-weight: 700; letter-spacing: .4px; white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-flexible { background: #dcfce7; color: #16a34a; }
+    .badge-moderate { background: #fef9c3; color: #a16207; }
+    .badge-strict   { background: #fee2e2; color: #b91c1c; }
+
+    .refund-timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-step { display: flex; gap: 14px; position: relative; padding-bottom: 20px; }
+    .timeline-step:last-child { padding-bottom: 0; }
+    .timeline-dot { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .timeline-dot-circle {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid #b91c1c; background: #ffffff; flex-shrink: 0;
+    }
+    .timeline-dot-line { width: 2px; flex: 1; background: #e5e7eb; margin-top: 4px; }
+    .timeline-step:last-child .timeline-dot-line { display: none; }
+    .timeline-body { flex: 1; }
+    .timeline-period { font-size: 12px; font-weight: 700; color: #b91c1c; margin-bottom: 2px; text-transform: uppercase; letter-spacing: .4px; }
+    .timeline-desc { font-size: 13px; color: #4b5563; line-height: 1.5; margin: 0; }
+
+    /* ── HOW REFUNDS WORK ── */
+    .refund-steps-list { display: flex; flex-direction: column; gap: 20px; margin-top: 12px; counter-reset: step; }
+    .refund-step {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 24px; background: #ffffff; border-radius: 12px;
+      border: 1px solid #e5e7eb;
+    }
+    .refund-step-num {
+      counter-increment: step;
+      width: 36px; height: 36px; border-radius: 50%; background: #b91c1c;
+      color: #ffffff; font-weight: 800; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .refund-step-num::before { content: counter(step); }
+    .refund-step-body h4 { font-size: 0.95rem; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+    .refund-step-body p { font-size: 13px; color: #4b5563; margin: 0; line-height: 1.6; }
+
+    /* ── EXCEPTIONS ── */
+    .exceptions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 12px; }
+    .exception-item {
+      background: #f9fafb; border-radius: 8px; padding: 20px 24px;
+      border-left: 3px solid #b91c1c; display: flex; gap: 14px; align-items: flex-start;
+    }
+    .exception-item svg { color: #b91c1c; flex-shrink: 0; margin-top: 2px; }
+    .exception-item h4 { font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+    .exception-item p { font-size: 13px; color: #4b5563; margin: 0; line-height: 1.5; }
+
+    /* ── FAQ ACCORDION ── */
+    .faq-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .faq-item { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; }
+    .faq-item summary {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 20px 24px; cursor: pointer; font-weight: 600; font-size: 14px;
+      color: #1f2937; list-style: none; user-select: none;
+      transition: background 0.3s;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary:hover { background: #f9fafb; }
+    .faq-item[open] summary { background: #fee2e2; color: #b91c1c; }
+    .faq-chevron { flex-shrink: 0; transition: transform 0.3s; color: #9ca3af; }
+    .faq-item[open] .faq-chevron { transform: rotate(180deg); color: #b91c1c; }
+    .faq-answer {
+      padding: 0 24px 20px; font-size: 14px; color: #4b5563; line-height: 1.7;
+      border-top: 1px solid #e5e7eb;
+    }
+    .faq-answer p { margin: 12px 0 0; color: #4b5563; }
+
+    @media (max-width: 768px) {
+      .policy-grid { grid-template-columns: 1fr; }
+      .exceptions-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<section class="cancel-hero">
+  <div class="container">
+    <div class="cancel-hero-content">
+      <div class="eyebrow" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);color:#ffffff;padding:5px 14px;border-radius:99px;font-size:12px;font-weight:600;margin-bottom:16px;border:1px solid rgba(255,255,255,.25);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Policy Document
+      </div>
+      <h1>Cancellation Policy</h1>
+      <p class="last-updated">Last updated: January 2026</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding: 64px 0;">
+  <div class="container">
+    <div class="section-header reveal" style="margin-bottom: 32px;">
+      <div>
+        <div class="eyebrow" style="color: #b91c1c; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Policy Options</div>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #1f2937; margin: 0 0 8px;">Choose Your Policy Type</h2>
+        <p style="color: #4b5563; margin: 0;">Each property listing specifies which cancellation policy applies at the time of booking.</p>
+      </div>
+    </div>
+
+    <div class="policy-grid stagger">
+
+      <div class="policy-card">
+        <div class="policy-card-header">
+          <h3>Flexible</h3>
+          <span class="strictness-badge badge-flexible">Low Risk</span>
+        </div>
+        <p style="font-size:13px;color:#4b5563;margin:0;">Best for guests who may need to change plans. Offers the most generous refund window.</p>
+        <div class="refund-timeline">
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle" style="background:#b91c1c;border-color:#b91c1c;"></div>
+              <div class="timeline-dot-line"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">More than 24 hrs before check-in</div>
+              <p class="timeline-desc">Full refund of the booking amount, no questions asked.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle"></div>
+              <div class="timeline-dot-line"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">Within 24 hrs of check-in</div>
+              <p class="timeline-desc">50% refund of the total booking amount.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">After check-in</div>
+              <p class="timeline-desc">No refund for nights already used.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="policy-card featured">
+        <div class="policy-card-header">
+          <h3>Moderate</h3>
+          <span class="strictness-badge badge-moderate">Medium Risk</span>
+        </div>
+        <p style="font-size:13px;color:#4b5563;margin:0;">A balanced option offering reasonable protection for both guest and host. Most common policy.</p>
+        <div class="refund-timeline">
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle" style="background:#b91c1c;border-color:#b91c1c;"></div>
+              <div class="timeline-dot-line"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">More than 5 days before check-in</div>
+              <p class="timeline-desc">Full refund of the booking amount.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle"></div>
+              <div class="timeline-dot-line"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">1–5 days before check-in</div>
+              <p class="timeline-desc">50% refund of the total booking amount.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">After check-in</div>
+              <p class="timeline-desc">No refund for nights already used.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="policy-card">
+        <div class="policy-card-header">
+          <h3>Strict</h3>
+          <span class="strictness-badge badge-strict">High Risk</span>
+        </div>
+        <p style="font-size:13px;color:#4b5563;margin:0;">Applied to premium and high-demand properties. Limited refund windows once booked.</p>
+        <div class="refund-timeline">
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle" style="background:#b91c1c;border-color:#b91c1c;"></div>
+              <div class="timeline-dot-line"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">More than 14 days before check-in</div>
+              <p class="timeline-desc">Full refund of the booking amount.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle"></div>
+              <div class="timeline-dot-line"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">7–14 days before check-in</div>
+              <p class="timeline-desc">50% refund of the total booking amount.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot">
+              <div class="timeline-dot-circle"></div>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-period">Fewer than 7 days before check-in</div>
+              <p class="timeline-desc">No refund. Booking amount is fully forfeited.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <p style="font-size:13px;color:#9ca3af;margin-top:20px;text-align:center;">Service fees are non-refundable in all policy types unless we cancel the booking.</p>
+  </div>
+</section>
+
+<section class="section" style="background:#f9fafb;border-top:1px solid #e5e7eb;padding-top:56px;padding-bottom:56px;">
+  <div class="container">
+    <div class="section-header reveal" style="margin-bottom:28px;">
+      <div>
+        <div class="eyebrow" style="color: #b91c1c; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Refund Process</div>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #1f2937; margin: 0 0 8px;">How Refunds Work</h2>
+        <p style="color: #4b5563; margin: 0;">Once a cancellation is initiated, here is what happens next.</p>
+      </div>
+    </div>
+    <div class="refund-steps-list stagger">
+      <div class="refund-step">
+        <div class="refund-step-num"></div>
+        <div class="refund-step-body">
+          <h4>Initiate the Cancellation</h4>
+          <p>Log in to your StayDekho account, go to "My Bookings", and select the booking you wish to cancel. Click "Cancel Booking" and confirm your choice.</p>
+        </div>
+      </div>
+      <div class="refund-step">
+        <div class="refund-step-num"></div>
+        <div class="refund-step-body">
+          <h4>Refund Eligibility is Calculated</h4>
+          <p>Our system automatically calculates the refund amount based on the property's cancellation policy and the time remaining before your check-in date.</p>
+        </div>
+      </div>
+      <div class="refund-step">
+        <div class="refund-step-num"></div>
+        <div class="refund-step-body">
+          <h4>Confirmation Email Sent</h4>
+          <p>You will receive a cancellation confirmation email with the exact refund amount and the timeline for when it will be credited to your account.</p>
+        </div>
+      </div>
+      <div class="refund-step">
+        <div class="refund-step-num"></div>
+        <div class="refund-step-body">
+          <h4>Refund Credited to Original Payment Method</h4>
+          <p>Refunds are processed to the original payment method (credit/debit card, UPI, net banking, or wallet). Processing typically takes 3–5 business days, though your bank may take an additional 2–3 days to reflect the amount.</p>
+        </div>
+      </div>
+      <div class="refund-step">
+        <div class="refund-step-num"></div>
+        <div class="refund-step-body">
+          <h4>Contact Support if Delayed</h4>
+          <p>If you have not received your refund within 7 business days, please contact our support team at support@staydekho.com with your booking reference number.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding: 64px 0;">
+  <div class="container">
+    <div class="section-header reveal" style="margin-bottom:28px;">
+      <div>
+        <div class="eyebrow" style="color: #b91c1c; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Special Cases</div>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #1f2937; margin: 0 0 8px;">Exceptions to the Policy</h2>
+        <p style="color: #4b5563; margin: 0;">Certain circumstances may qualify for full refunds outside the standard policy windows.</p>
+      </div>
+    </div>
+    <div class="exceptions-grid stagger">
+      <div class="exception-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div>
+          <h4>Force Majeure</h4>
+          <p>Natural disasters, government travel bans, or other extraordinary events beyond your control may qualify for a full refund regardless of the policy type. Documentation will be required.</p>
+        </div>
+      </div>
+      <div class="exception-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <div>
+          <h4>Health &amp; Medical Emergencies</h4>
+          <p>In the event of a serious medical emergency, please contact our support team immediately with supporting documentation. We review these cases on a compassionate basis.</p>
+        </div>
+      </div>
+      <div class="exception-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>
+          <h4>COVID-19 Policy</h4>
+          <p>If a government-mandated lockdown or travel restriction prevents you from travelling, you are entitled to a full refund or date change, regardless of the policy type on the listing.</p>
+        </div>
+      </div>
+      <div class="exception-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div>
+          <h4>Property Not as Described</h4>
+          <p>If the property significantly differs from the listing at the time of check-in (missing amenities, safety issues), you may be entitled to a full refund. Report within 24 hours of arrival.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#f9fafb;border-top:1px solid #e5e7eb;padding-top:56px;padding-bottom:64px;">
+  <div class="container">
+    <div class="section-header reveal" style="margin-bottom:28px;">
+      <div>
+        <div class="eyebrow" style="color: #b91c1c; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Common Questions</div>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #1f2937; margin: 0 0 8px;">Frequently Asked Questions</h2>
+      </div>
+    </div>
+    <div class="faq-list" style="max-width: 760px;">
+
+      <details class="faq-item">
+        <summary>
+          What if StayDekho cancels my booking?
+          <svg class="faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="faq-answer">
+          <p>If a host cancels your confirmed booking, you will receive a full refund of the total booking amount, including service fees, regardless of the cancellation policy. We will also help you find an alternative property. Hosts who cancel frequently are subject to penalties and may have their listings removed from StayDekho.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>
+          Can I change my dates instead of cancelling?
+          <svg class="faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="faq-answer">
+          <p>Yes. You can request a date change by going to "My Bookings" and selecting "Modify Dates". Date changes are subject to availability and any price difference for the new dates. If you modify within the cancellation window, the modification is treated as a new booking and the original booking may be subject to the cancellation policy.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>
+          What are service fees and are they refundable?
+          <svg class="faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="faq-answer">
+          <p>StayDekho charges a service fee to cover platform operations, payment processing, and guest support. Service fees are typically non-refundable when you initiate a cancellation, unless the host cancels or in exceptional circumstances reviewed by our team. The exact service fee amount is shown at checkout before you confirm your booking.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>
+          How do I initiate a cancellation?
+          <svg class="faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="faq-answer">
+          <p>To cancel a booking: log in to your StayDekho account &rarr; click "My Bookings" in the navigation &rarr; find the booking you want to cancel &rarr; click "View Details" &rarr; scroll to the bottom and click "Cancel Booking" &rarr; review the refund amount shown and confirm. You will receive an email confirmation immediately after.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="position:fixed;bottom:20px;right:20px;background:#b91c1c;color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:99;">↑</button>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Thoda delay dete hain taaki components.js apna header inject kar de
+    setTimeout(() => {
+      const header = document.querySelector('header') || document.querySelector('.site-header') || document.querySelector('.navbar');
+      
+      if (header) {
+        // Page load hone par immediately Dark Red color lagayenge
+        header.style.setProperty('background-color', '#7b1113', 'important');
+        header.style.setProperty('transition', 'background-color 0.3s ease', 'important');
+        
+        // Scroll event listener (Taki niche scroll karne par white ho jaye)
+        window.addEventListener('scroll', () => {
+          if (window.scrollY > 50) {
+            header.style.setProperty('background-color', '#ffffff', 'important');
+          } else {
+            header.style.setProperty('background-color', '#7b1113', 'important');
+          }
+        });
+      }
+    }, 150); // 150ms ka delay
+  });
+
+  window.addEventListener('scroll', () => {
+    const scrollTopBtn = document.getElementById('scroll-top');
+    if (window.scrollY > 400) {
+      scrollTopBtn.style.opacity = '1';
+      scrollTopBtn.style.pointerEvents = 'auto';
+    } else {
+      scrollTopBtn.style.opacity = '0';
+      scrollTopBtn.style.pointerEvents = 'none';
+    }
+  }, { passive: true });
+
+  document.body.style.opacity = '0';
+  window.addEventListener('load', () => {
+    document.body.style.transition = 'opacity .4s ease';
+    document.body.style.opacity = '1';
+  });
+</script>
+</body>
+</html>

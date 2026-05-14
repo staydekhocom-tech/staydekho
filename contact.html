@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contact Us — StayDekho</title>
+  <meta name="description" content="Get in touch with StayDekho. We're here to help with bookings, host enquiries, and everything in between."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ── Page hero ── */
+    .page-hero {
+      background: linear-gradient(135deg, #8B1717 0%, #6b1010 60%, #3d0808 100%);
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      padding: 70px 0 50px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .page-hero .container { position: relative; z-index: 1; }
+    .page-hero h1 { color: #fff; font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 800; margin: 0 0 12px; }
+    .page-hero p { color: rgba(255,255,255,.8); font-size: 1.05rem; max-width: 480px; margin: 0 auto; }
+    .page-hero .eyebrow { color: rgba(255,255,255,.65); font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+    /* ── Two-column contact layout ── */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 48px;
+      align-items: start;
+    }
+    @media (max-width: 860px) { .contact-layout { grid-template-columns: 1fr; gap: 32px; } }
+
+    /* ── Form ── */
+    .contact-form-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.07);
+    }
+    .contact-form-card h2 { font-size: 1.4rem; font-weight: 800; margin: 0 0 6px; }
+    .contact-form-card .form-subtitle { font-size: .9rem; color: #777; margin: 0 0 28px; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 540px) { .form-row { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e8d8d8;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-family: inherit;
+      color: #1a1a1a;
+      background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+      box-sizing: border-box;
+      appearance: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #8B1717;
+      box-shadow: 0 0 0 3px rgba(139,23,23,.1);
+    }
+    .form-group textarea { resize: vertical; min-height: 130px; }
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B1717' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    .form-submit-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    /* ── Contact info cards ── */
+    .contact-info-stack { display: flex; flex-direction: column; gap: 16px; }
+    .info-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 14px;
+      padding: 20px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      box-shadow: 0 2px 10px rgba(0,0,0,.05);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .info-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(139,23,23,.1); }
+    .info-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #fff5f5;
+      color: #8B1717;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .info-body { flex: 1; min-width: 0; }
+    .info-label { font-size: .75rem; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+    .info-value { font-size: .95rem; font-weight: 600; color: #1a1a1a; word-break: break-word; }
+    .info-sub { font-size: .8rem; color: #888; margin-top: 2px; }
+
+    /* ── Office locations ── */
+    .offices-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+    @media (max-width: 768px) { .offices-grid { grid-template-columns: 1fr; } }
+    .office-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 14px;
+      padding: 24px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.05);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .office-card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(139,23,23,.1); }
+    .office-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #8B1717;
+      background: #fff5f5;
+      border: 1px solid #f5d8d8;
+      border-radius: 20px;
+      padding: 4px 10px;
+      margin-bottom: 12px;
+    }
+    .office-city { font-size: 1.15rem; font-weight: 800; margin: 0 0 6px; }
+    .office-address { font-size: .875rem; color: #666; line-height: 1.5; margin: 0 0 10px; }
+    .office-phone { font-size: .875rem; color: #8B1717; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+    /* ── Toast notification ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1a1a1a;
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: .9rem;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .35s;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast-icon { color: #4ade80; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- ── HERO ──────────────────────────────────────────────────── -->
+<section class="page-hero">
+  <div class="container">
+    <div class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+      We'd Love to Hear from You
+    </div>
+    <h1>Get in Touch</h1>
+    <p>Questions about a booking, a property, or anything else? Our team is here to help.</p>
+  </div>
+</section>
+
+<!-- ── CONTACT FORM + INFO ────────────────────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="contact-layout">
+
+      <!-- LEFT: Form -->
+      <div class="contact-form-card reveal">
+        <h2>Send Us a Message</h2>
+        <p class="form-subtitle">Fill in the form and we'll get back to you within 24 hours.</p>
+        <form id="contact-form" onsubmit="handleSubmit(event)" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="contact-name">Full Name</label>
+              <input type="text" id="contact-name" name="name" placeholder="Priya Sharma" required/>
+            </div>
+            <div class="form-group">
+              <label for="contact-phone">Phone Number</label>
+              <input type="tel" id="contact-phone" name="phone" placeholder="+91 98765 43210"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="contact-email">Email Address</label>
+            <input type="email" id="contact-email" name="email" placeholder="priya@example.com" required/>
+          </div>
+          <div class="form-group">
+            <label for="contact-subject">Subject</label>
+            <select id="contact-subject" name="subject" required>
+              <option value="" disabled selected>Select a topic…</option>
+              <option value="general">General Enquiry</option>
+              <option value="booking">Booking &amp; Reservations</option>
+              <option value="technical">Technical Support</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" name="message" placeholder="Tell us how we can help you…" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary form-submit-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Send Message
+          </button>
+        </form>
+      </div>
+
+      <!-- RIGHT: Info cards -->
+      <div class="contact-info-stack reveal">
+        <div class="info-card">
+          <div class="info-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+          </div>
+          <div class="info-body">
+            <div class="info-label">Phone</div>
+            <div class="info-value">+91 98765 43210</div>
+            <div class="info-sub">Mon–Sun, 9AM to 9PM IST</div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div class="info-body">
+            <div class="info-label">Email</div>
+            <div class="info-value">staydekho.com@gmail.com</div>
+            <div class="info-sub">We reply within 24 hours</div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="info-body">
+            <div class="info-label">Address</div>
+            <div class="info-value">6 Seth Ji Ki Bari, Madhuban</div>
+            <div class="info-sub">Udaipur, Rajasthan</div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="info-body">
+            <div class="info-label">Working Hours</div>
+            <div class="info-value">9:00 AM – 9:00 PM</div>
+            <div class="info-sub">7 days a week, including holidays</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── OFFICE LOCATIONS ───────────────────────────────────────── -->
+<section class="section" style="background:#fdfaf9;">
+  <div class="container">
+    <div class="section-header reveal" style="justify-content:center; text-align:center">
+      <div>
+        <div class="eyebrow">Where to Find Us</div>
+        <h2>Our Offices</h2>
+        <p>Three locations across India, all working towards one mission.</p>
+      </div>
+    </div>
+
+    <div class="offices-grid stagger" style="grid-template-columns: 1fr; max-width: 400px; margin: 48px auto 0;">
+      <div class="office-card">
+        <div class="office-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Headquarters
+        </div>
+        <div class="office-city">Udaipur</div>
+        <div class="office-address">6 Seth Ji Ki Bari,<br/>Madhuban,<br/>Udaipur, Rajasthan</div>
+        <div class="office-phone">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+          +91 87699 05983
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="alert" aria-live="polite">
+  <span class="toast-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  </span>
+  <span id="toast-msg">Message sent!</span>
+</div>
+
+<!-- Scroll to top -->
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  // Toast function
+  function showToast(message, duration) {
+    duration = duration || 4000;
+    var toast = document.getElementById('toast');
+    var toastMsg = document.getElementById('toast-msg');
+    toastMsg.textContent = message;
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, duration);
+  }
+
+  // Contact form submit handler
+  async function handleSubmit(e) {
+    e.preventDefault();
+    var name    = document.getElementById('contact-name').value.trim();
+    var email   = document.getElementById('contact-email').value.trim();
+    var phone   = document.getElementById('contact-phone').value.trim();
+    var subject = document.getElementById('contact-subject').value;
+    var message = document.getElementById('contact-message').value.trim();
+
+    if (!name || !email || !subject || !message) {
+      showToast('Please fill in all required fields.');
+      return;
+    }
+
+    var btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      await api.submitContact({ name, email, phone, subject, message });
+      document.getElementById('contact-form').reset();
+      showToast("Message sent! We'll get back to you within 24 hours.", 5000);
+    } catch (err) {
+      showToast('Something went wrong. Please try again.', 4000);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Message';
+    }
+  }
+
+  // Scroll-to-top button
+  window.addEventListener('scroll', function() {
+    document.getElementById('scroll-top').classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+
+  // Page fade-in
+  document.body.style.opacity = '0';
+  window.addEventListener('load', function() {
+    document.body.style.transition = 'opacity .4s ease';
+    document.body.style.opacity = '1';
+  });
+</script>
+</body>
+</html>

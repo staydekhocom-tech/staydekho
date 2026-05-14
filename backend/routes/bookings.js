@@ -1,0 +1,417 @@
+const router = require('express').Router();
+const db     = require('../db/database');
+const { protect, adminOnly } = require('../middleware/auth');
+const { sendEmail, bookingCancelledHtml } = require('../services/email');
+
+// GET /api/bookings  — admin gets all, user gets own
+router.get('/', protect, (req, res) => {
+  let rows;
+  if (req.user.role === 'admin') {
+    rows = db.prepare(`
+      SELECT b.*, u.name as user_name, u.email as user_email,
+             p.name as property_name, p.location as property_location
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      JOIN properties p ON b.property_id = p.id
+      ORDER BY b.created_at DESC
+    `).all();
+  } else {
+    rows = db.prepare(`
+      SELECT b.*, p.name as property_name, p.location as property_location,
+             p.images as property_images
+      FROM bookings b
+      JOIN properties p ON b.property_id = p.id
+      WHERE b.user_id = ?
+      ORDER BY b.created_at DESC
+    `).all(req.user.id);
+  }
+  res.json({ bookings: rows });
+});
+
+// GET /api/bookings/:id
+router.get('/:id', protect, (req, res) => {
+  const row = db.prepare(`
+    SELECT b.*, p.name as property_name, p.location as property_location,
+           p.price as property_price, p.images as property_images
+    FROM bookings b JOIN properties p ON b.property_id = p.id
+    WHERE b.id = ?
+  `).get(req.params.id);
+
+  if (!row) return res.status(404).json({ error: 'Booking not found' });
+  if (req.user.role !== 'admin' && row.user_id !== req.user.id)
+    return res.status(403).json({ error: 'Not authorized' });
+
+  res.json({ booking: { ...row, property_images: JSON.parse(row.property_images || '[]') } });
+});
+
+// POST /api/bookings  — create booking (returns order to pay)
+router.post('/', protect, (req, res) => {
+  const { property_id, checkin, checkout, guests, guest_name, guest_email, guest_phone } = req.body;
+  if (!property_id || !checkin || !checkout)
+    return res.status(400).json({ error: 'Property, check-in and check-out are required' });
+
+  const property = db.prepare('SELECT * FROM properties WHERE id = ? AND status = ?').get(property_id, 'Active');
+  if (!property) return res.status(404).json({ error: 'Property not found or inactive' });
+
+  const cin  = new Date(checkin);
+  const cout = new Date(checkout);
+  if (cout <= cin) return res.status(400).json({ error: 'Check-out must be after check-in' });
+
+  // Double-booking check: reject if any active booking overlaps these dates
+  const overlap = db.prepare(`
+    SELECT id FROM bookings
+    WHERE property_id = ?
+      AND status NOT IN ('cancelled', 'checked_out')
+      AND checkin < ? AND checkout > ?
+    LIMIT 1
+  `).get(property_id, checkout, checkin);
+  if (overlap) return res.status(409).json({ error: 'These dates are already booked. Please choose different dates.' });
+
+  const nights = Math.ceil((cout - cin) / (1000 * 60 * 60 * 24));
+
+  // Build per-night prices from date_prices table, fallback to property.price
+  const getDatePrice = db.prepare(
+    "SELECT price FROM date_prices WHERE property_id = ? AND date = ? AND blocked = 0 AND price IS NOT NULL"
+  );
+  let base = 0;
+  for (let i = 0; i < nights; i++) {
+    const d = new Date(cin);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const dp = getDatePrice.get(property_id, dateStr);
+    base += dp ? dp.price : property.price;
+  }
+
+  const avgNight = base / nights;
+  const gstRate  = avgNight > 7500 ? 0.18 : avgNight > 1000 ? 0.12 : 0;
+  const gst      = Math.round(base * gstRate);
+  const svc      = Math.round(base * 0.05);
+  const amount   = base + gst + svc;
+
+  const result = db.prepare(`
+    INSERT INTO bookings
+      (user_id, property_id, guest_name, guest_email, guest_phone, checkin, checkout, guests, nights, amount, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `).run(
+    req.user.id, property_id,
+    guest_name  || req.user.name,
+    guest_email || req.user.email,
+    guest_phone || req.user.phone || '',
+    checkin, checkout,
+    guests  || 1, nights, amount
+  );
+
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid);
+  res.status(201).json({ booking, amount, nights });
+});
+
+// PUT /api/bookings/:id/status  — admin update status
+router.put('/:id/status', protect, adminOnly, (req, res) => {
+  const { status } = req.body;
+  const allowed = ['pending','confirmed','cancelled','checked_in','checked_out'];
+  if (!allowed.includes(status))
+    return res.status(400).json({ error: `Status must be one of: ${allowed.join(', ')}` });
+
+  db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
+  res.json({ message: 'Status updated', status });
+});
+
+// GET /api/bookings/:id/invoice  — printable HTML tax invoice
+// Supports ?token=JWT for direct browser tab opening (no auth header possible)
+router.get('/:id/invoice', (req, res, next) => {
+  // Allow token via query param for this route only
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+}, protect, (req, res) => {
+  const row = db.prepare(`
+    SELECT b.*,
+           u.name  as user_name,  u.email as user_email, u.phone as user_phone,
+           p.name  as prop_name,  p.location as prop_location,
+           p.price as prop_price, p.beds as prop_beds, p.guests as prop_guests
+    FROM bookings b
+    JOIN users u    ON b.user_id    = u.id
+    JOIN properties p ON b.property_id = p.id
+    WHERE b.id = ?
+  `).get(req.params.id);
+
+  if (!row) return res.status(404).json({ error: 'Booking not found' });
+  if (req.user.role !== 'admin' && row.user_id !== req.user.id)
+    return res.status(403).json({ error: 'Not authorized' });
+
+  // ── GST + Service Fee — derive from stored booking.amount (source of truth)
+  const nights_   = row.nights || 1;
+  const totalAmt  = row.amount || 0;
+  // Determine GST rate from avg per-night price
+  const avgPpn    = totalAmt / nights_ / 1.23; // approx reverse (1 + 0.05 + 0.18)
+  const gstRate   = avgPpn > 7500 ? 0.18 : avgPpn > 1000 ? 0.12 : 0;
+  const gstPct    = Math.round(gstRate * 100);
+  // Back-calculate base from total: total = base * (1 + 0.05 + gstRate)
+  const divisor   = 1 + 0.05 + gstRate;
+  const baseAmt   = Math.round(totalAmt / divisor);
+  const svcAmt    = Math.round(baseAmt * 0.05);
+  const gstAmt    = totalAmt - baseAmt - svcAmt;
+  const halfGst   = Math.round(gstAmt / 2);
+  const pricePn   = nights_ > 0 ? Math.round(baseAmt / nights_) : baseAmt;
+
+  // ── Payment info ──────────────────────────────────────
+  const payment = db.prepare(`
+    SELECT * FROM payments WHERE booking_id = ? AND status = 'captured'
+    ORDER BY created_at DESC LIMIT 1
+  `).get(row.id);
+  // payments.amount stored in paise → divide by 100 to get rupees
+  const amtPaid   = payment
+    ? Math.round(payment.amount / 100)
+    : (row.status === 'confirmed' || row.status === 'checked_in' || row.status === 'checked_out'
+        ? row.amount : 0);
+  const balDue    = Math.max(0, row.amount - amtPaid);
+
+  // ── Helpers ───────────────────────────────────────────
+  const INR  = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0 });
+  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' }); } catch { return s || '—'; } };
+  const invoiceNo   = `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).padStart(4,'0')}`;
+  const invoiceDate = fmtD(row.created_at);
+  const statusColor = { confirmed:'#16a34a', pending:'#d97706', cancelled:'#dc2626', checked_in:'#2563eb', checked_out:'#6b7280' }[row.status] || '#6b7280';
+  const statusLabel = (row.status || 'pending').replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+  const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
+  const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
+  const gstin = process.env.BUSINESS_GSTIN || 'GSTIN: 08XXXXX0000X1ZX';  // update in .env
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Invoice ${invoiceNo} — StayDekho</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f4f4f4}
+  .page{max-width:760px;margin:24px auto;background:#fff;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,.1)}
+  /* Header */
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #8B1717}
+  .logo{font-size:22px;font-weight:800;color:#8B1717;letter-spacing:-.5px}
+  .logo span{color:#1a1a1a}
+  .company-info{font-size:11px;color:#555;margin-top:4px;line-height:1.7}
+  .inv-meta{text-align:right}
+  .inv-title{font-size:20px;font-weight:800;color:#8B1717;letter-spacing:.05em;text-transform:uppercase}
+  .inv-no{font-size:13px;font-weight:700;color:#1a1a1a;margin-top:4px}
+  .inv-date{font-size:11px;color:#777;margin-top:2px}
+  /* Status badge */
+  .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;margin-top:8px;background:${statusColor}}
+  /* Info grid */
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+  .info-box{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:16px}
+  .info-box h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8B1717;margin-bottom:10px}
+  .info-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;gap:8px}
+  .info-row .lbl{color:#777;flex-shrink:0}
+  .info-row .val{font-weight:600;text-align:right}
+  .info-row.highlight .val{color:#8B1717;font-size:13px}
+  /* Table */
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12.5px}
+  thead tr{background:#8B1717;color:#fff}
+  thead th{padding:10px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  thead th:last-child{text-align:right}
+  tbody tr{border-bottom:1px solid #f0f0f0}
+  tbody tr:hover{background:#fafafa}
+  tbody td{padding:11px 12px;vertical-align:top}
+  tbody td:last-child{text-align:right;font-weight:600}
+  .desc-sub{font-size:11px;color:#888;margin-top:2px}
+  /* Totals */
+  .totals{margin-left:auto;width:280px}
+  .tot-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px;border-bottom:1px solid #f0f0f0}
+  .tot-row .lbl{color:#555}
+  .tot-row.subtotal{font-weight:600}
+  .tot-row.gst-row{color:#777;font-size:11.5px}
+  .tot-row.grand{background:#8B1717;color:#fff;font-weight:800;font-size:14px;padding:10px 12px;border-radius:6px;margin-top:6px;border:none}
+  /* Payment summary */
+  .pay-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0;padding:16px;background:#f9f5f5;border-radius:8px;border:1px solid #f0e0e0}
+  .pay-box{text-align:center}
+  .pay-box .amt{font-size:18px;font-weight:800;color:#8B1717}
+  .pay-box .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+  .pay-box.paid .amt{color:#16a34a}
+  .pay-box.due  .amt{color:${balDue > 0 ? '#dc2626' : '#16a34a'}}
+  /* Notes */
+  .notes{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:16px;margin-top:20px;font-size:11px;color:#666;line-height:1.8}
+  .notes h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#333;margin-bottom:8px}
+  /* Footer */
+  .footer{margin-top:28px;padding-top:16px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#aaa}
+  /* Print */
+  .print-btn{position:fixed;bottom:24px;right:24px;background:#8B1717;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(139,23,23,.4);z-index:99}
+  .print-btn:hover{background:#6b1010}
+  @media print{
+    body{background:#fff}
+    .page{box-shadow:none;margin:0;padding:28px}
+    .print-btn{display:none}
+    .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="hdr">
+    <div>
+      <div class="logo">StayDekh<span>o</span></div>
+      <div class="company-info">
+        Premium Group Stays · Udaipur, Rajasthan<br/>
+        ${phone} · ${email}<br/>
+        ${gstin}
+      </div>
+    </div>
+    <div class="inv-meta">
+      <div class="inv-title">Tax Invoice</div>
+      <div class="inv-no">${invoiceNo}</div>
+      <div class="inv-date">Date: ${invoiceDate}</div>
+      <div><span class="badge">${statusLabel}</span></div>
+    </div>
+  </div>
+
+  <!-- ── BILL TO + BOOKING DETAILS ── -->
+  <div class="info-grid">
+    <div class="info-box">
+      <h4>Bill To</h4>
+      <div class="info-row"><span class="lbl">Name</span><span class="val">${row.guest_name || row.user_name || '—'}</span></div>
+      <div class="info-row"><span class="lbl">Email</span><span class="val" style="font-size:11px">${row.guest_email || row.user_email || '—'}</span></div>
+      <div class="info-row"><span class="lbl">Phone</span><span class="val">${row.guest_phone || row.user_phone || '—'}</span></div>
+    </div>
+    <div class="info-box">
+      <h4>Booking Details</h4>
+      <div class="info-row"><span class="lbl">Booking ID</span><span class="val">#${row.id}</span></div>
+      <div class="info-row"><span class="lbl">Check-in</span><span class="val">${fmtD(row.checkin)}</span></div>
+      <div class="info-row"><span class="lbl">Check-out</span><span class="val">${fmtD(row.checkout)}</span></div>
+      <div class="info-row"><span class="lbl">Duration</span><span class="val">${row.nights} Night${row.nights > 1 ? 's' : ''}</span></div>
+      <div class="info-row highlight"><span class="lbl">Guests</span><span class="val">${row.guests} Guest${row.guests > 1 ? 's' : ''}</span></div>
+    </div>
+  </div>
+
+  <!-- ── CHARGES TABLE ── -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50%">Description</th>
+        <th>Rate</th>
+        <th>Nights</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong>${row.prop_name}</strong>
+          <div class="desc-sub">${row.prop_location} · ${row.prop_beds || '—'} Beds · Up to ${row.prop_guests || '—'} Guests</div>
+        </td>
+        <td>${INR(row.prop_price)}/night</td>
+        <td>${row.nights}</td>
+        <td>${INR(baseAmt)}</td>
+      </tr>
+      <tr>
+        <td><strong>Platform Service Fee</strong><div class="desc-sub">5% of accommodation charges</div></td>
+        <td>5%</td>
+        <td>—</td>
+        <td>${INR(svcAmt)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── TOTALS ── -->
+  <div class="totals">
+    <div class="tot-row subtotal">
+      <span class="lbl">Accommodation (${row.nights} night${row.nights > 1 ? 's' : ''})</span>
+      <span>${INR(baseAmt)}</span>
+    </div>
+    <div class="tot-row gst-row">
+      <span class="lbl">Service Fee (5%)</span>
+      <span>${INR(svcAmt)}</span>
+    </div>
+    ${gstRate > 0 ? `
+    <div class="tot-row gst-row">
+      <span class="lbl">CGST @ ${gstPct/2}%</span>
+      <span>${INR(halfGst)}</span>
+    </div>
+    <div class="tot-row gst-row">
+      <span class="lbl">SGST @ ${gstPct/2}%</span>
+      <span>${INR(gstAmt - halfGst)}</span>
+    </div>
+    <div class="tot-row subtotal">
+      <span class="lbl">Total GST (${gstPct}%)</span>
+      <span>${INR(gstAmt)}</span>
+    </div>
+    ` : `
+    <div class="tot-row gst-row">
+      <span class="lbl">GST</span>
+      <span>Nil (≤ ₹1000/night)</span>
+    </div>
+    `}
+    <div class="tot-row grand">
+      <span>Grand Total</span>
+      <span>${INR(row.amount)}</span>
+    </div>
+  </div>
+
+  <!-- ── PAYMENT SUMMARY ── -->
+  <div class="pay-summary">
+    <div class="pay-box">
+      <div class="amt">${INR(row.amount)}</div>
+      <div class="lbl">Total Amount</div>
+    </div>
+    <div class="pay-box paid">
+      <div class="amt">${INR(amtPaid)}</div>
+      <div class="lbl">Amount Paid</div>
+    </div>
+    <div class="pay-box due">
+      <div class="amt">${INR(balDue)}</div>
+      <div class="lbl">${balDue > 0 ? 'Balance Due' : 'Fully Paid ✓'}</div>
+    </div>
+  </div>
+
+  <!-- ── NOTES ── -->
+  <div class="notes">
+    <h4>Terms & Conditions</h4>
+    Check-in time: 2:00 PM onwards · Check-out time: 11:00 AM sharp<br/>
+    This is a computer-generated invoice and does not require a physical signature.<br/>
+    For cancellations and refunds, please refer to our Cancellation Policy at staydekho.com/cancellation.<br/>
+    GST calculated as per prevailing Indian hotel accommodation tax rates.
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="footer">
+    <span>StayDekho · Udaipur, Rajasthan · ${phone}</span>
+    <span>${invoiceNo} · Generated ${new Date().toLocaleDateString('en-IN')}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+// DELETE /api/bookings/:id  — cancel booking
+router.delete('/:id', protect, (req, res) => {
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  if (req.user.role !== 'admin' && booking.user_id !== req.user.id)
+    return res.status(403).json({ error: 'Not authorized' });
+  if (booking.status === 'confirmed')
+    return res.status(400).json({ error: 'Cannot cancel a confirmed booking. Contact support.' });
+
+  db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(req.params.id);
+
+  // Send cancellation email (non-blocking)
+  const cancelled = db.prepare(`SELECT b.*, p.name as property_name FROM bookings b JOIN properties p ON b.property_id = p.id WHERE b.id = ?`).get(req.params.id);
+  if (cancelled) {
+    sendEmail(cancelled.guest_email, `Booking Cancelled — #${cancelled.id}`, bookingCancelledHtml(cancelled))
+      .catch(e => console.error('Cancel email error:', e.message));
+  }
+
+  res.json({ message: 'Booking cancelled' });
+});
+
+module.exports = router;

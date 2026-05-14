@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Our Stays — StayDekho</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital@1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+
+    /* ════════════════════════════════════════════
+       CTA — side-tab style, near footer
+    ════════════════════════════════════════════ */
+    #sd-float-cta { right:0!important; bottom:40px!important; gap:10px!important; }
+    .sd-fab {
+      border-radius:26px 0 0 26px!important;
+      width:50px!important; height:50px!important;
+      padding:0 13px!important;
+      box-shadow:-4px 4px 18px rgba(0,0,0,.22)!important;
+      justify-content:center!important;
+    }
+    .sd-fab:hover { width:auto!important; padding:0 16px 0 14px!important; justify-content:flex-end!important; }
+    @media(max-width:600px){
+      #sd-float-cta{ bottom:80px!important; }
+      .sd-fab{ width:44px!important; height:44px!important; }
+    }
+
+    /* ════════════════════════════════════════════
+       SEARCH CARD (Airbnb-style)
+    ════════════════════════════════════════════ */
+    .search-card {
+      background:#fff; border-radius:18px;
+      box-shadow:0 8px 32px rgba(0,0,0,.13);
+      padding:6px 8px 6px 6px;
+      display:flex; align-items:stretch; gap:0;
+      max-width:900px; margin:0 auto;
+    }
+    .sc-field {
+      display:flex; flex-direction:column; justify-content:center;
+      padding:10px 18px; flex:1; cursor:pointer;
+      border-radius:12px; transition:background .15s; min-width:0;
+    }
+    .sc-field:hover { background:#f9f7f4; }
+    .sc-field label {
+      font-size:.62rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:.1em; color:#1a0a0a; margin-bottom:3px; cursor:pointer;
+    }
+    .sc-field input {
+      border:none; outline:none; font-size:.9rem;
+      font-family:inherit; color:#4a4642; background:transparent; width:100%; cursor:pointer;
+    }
+    .sc-field input::placeholder { color:#b0aaa4; }
+    .sc-divider { width:1px; background:#e8e3de; margin:10px 0; flex-shrink:0; }
+    .sc-search-btn {
+      background:#8B1717; color:#fff; border:none; border-radius:12px;
+      width:50px; height:50px; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; flex-shrink:0; align-self:center;
+      transition:background .2s,transform .15s; margin-right:2px;
+    }
+    .sc-search-btn:hover { background:#6b1010; transform:scale(1.05); }
+
+    /* ════════════════════════════════════════════
+       QUICK FILTER CHIPS
+    ════════════════════════════════════════════ */
+    .amenity-chips {
+      display:flex; gap:8px; flex-wrap:wrap;
+      justify-content:center; margin-top:14px;
+    }
+    .amenity-chip {
+      padding:6px 16px; border-radius:20px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.18); font-size:.75rem;
+      font-weight:500; cursor:pointer; transition:all .2s;
+      color:rgba(255,255,255,.78);
+    }
+    .amenity-chip:hover  { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.35); color:#fff; }
+    .amenity-chip.active { background:#fff; color:#8B1717; border-color:#fff; font-weight:700; }
+
+
+    /* ════════════════════════════════════════════
+       SKELETON LOADING
+    ════════════════════════════════════════════ */
+    @keyframes shimmer {
+      0%   { background-position:-600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .skel-card {
+      border-radius:var(--radius); overflow:hidden;
+      background:#fff; box-shadow:var(--shadow-sm);
+    }
+    .skel-block {
+      background:linear-gradient(90deg,#f0ece8 25%,#e8e3de 50%,#f0ece8 75%);
+      background-size:600px 100%;
+      animation:shimmer 1.4s infinite linear;
+      border-radius:6px;
+    }
+    .skel-img   { height:220px; border-radius:0; }
+    .skel-body  { padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .skel-line  { height:12px; }
+    .skel-title { height:16px; width:75%; }
+    .skel-short { height:11px; width:45%; }
+
+    /* ════════════════════════════════════════════
+       DESTINATION SUGGESTION DROPDOWN
+    ════════════════════════════════════════════ */
+    .suggest-drop {
+      position:absolute; top:calc(100% + 6px); left:-6px;
+      min-width:300px; background:#fff;
+      border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.18);
+      border:1px solid rgba(0,0,0,.07); z-index:9999;
+      overflow:hidden; display:none;
+    }
+    .suggest-drop.open { display:block; }
+    .suggest-section {
+      padding:8px 14px 4px; font-size:.62rem; font-weight:800;
+      text-transform:uppercase; letter-spacing:.1em; color:#9a9590;
+    }
+    .suggest-item {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 16px; cursor:pointer;
+      transition:background .12s; border-bottom:1px solid #f5f2ef;
+    }
+    .suggest-item:last-child { border-bottom:none; }
+    .suggest-item:hover,.suggest-item.si-focused { background:#faf8f5; }
+    .si-icon  { font-size:1rem; flex-shrink:0; line-height:1; }
+    .si-name  { font-size:.88rem; font-weight:600; color:#1a0a0a; }
+    .si-sub   { font-size:.72rem; color:#9a9590; margin-top:1px; }
+    .si-badge { font-size:.65rem; font-weight:700; color:#8B1717; background:#fff0f0; padding:2px 6px; border-radius:8px; margin-left:6px; }
+
+    /* ════════════════════════════════════════════
+       WISHLIST TOAST
+    ════════════════════════════════════════════ */
+    #wish-toast {
+      position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
+      background:#1a0a0a; color:#fff; padding:12px 22px;
+      border-radius:28px; font-size:.85rem; font-weight:600;
+      box-shadow:0 8px 28px rgba(0,0,0,.25); z-index:99999;
+      display:none; align-items:center; gap:10px; white-space:nowrap;
+      transition:opacity .3s, transform .3s;
+    }
+    #wish-toast.show { display:flex; opacity:1; transform:translateX(-50%) translateY(0); }
+    #wish-toast a { color:#f4c066; text-decoration:underline; cursor:pointer; }
+
+    /* ════════════════════════════════════════════
+       CARD EXTRAS
+    ════════════════════════════════════════════ */
+    .card-wishlist { transition:transform .2s; }
+    .card-wishlist:hover { transform:scale(1.2); }
+    .card-wishlist.active { color:var(--red); }
+
+    /* ════════════════════════════════════════════
+       MOBILE RESPONSIVE
+    ════════════════════════════════════════════ */
+    @media(max-width:700px){
+      /* ── Header ── */
+      .listings-hdr-inner { flex-direction:column!important; gap:14px!important; align-items:flex-start!important; }
+
+      /* ── Stats strip — pill card style ── */
+      .listings-stats-strip {
+        width:100%; justify-content:space-around!important;
+        gap:0!important; flex-wrap:nowrap!important;
+        background:rgba(0,0,0,.18); border-radius:14px;
+        padding:14px 10px;
+      }
+      .listings-stats-sep { display:none; }
+
+      /* ── Search card — clean single card, no individual boxes ── */
+      .search-card {
+        flex-direction:column;
+        padding:0; gap:0;
+        border-radius:18px;
+        max-width:100%;
+        overflow:hidden;
+        box-shadow:0 6px 28px rgba(0,0,0,.13);
+      }
+      /* Each field: NO border, just a bottom divider */
+      .sc-field {
+        padding:15px 18px;
+        border:none !important;
+        border-radius:0 !important;
+        border-bottom:1px solid #f0ece8 !important;
+        background:#fff;
+        flex-direction:row;
+        align-items:center;
+        gap:12px;
+      }
+      /* Label + input stacked inside flex-row */
+      .sc-field > div,
+      .sc-field { flex-direction:column; align-items:flex-start; }
+      .sc-field label { margin-bottom:3px; }
+      .sc-field:last-of-type { border-bottom:none !important; }
+      .sc-field:hover { background:#faf8f5; }
+      .sc-divider { display:none; }
+
+      /* Search button — inside card, full width with margin */
+      .sc-search-btn {
+        width:calc(100% - 24px);
+        height:50px;
+        border-radius:12px;
+        margin:12px auto;
+        align-self:center;
+        font-size:1rem;
+        display:flex;
+        gap:8px;
+      }
+      .sc-search-btn::after { content:'Search'; font-family:Inter,sans-serif; font-size:.9rem; font-weight:700; }
+
+      /* ── Filter chips ── */
+      .amenity-chips { margin-top:12px; gap:7px; padding:0 2px; }
+      .amenity-chip  { padding:6px 14px; font-size:.73rem; }
+
+      /* ── Listings bar ── */
+      .listings-bar { flex-direction:column!important; align-items:flex-start!important; gap:10px!important; }
+      .listings-bar-right { width:100%; }
+
+      /* ── Suggestion dropdown ── */
+      .suggest-drop { min-width:calc(100vw - 40px); left:-12px; }
+    }
+    @media(max-width:480px){
+      .listings-stats-strip { padding:12px 6px; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE HEADER
+══════════════════════════════════════════════ -->
+<section style="
+  background:linear-gradient(135deg,#2d0707 0%,#8B1717 60%,#a01f1f 100%);
+  padding:80px 0 52px; color:#fff; position:relative; overflow:hidden;
+">
+  <div style="position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none"></div>
+  <div style="position:absolute;bottom:-40px;left:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none"></div>
+
+  <div class="container" style="position:relative;z-index:1">
+
+    <!-- Title + Stats -->
+    <div class="listings-hdr-inner" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:20px">
+      <div style="max-width:520px">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);backdrop-filter:blur(6px);padding:5px 14px;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Directly managed by us
+        </div>
+        <h1 style="color:#fff;font-size:clamp(1.9rem,4vw,2.6rem);margin:0 0 10px;font-family:'Playfair Display',serif;font-style:italic;line-height:1.15">Our Stays</h1>
+        <p style="color:rgba(255,255,255,.80);margin:0;font-size:.97rem;line-height:1.7;max-width:420px">
+          A small, carefully chosen collection — each property hosted by us personally, not a stranger.
+        </p>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="listings-stats-strip" style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#fff" id="hdr-prop-count">—</div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;font-weight:600" id="hdr-prop-label">Properties</div>
+        </div>
+        <div class="listings-stats-sep" style="width:1px;background:rgba(255,255,255,.2)"></div>
+        <div style="text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#fff" id="hdr-guest-count">—</div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Happy Guests</div>
+        </div>
+        <div class="listings-stats-sep" style="width:1px;background:rgba(255,255,255,.2)"></div>
+        <div style="text-align:center">
+          <div style="font-size:1.6rem;font-weight:800;color:#fff" id="hdr-rating">4.8★</div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Avg Rating</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Card -->
+    <div style="margin-top:28px">
+      <div class="search-card">
+
+        <!-- Destination with typeahead -->
+        <div class="sc-field" style="position:relative">
+          <label for="filter-q">Destination / Property</label>
+          <input type="text" id="filter-q" placeholder="Udaipur, Goa, Manali…"
+            autocomplete="off"
+            oninput="scheduleFilter(); showDestSuggestions(this.value)"
+            onfocus="showDestSuggestions(this.value)"
+            onkeydown="onSuggestKey(event)"/>
+          <div id="dest-suggestions" class="suggest-drop"></div>
+        </div>
+
+        <div class="sc-divider"></div>
+        <div class="sc-field">
+          <label for="filter-checkin">Check-in</label>
+          <input type="date" id="filter-checkin"/>
+        </div>
+        <div class="sc-divider"></div>
+        <div class="sc-field">
+          <label for="filter-checkout">Check-out</label>
+          <input type="date" id="filter-checkout"/>
+        </div>
+        <div class="sc-divider"></div>
+        <div class="sc-field" style="max-width:100px">
+          <label for="filter-guests">Guests</label>
+          <input type="number" id="filter-guests" min="1" max="50" placeholder="Any"/>
+        </div>
+
+        <button class="sc-search-btn" onclick="applyFilters()" title="Search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+      </div>
+
+      <!-- Quick filter chips -->
+      <div class="amenity-chips">
+        <button class="amenity-chip" id="chip-pool" onclick="toggleQuickFilter('pool',this)">🏊 Pool</button>
+        <button class="amenity-chip" id="chip-city" onclick="toggleQuickFilter('city',this)">🏙️ City Centre</button>
+        <label class="amenity-chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 14px;cursor:pointer" for="filter-category">
+          <span>🏡</span>
+          <select id="filter-category" onchange="renderGrid()" style="border:none;outline:none;background:transparent;font-size:.75rem;font-weight:600;color:rgba(255,255,255,.9);cursor:pointer;font-family:inherit;max-width:120px;padding:1px 4px 1px 0;-webkit-appearance:none;appearance:none">
+            <option value="" style="color:#1a0a0a;background:#fff">All Types</option>
+            <option value="villa"     style="color:#1a0a0a;background:#fff">Villa</option>
+            <option value="cottage"   style="color:#1a0a0a;background:#fff">Cottage</option>
+            <option value="farmhouse" style="color:#1a0a0a;background:#fff">Farmhouse</option>
+            <option value="apartment" style="color:#1a0a0a;background:#fff">Apartment</option>
+            <option value="heritage"  style="color:#1a0a0a;background:#fff">Heritage / Haveli</option>
+            <option value="treehouse" style="color:#1a0a0a;background:#fff">Tree House</option>
+            <option value="bungalow"  style="color:#1a0a0a;background:#fff">Bungalow</option>
+          </select>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+        </label>
+        <button class="amenity-chip" style="border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.45);font-size:.7rem" onclick="clearAllFilters()">✕ Clear</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════ -->
+<section class="section-sm">
+  <div class="container">
+
+    <!-- Listings bar: count + price filter + sort -->
+    <div class="listings-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div id="listings-count" style="color:var(--gray-600);font-size:.95rem">Loading…</div>
+
+      <div class="listings-bar-right" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+
+        <!-- Sort -->
+        <div style="display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--gray-600)">
+          <span>Sort</span>
+          <select onchange="sortResults(this.value)" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:.9rem;outline:none;cursor:pointer;font-family:inherit;background:#fff">
+            <option value="recommended">Recommended</option>
+            <option value="price-asc">Price: Low → High</option>
+            <option value="price-desc">Price: High → Low</option>
+            <option value="rating">Top Rated</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid (skeletons shown while loading) -->
+    <div class="properties-grid" id="listings-grid">
+      <!-- 6 skeleton cards -->
+      <div class="skel-card"><div class="skel-block skel-img"></div><div class="skel-body"><div class="skel-block skel-line skel-short"></div><div class="skel-block skel-line skel-title"></div><div class="skel-block skel-line" style="width:90%"></div><div class="skel-block skel-line skel-short"></div></div></div>
+      <div class="skel-card"><div class="skel-block skel-img"></div><div class="skel-body"><div class="skel-block skel-line skel-short"></div><div class="skel-block skel-line skel-title"></div><div class="skel-block skel-line" style="width:90%"></div><div class="skel-block skel-line skel-short"></div></div></div>
+      <div class="skel-card"><div class="skel-block skel-img"></div><div class="skel-body"><div class="skel-block skel-line skel-short"></div><div class="skel-block skel-line skel-title"></div><div class="skel-block skel-line" style="width:90%"></div><div class="skel-block skel-line skel-short"></div></div></div>
+      <div class="skel-card"><div class="skel-block skel-img"></div><div class="skel-body"><div class="skel-block skel-line skel-short"></div><div class="skel-block skel-line skel-title"></div><div class="skel-block skel-line" style="width:90%"></div><div class="skel-block skel-line skel-short"></div></div></div>
+      <div class="skel-card"><div class="skel-block skel-img"></div><div class="skel-body"><div class="skel-block skel-line skel-short"></div><div class="skel-block skel-line skel-title"></div><div class="skel-block skel-line" style="width:90%"></div><div class="skel-block skel-line skel-short"></div></div></div>
+      <div class="skel-card"><div class="skel-block skel-img"></div><div class="skel-body"><div class="skel-block skel-line skel-short"></div><div class="skel-block skel-line skel-title"></div><div class="skel-block skel-line" style="width:90%"></div><div class="skel-block skel-line skel-short"></div></div></div>
+    </div>
+
+    <div id="no-results" style="display:none;text-align:center;padding:60px 20px">
+      <div style="font-size:3rem;margin-bottom:16px">🔍</div>
+      <h3 style="margin-bottom:8px">No properties match your filters</h3>
+      <p style="color:var(--gray-600)">Try a different destination, adjust the budget, or clear filters.</p>
+      <button class="btn btn-outline" style="margin-top:20px" onclick="clearAllFilters()">Show all stays</button>
+    </div>
+
+    <div id="growing-callout" style="display:none;margin-top:48px;padding:32px;background:var(--off-white);border:1px dashed var(--gray-200);border-radius:var(--radius);text-align:center">
+      <h3 style="margin-bottom:8px;font-size:1.15rem">More stays coming soon 🌍</h3>
+      <p style="color:var(--gray-600);margin:0 auto 16px;max-width:520px">We're expanding across India — each property is personally scouted. Want to be notified?</p>
+      <a href="contact.html" class="btn btn-outline btn-sm">Get in Touch</a>
+    </div>
+  </div>
+</section>
+
+<!-- Wishlist toast -->
+<div id="wish-toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f4c066" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+  <span>Login to save to wishlist &nbsp;<a onclick="window.location='login.html?redirect='+encodeURIComponent(location.href)">Login →</a></span>
+</div>
+
+<div id="footer-placeholder"></div>
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  let currentSort   = 'recommended';
+  let allProperties = [];
+  let quickFilters  = { pool: false, city: false };
+  let _wishlistIds  = [];
+
+  /* ── SVG icons ──────────────────────────────────────── */
+  const HEART_OUT  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+  const HEART_FILL = `<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--red)" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+  const PIN_S  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+  const BED    = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/><rect x="6" y="8" width="6" height="4" rx="1"/></svg>`;
+  const BATH   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-1-.5C4.683 3 4 3.683 4 4.5V17a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><line x1="2" y1="12" x2="22" y2="12"/></svg>`;
+  const GUESTS = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+  const STAR   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#D4A017" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
+  /* ── Wishlist toast ──────────────────────────────────── */
+  let _toastTimer;
+  function showWishToast() {
+    const t = document.getElementById('wish-toast');
+    t.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  /* ── Card HTML ───────────────────────────────────────── */
+  function cardHTML(p) {
+    const wished = _wishlistIds.includes(Number(p.id));
+    const guestMax = p.max_guests || p.guests || '—';
+    const checkin  = document.getElementById('filter-checkin')?.value  || '';
+    const checkout = document.getElementById('filter-checkout')?.value || '';
+    const guests   = document.getElementById('filter-guests')?.value   || '';
+    let bookUrl = `property.html?id=${p.id}`;
+    if (checkin)  bookUrl += `&checkin=${encodeURIComponent(checkin)}`;
+    if (checkout) bookUrl += `&checkout=${encodeURIComponent(checkout)}`;
+    if (guests)   bookUrl += `&guests=${encodeURIComponent(guests)}`;
+
+    return `
+      <a href="${bookUrl}" class="property-card">
+        <div class="card-img-wrap">
+          <img src="${p.main_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}" alt="${p.title}" loading="lazy"
+            onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'"/>
+          <button class="card-wishlist ${wished?'active':''}" data-id="${p.id}"
+            onclick="event.preventDefault();toggleWish(this,${p.id})">
+            ${wished ? HEART_FILL : HEART_OUT}
+          </button>
+          ${p.badge ? `<span class="card-badge">${p.badge}</span>` : ''}
+        </div>
+        <div class="card-body">
+          <div class="card-location">${PIN_S} ${p.location}</div>
+          <div class="card-title">${p.title}</div>
+          <div class="card-meta">
+            <span>${BED} ${p.beds} Beds</span>
+            <span>${BATH} ${p.baths} Baths</span>
+            <span>${GUESTS} Upto ${guestMax}</span>
+          </div>
+          <div class="card-footer">
+            <div class="card-price">₹${Number(p.today_price || p.price).toLocaleString('en-IN')} <span>/ night</span></div>
+            <div class="card-rating">${STAR} ${p.rating || '4.8'}</div>
+          </div>
+        </div>
+      </a>`;
+  }
+
+  /* ── Wishlist toggle (with login guard) ─────────────── */
+  function toggleWish(btn, id) {
+    const token = localStorage.getItem('sd_token');
+    if (!token) { showWishToast(); return; }
+    api.toggleWishlist(id).then(({ wishlisted }) => {
+      btn.innerHTML = wishlisted ? HEART_FILL : HEART_OUT;
+      btn.classList.toggle('active', wishlisted);
+      if (wishlisted) { if (!_wishlistIds.includes(Number(id))) _wishlistIds.push(Number(id)); }
+      else            { _wishlistIds = _wishlistIds.filter(x => x !== Number(id)); }
+    }).catch(() => showWishToast());
+  }
+
+  /* ── Quick-filter chip toggles ──────────────────────── */
+  function toggleQuickFilter(type, btn) {
+    quickFilters[type] = !quickFilters[type];
+    btn.classList.toggle('active', quickFilters[type]);
+    renderGrid();
+  }
+
+  /* ── Sort ───────────────────────────────────────────── */
+  function sortResults(type) { currentSort = type; renderGrid(); }
+  function sortProps(arr) {
+    const a = [...arr];
+    if (currentSort === 'price-asc')  a.sort((x,y) => x.price - y.price);
+    if (currentSort === 'price-desc') a.sort((x,y) => y.price - x.price);
+    if (currentSort === 'rating')     a.sort((x,y) => (parseFloat(y.rating)||0) - (parseFloat(x.rating)||0));
+    return a;
+  }
+
+  /* ── Header stats ───────────────────────────────────── */
+  function updateHeaderStats(list) {
+    const q = document.getElementById('filter-q').value.trim();
+    document.getElementById('hdr-prop-count').textContent = list.length;
+    const lbl = document.getElementById('hdr-prop-label');
+    lbl.textContent = q ? `Properties in ${q.charAt(0).toUpperCase()+q.slice(1)}` : 'Properties';
+    const cap = list.reduce((s,p) => s + (parseInt(p.max_guests||p.guests)||0), 0);
+    document.getElementById('hdr-guest-count').textContent = cap > 0 ? cap+'+' : '—';
+    const ratings = list.map(p => parseFloat(p.rating)).filter(r => !isNaN(r) && r > 0);
+    document.getElementById('hdr-rating').textContent = ratings.length
+      ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1)+'★'
+      : '4.8★';
+  }
+
+  /* ── Render grid ────────────────────────────────────── */
+  function renderGrid() {
+    const grid = document.getElementById('listings-grid');
+    let list = [...allProperties];
+
+    // Pool filter
+    if (quickFilters.pool) {
+      list = list.filter(p => {
+        const am = Array.isArray(p.amenities) ? p.amenities : [];
+        return am.some(a => a.toLowerCase().includes('pool'));
+      });
+    }
+    // City Centre filter
+    if (quickFilters.city) {
+      list = list.filter(p => {
+        const t = (p.type||p.category||'').toLowerCase();
+        const tags = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
+        return t.includes('city') || tags.includes('city');
+      });
+    }
+    // Category filter
+    const catVal = (document.getElementById('filter-category')?.value||'').toLowerCase();
+    if (catVal) {
+      list = list.filter(p => (p.type||p.category||'').toLowerCase().includes(catVal));
+    }
+const sorted = sortProps(list);
+    updateHeaderStats(sorted);
+
+    if (!sorted.length) {
+      grid.innerHTML = '';
+      document.getElementById('no-results').style.display = 'block';
+      document.getElementById('growing-callout').style.display = 'none';
+    } else {
+      grid.innerHTML = sorted.map(cardHTML).join('');
+      document.getElementById('no-results').style.display = 'none';
+      document.getElementById('growing-callout').style.display = 'block';
+    }
+
+    document.getElementById('listings-count').innerHTML = sorted.length
+      ? `<strong>${sorted.length}</strong> stay${sorted.length!==1?'s':''} available`
+      : '0 stays found';
+  }
+
+  /* ── Fetch from API ─────────────────────────────────── */
+  async function loadProperties() {
+    const q       = document.getElementById('filter-q').value.trim();
+    const checkin = document.getElementById('filter-checkin').value;
+    const guests  = document.getElementById('filter-guests').value;
+    const params  = {};
+    if (q)       params.q       = q;
+    if (guests)  params.guests  = guests;
+    if (checkin) params.checkin = checkin;
+    try {
+      const [r, wl] = await Promise.all([
+        api.listProperties(params),
+        api.getWishlistIds ? api.getWishlistIds() : Promise.resolve([]),
+      ]);
+      allProperties = r.properties || [];
+      _wishlistIds  = wl || [];
+      renderGrid();
+    } catch {
+      document.getElementById('listings-grid').innerHTML =
+        `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--gray-400)">
+          <p style="color:var(--red);margin-bottom:12px">Could not load properties. Is the server running?</p>
+          <button class="btn btn-outline btn-sm" onclick="loadProperties()">Retry</button>
+        </div>`;
+    }
+  }
+
+  function applyFilters() { loadProperties(); }
+
+  let _debounce;
+  function scheduleFilter() {
+    clearTimeout(_debounce);
+    _debounce = setTimeout(loadProperties, 350);
+  }
+
+  function clearAllFilters() {
+    ['filter-q','filter-checkin','filter-checkout','filter-guests']
+      .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    const cat = document.getElementById('filter-category');
+    if (cat) cat.value = '';
+    quickFilters = { pool: false, city: false };
+    document.querySelectorAll('.amenity-chip').forEach(c => c.classList.remove('active'));
+    loadProperties();
+  }
+
+  /* ── Date min logic ─────────────────────────────────── */
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('filter-checkin').min  = today;
+  document.getElementById('filter-checkout').min = today;
+  document.getElementById('filter-checkin').addEventListener('change', e => {
+    document.getElementById('filter-checkout').min = e.target.value;
+    if (document.getElementById('filter-checkout').value < e.target.value)
+      document.getElementById('filter-checkout').value = e.target.value;
+  });
+
+  /* ── URL param pre-fill ─────────────────────────────── */
+  const _p = new URLSearchParams(location.search);
+  if (_p.get('q'))        document.getElementById('filter-q').value        = _p.get('q');
+  if (_p.get('checkin'))  document.getElementById('filter-checkin').value  = _p.get('checkin');
+  if (_p.get('checkout')) document.getElementById('filter-checkout').value = _p.get('checkout');
+  if (_p.get('guests'))   document.getElementById('filter-guests').value   = _p.get('guests');
+
+  /* ── Scroll-to-top ──────────────────────────────────── */
+  window.addEventListener('scroll', () => {
+    document.getElementById('scroll-top').classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+
+  /* ── INIT ───────────────────────────────────────────── */
+  loadProperties();
+
+
+  /* ════════════════════════════════════════════════════
+     DESTINATION AUTOCOMPLETE
+  ════════════════════════════════════════════════════ */
+  const POPULAR_DEST = [
+    { name:'Udaipur',   sub:'Rajasthan',          icon:'🏰' },
+    { name:'Goa',       sub:'Beach & Party Hub',   icon:'🏖️' },
+    { name:'Manali',    sub:'Himachal Pradesh',    icon:'🏔️' },
+    { name:'Coorg',     sub:'Karnataka',           icon:'🌿' },
+    { name:'Lonavala',  sub:'Maharashtra',         icon:'⛰️' },
+    { name:'Rishikesh', sub:'Uttarakhand',         icon:'🏞️' },
+    { name:'Jaipur',    sub:'Rajasthan',           icon:'🏯' },
+    { name:'Shimla',    sub:'Himachal Pradesh',    icon:'❄️' },
+    { name:'Ooty',      sub:'Tamil Nadu',          icon:'🌄' },
+    { name:'Kerala',    sub:'Backwaters & Beaches', icon:'🌴' },
+    { name:'Kasol',     sub:'Himachal Pradesh',    icon:'🌲' },
+    { name:'Mussoorie', sub:'Uttarakhand',         icon:'🌫️' },
+  ];
+
+  function buildSuggestList(query) {
+    const q = (query||'').trim().toLowerCase();
+    const dbItems = [], seenLocs = new Set();
+
+    allProperties.forEach(p => {
+      const loc = (p.location||'').trim();
+      if (!loc) return;
+      const key = loc.toLowerCase();
+      if (!seenLocs.has(key) && (q==='' || key.includes(q))) {
+        seenLocs.add(key);
+        const cnt = allProperties.filter(x=>(x.location||'').toLowerCase()===key).length;
+        dbItems.push({ name:loc, sub:cnt>1?`${cnt} properties`:p.title, icon:'📍', badge:cnt>1?cnt+' stays':null });
+      }
+    });
+    allProperties.forEach(p => {
+      if (q && p.title && p.title.toLowerCase().includes(q))
+        dbItems.push({ name:p.title, sub:p.location||'', icon:'🏠', badge:null });
+    });
+
+    const seen2 = new Set(dbItems.map(r=>r.name.toLowerCase()));
+    const popular = POPULAR_DEST.filter(d =>
+      (q===''||d.name.toLowerCase().includes(q)) && !seen2.has(d.name.toLowerCase())
+    );
+    return { from_db: dbItems.slice(0,5), popular: popular.slice(0, q?5:6) };
+  }
+
+  function showDestSuggestions(query) {
+    const drop = document.getElementById('dest-suggestions');
+    if (!drop) return;
+    const { from_db, popular } = buildSuggestList(query);
+    if (!from_db.length && !popular.length) { drop.classList.remove('open'); return; }
+
+    let html = '';
+    if (from_db.length) {
+      html += `<div class="suggest-section">Our Properties</div>`;
+      html += from_db.map(item => `
+        <div class="suggest-item" data-val="${item.name.replace(/"/g,'&quot;')}" onmousedown="selectDestSuggestion(this.dataset.val)">
+          <span class="si-icon">${item.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div class="si-name">${item.name}${item.badge?`<span class="si-badge">${item.badge}</span>`:''}</div>
+            <div class="si-sub">${item.sub}</div>
+          </div>
+        </div>`).join('');
+    }
+    if (popular.length) {
+      html += `<div class="suggest-section" style="margin-top:${from_db.length?'4px':'0'}">Popular Destinations</div>`;
+      html += popular.map(item => `
+        <div class="suggest-item" data-val="${item.name}" onmousedown="selectDestSuggestion(this.dataset.val)">
+          <span class="si-icon">${item.icon}</span>
+          <div><div class="si-name">${item.name}</div><div class="si-sub">${item.sub}</div></div>
+        </div>`).join('');
+    }
+    drop.innerHTML = html;
+    drop.classList.add('open');
+  }
+
+  function selectDestSuggestion(val) {
+    document.getElementById('filter-q').value = val;
+    document.getElementById('dest-suggestions').classList.remove('open');
+    loadProperties();
+  }
+
+  function onSuggestKey(e) {
+    const drop = document.getElementById('dest-suggestions');
+    if (!drop?.classList.contains('open')) return;
+    const items = [...drop.querySelectorAll('.suggest-item')];
+    const cur = drop.querySelector('.si-focused');
+    let idx = items.indexOf(cur);
+    if (e.key==='ArrowDown') { e.preventDefault(); if(cur) cur.classList.remove('si-focused'); items[Math.min(idx+1,items.length-1)].classList.add('si-focused'); }
+    else if (e.key==='ArrowUp')  { e.preventDefault(); if(cur) cur.classList.remove('si-focused'); if(idx>0) items[idx-1].classList.add('si-focused'); }
+    else if (e.key==='Enter') { const f=drop.querySelector('.si-focused'); if(f){e.preventDefault();selectDestSuggestion(f.dataset.val);} }
+    else if (e.key==='Escape') drop.classList.remove('open');
+  }
+
+  document.getElementById('filter-q').addEventListener('blur', () => {
+    setTimeout(() => { const d=document.getElementById('dest-suggestions'); if(d) d.classList.remove('open'); }, 180);
+  });
+
+</script>
+</body>
+</html>

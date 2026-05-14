@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel — StayDekho</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --red:#8B1717; --red-dark:#6b1010; --red-light:#f8e8e8;
+      --sidebar-width:240px;
+      --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb;
+      --gray-300:#d1d5db; --gray-400:#9ca3af; --gray-500:#6b7280;
+      --gray-600:#4b5563; --gray-800:#1f2937;
+      --white:#fff; --radius:12px; --radius-sm:8px;
+      --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--gray-100);color:var(--gray-800);display:flex;min-height:100vh;}
+
+    /* SIDEBAR */
+    .sidebar{width:var(--sidebar-width);background:var(--red-dark);min-height:100vh;position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:100;}
+    .sidebar-logo{padding:22px 20px;border-bottom:1px solid rgba(255,255,255,.12);}
+    .sidebar-logo a{text-decoration:none;color:#fff;}
+    .logo-text{font-weight:800;font-size:1.25rem;letter-spacing:-.5px;}
+    .admin-badge{font-size:10px;font-weight:600;letter-spacing:1.2px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-top:3px;}
+    .sidebar-nav{padding:12px 0;flex:1;overflow-y:auto;}
+    .nav-sec-lbl{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.35);padding:14px 20px 5px;}
+    .sidebar-link{display:flex;align-items:center;gap:10px;padding:10px 20px;color:rgba(255,255,255,.7);text-decoration:none;font-size:13.5px;font-weight:500;border-left:3px solid transparent;cursor:pointer;transition:background .15s,color .15s,border-color .15s;user-select:none;}
+    .sidebar-link:hover{color:#fff;background:rgba(255,255,255,.07);border-left-color:rgba(255,255,255,.4);}
+    .sidebar-link.active{color:#fff;background:rgba(255,255,255,.12);border-left-color:#fff;}
+    .sidebar-link .icon{width:18px;text-align:center;font-size:15px;flex-shrink:0;}
+    .sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.12);}
+    .sidebar-footer a{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.55);text-decoration:none;font-size:13px;padding:7px 0;transition:color .15s;}
+    .sidebar-footer a:hover{color:#fff;}
+
+    /* MAIN */
+    .main{margin-left:var(--sidebar-width);flex:1;padding:28px 32px;min-width:0;}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px;gap:16px;flex-wrap:wrap;}
+    .page-title{font-size:1.45rem;font-weight:800;line-height:1.2;}
+    .page-subtitle{font-size:13px;color:var(--gray-400);margin-top:3px;}
+    .topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .avatar{width:36px;height:36px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;}
+
+    /* CARD */
+    .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 24px;}
+
+    /* STATS */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;}
+    .stat-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;display:flex;align-items:center;gap:14px;}
+    .stat-icon{width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+    .si-red{background:#fee2e2;} .si-green{background:#dcfce7;} .si-blue{background:#dbeafe;} .si-orange{background:#ffedd5;}
+    .stat-val{font-size:1.55rem;font-weight:800;line-height:1;}
+    .stat-lbl{font-size:12px;color:var(--gray-400);margin-top:4px;}
+    .stat-chg{font-size:11px;margin-top:4px;}
+    .up{color:#16a34a;} .down{color:#dc2626;}
+    .dash-grid{display:grid;grid-template-columns:1fr 360px;gap:22px;}
+
+    /* TABLE */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:13.5px;}
+    th{text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--gray-400);border-bottom:1.5px solid var(--gray-100);white-space:nowrap;}
+    td{padding:13px 14px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tbody tr:hover td{background:var(--gray-50);}
+
+    /* BADGES */
+    .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:600;}
+    .b-confirmed{background:#dcfce7;color:#15803d;} .b-pending{background:#fef9c3;color:#a16207;}
+    .b-cancelled{background:#fee2e2;color:#b91c1c;} .b-active{background:#dcfce7;color:#15803d;} .b-inactive{background:#fee2e2;color:#b91c1c;}
+
+    /* BUTTONS */
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Inter';transition:all .18s;}
+    .btn-primary{background:var(--red);color:#fff;} .btn-primary:hover{background:var(--red-dark);}
+    .btn-outline{background:transparent;color:var(--gray-600);border:1.5px solid var(--gray-200);}
+    .btn-outline:hover{border-color:var(--red);color:var(--red);}
+    .btn-black {background: #222; color: #fff;} .btn-black:hover {background: #000;}
+    .btn-sm{padding:5px 10px;font-size:11.5px;}
+    .btn-icon{width:30px;height:30px;padding:0;justify-content:center;border-radius:7px;background:var(--gray-100);color:var(--gray-600);border:none;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;}
+    .btn-icon:hover{background:var(--red-light);color:var(--red);}
+
+    /* SEC HEADER */
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .sec-title{font-size:15px;font-weight:700;}
+
+    /* REVENUE CHART */
+    .chart-bars{display:flex;align-items:flex-end;gap:6px;height:110px;}
+    .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+    .bar{width:100%;background:var(--red);border-radius:5px 5px 0 0;opacity:.82;transition:opacity .2s;min-height:4px;}
+    .bar:hover{opacity:1;}
+    .bar-lbl{font-size:10px;color:var(--gray-400);}
+
+    /* MINI CALENDAR */
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+    .cal-dn{text-align:center;font-size:10px;font-weight:700;color:var(--gray-400);padding:5px 0;}
+    .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:13px;cursor:default;transition:background .12s;}
+    .cal-day.other{color:var(--gray-200);}
+    .cal-day.today{background:var(--red-light);color:var(--red);font-weight:700;}
+    .cal-day.booked{background:var(--red);color:#fff;font-weight:700;}
+    .cal-day.avail:hover{background:var(--gray-100);}
+
+    /* PROPERTY GRID */
+    .prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+    .prop-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .prop-img{width:100%;height:155px;object-fit:cover;display:block;}
+    .prop-body{padding:14px 16px;}
+    .prop-name{font-weight:700;font-size:14.5px;margin-bottom:3px;}
+    .prop-loc{font-size:12px;color:var(--gray-400);margin-bottom:10px;}
+    .prop-meta{display:flex;align-items:center;justify-content:space-between;}
+    .prop-price{font-weight:700;color:var(--red);font-size:14px;}
+    .prop-info{font-size:11.5px;color:var(--gray-400);margin-top:3px;}
+    .prop-actions{display:flex;gap:6px;margin-top:12px;}
+
+    /* FORM */
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .form-grp{margin-bottom:14px;}
+    .form-lbl{font-size:12.5px;font-weight:600;color:var(--gray-600);margin-bottom:5px;display:block;}
+    .form-ctrl{width:100%;padding:9px 13px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13.5px;font-family:'Inter';outline:none;transition:border .18s;}
+    .form-ctrl:focus{border-color:var(--red);}
+
+    /* MULTI IMAGE UPLOAD */
+    .multi-img-section{border:2px dashed var(--gray-200);border-radius:var(--radius-sm);padding:14px;transition:border .2s;}
+    .multi-img-section:hover{border-color:var(--red);}
+    .img-thumb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
+    .img-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--gray-100);}
+    .img-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+    .img-thumb-remove{position:absolute;top:4px;right:4px;width:20px;height:20px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;line-height:1;}
+    .img-thumb-remove:hover{background:#b91c1c;}
+    .img-thumb-cover{position:absolute;bottom:4px;left:4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.5px;}
+    .img-add-btn{aspect-ratio:1;border-radius:8px;border:2px dashed var(--gray-200);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--gray-400);font-size:11px;font-weight:600;transition:all .18s;background:var(--gray-50);}
+    .img-add-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
+    .img-add-btn .add-icon{font-size:20px;line-height:1;}
+    .img-url-row{display:flex;gap:8px;align-items:center;}
+    .img-url-inp{flex:1;padding:8px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter';outline:none;}
+    .img-url-inp:focus{border-color:var(--red);}
+    .img-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--gray-400);font-size:13px;padding:20px 0;}
+    .file-label{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:600;cursor:pointer;background:var(--gray-100);color:var(--gray-600);border:1.5px solid var(--gray-200);transition:all .18s;}
+    .file-label:hover{border-color:var(--red);color:var(--red);}
+
+    /* SEARCH */
+    .search-inp{padding:8px 13px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter';outline:none;width:210px;}
+    .search-inp:focus{border-color:var(--red);}
+
+    /* MODAL */
+    .modal-bd{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+    .modal-bd.open{display:flex;}
+    .modal{background:#fff;border-radius:var(--radius);padding:26px;width:580px;max-width:100%;max-height:92vh;overflow-y:auto;}
+    .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .modal-title{font-size:1.05rem;font-weight:700;}
+    .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--gray-400);}
+
+    /* PAGE */
+    .page-view{display:none;} .page-view.active{display:block;}
+
+    /* ── 🔥 NEW AIRBNB STYLE ADVANCED CALENDAR 🔥 ── */
+    .editor-layout { display: flex; gap: 24px; align-items: flex-start; }
+    .editor-main { flex: 1; background: #fff; border-radius: var(--radius); padding: 24px; border: 1px solid var(--gray-200); box-shadow: var(--shadow); }
+    .editor-sidebar { width: 320px; background: #fff; border-radius: var(--radius); padding: 24px; border: 1px solid var(--gray-200); box-shadow: 0 12px 24px rgba(0,0,0,.06); position: sticky; top: 20px; flex-shrink: 0; }
+    .cal-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .cal-month-title { font-size: 1.35rem; font-weight: 800; }
+    .adv-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+    .adv-cal-dn { text-align: left; font-size: 11px; font-weight: 600; color: var(--gray-500); padding-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .adv-day { aspect-ratio: 1; border: 1px solid var(--gray-200); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; cursor: pointer; user-select: none; transition: all .1s; background: #fff; }
+    .adv-day.other-month { opacity: 0.3; pointer-events: none; background: var(--gray-50); }
+    .adv-day:hover { border-color: var(--gray-800); }
+    .adv-day.selected { border: 2px solid #222; background: var(--gray-50); }
+    .adv-day.blocked { background: #222; border-color: #222; color: #fff; }
+    .adv-day.blocked:hover { background: #000; border-color: #000; }
+    .adv-day.blocked.selected { border: 2px solid var(--red); }
+    .adv-day.booked { background: #fff0f0; border-color: #fca5a5; pointer-events: none; opacity: 0.8; }
+    .day-num { font-weight: 700; font-size: 15px; margin-bottom: auto; text-decoration: none; }
+    .adv-day.blocked .day-num { text-decoration: line-through; opacity: 0.8; }
+    .day-price { font-size: 12px; font-weight: 500; color: var(--gray-600); margin-top: 4px; }
+    .adv-day.blocked .day-price { color: rgba(255,255,255,.6); }
+    .adv-day.has-custom { background: #f0fdf4; border-color: #bbf7d0; }
+    .adv-day.has-custom .day-price { color: #16a34a; font-weight: 700; }
+    .adv-day.has-custom .day-price strike { font-size: 10px; color: var(--gray-400); margin-right: 4px; font-weight: 500;}
+    .side-card { background: #f9fafb; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--gray-200); }
+    .side-card.dark { background: #222; color: #fff; border-color: #222; }
+    .side-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; letter-spacing: 0.5px;}
+    .side-card.dark .side-title { color: rgba(255,255,255,.6); }
+    .status-toggle { display: flex; background: var(--gray-200); border-radius: 8px; padding: 3px; margin-bottom: 16px; }
+    .status-btn { flex: 1; text-align: center; padding: 8px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; color: var(--gray-600); transition: .2s; }
+    .status-btn.active { background: #fff; color: #222; box-shadow: var(--shadow); }
+    .status-btn.active.blk { background: #222; color: #fff; }
+
+    .stars{color:var(--red);letter-spacing:1px;}
+    ::-webkit-scrollbar{width:5px;height:5px;}
+    ::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:3px;}
+
+    @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr);}.dash-grid{grid-template-columns:1fr;}.prop-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:1100px){ .editor-layout { flex-direction: column; } .editor-sidebar { width: 100%; position: static; } }
+    @media(max-width:900px){.form-row{grid-template-columns:1fr;}}
+    @media(max-width:768px){.main{margin-left:0;padding:16px;}.stats-grid{grid-template-columns:1fr 1fr;gap:12px;}.prop-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <a href="index.html">
+      <div class="logo-text">StayDekho</div>
+      <div class="admin-badge">Admin Panel</div>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-sec-lbl">Overview</div>
+    <div class="sidebar-link active" onclick="showPage('dashboard')"><span class="icon">📊</span> Dashboard</div>
+    <div class="nav-sec-lbl">Manage</div>
+    <div class="sidebar-link" onclick="showPage('properties')"><span class="icon">🏡</span> Properties</div>
+    <div class="sidebar-link" onclick="showPage('bookings')"><span class="icon">📋</span> Bookings</div>
+    <div class="sidebar-link" onclick="showPage('calendar')"><span class="icon">📅</span> Calendar</div>
+    <div class="nav-sec-lbl">People</div>
+    <div class="sidebar-link" onclick="showPage('users')"><span class="icon">👥</span> Users</div>
+    <div class="sidebar-link" onclick="showPage('reviews')"><span class="icon">⭐</span> Reviews</div>
+    <div class="sidebar-link" onclick="showPage('reels')"><span class="icon">🎬</span> Guest Reels</div>
+    <div class="sidebar-link" onclick="showPage('today')"><span class="icon">🗓️</span> Today (Check-ins)</div>
+    <div class="sidebar-link" onclick="showPage('site-settings')"><span class="icon">⚙️</span> Site Settings</div>
+    <div class="sidebar-link" onclick="showPage('ical')"><span class="icon">🔁</span> iCal Sync</div>
+    <div class="sidebar-link" onclick="showPage('guides')"><span class="icon">📍</span> Travel Guides</div>
+    <div class="sidebar-link" onclick="showPage('addons')"><span class="icon">🧰</span> Add-on Requests</div>
+    <div class="sidebar-link" onclick="showPage('blog')"><span class="icon">📝</span> Blog Posts</div>
+    <div class="nav-sec-lbl">Website Links</div>
+    <a class="sidebar-link" href="index.html" target="_blank"><span class="icon">🌐</span> Home Page</a>
+    <a class="sidebar-link" href="listings.html" target="_blank"><span class="icon">🔍</span> Listings</a>
+    <a class="sidebar-link" href="about.html" target="_blank"><span class="icon">ℹ️</span> About Us</a>
+    <a class="sidebar-link" href="contact.html" target="_blank"><span class="icon">📞</span> Contact</a>
+    <a class="sidebar-link" href="blog.html" target="_blank"><span class="icon">📝</span> Blog</a>
+    <a class="sidebar-link" href="guest-dashboard.html" target="_blank"><span class="icon">👤</span> Guest Dashboard</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="#"><span>⚙️</span> Settings</a>
+    <a href="#" onclick="api.logout();return false"><span>🚪</span> Logout</a>
+  </div>
+</aside>
+
+<main class="main">
+
+  <div class="page-view active" id="page-dashboard">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Welcome back, Admin 👋 — Here's what's happening today</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add Property</button>
+        <div class="avatar">A</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon si-red">🏡</div><div><div class="stat-val" id="stat-props">—</div><div class="stat-lbl">Total Properties</div><div class="stat-chg up" id="stat-props-sub">Loading…</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-green">📋</div><div><div class="stat-val" id="stat-books">—</div><div class="stat-lbl">Total Bookings</div><div class="stat-chg up" id="stat-books-sub">Loading…</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-val" id="stat-users-count">—</div><div class="stat-lbl">Registered Users</div><div class="stat-chg up" id="stat-users-sub">Loading…</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl">Revenue (This Month)</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">Recent Bookings</div>
+          <button class="btn btn-outline btn-sm" onclick="showPage('bookings')">View All →</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Guest</th><th>Property</th><th>Check-in</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="recent-bookings-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="sec-hdr" style="gap:10px; flex-wrap:wrap;">
+            <div class="sec-title" id="mini-cal-title">📅 Loading...</div>
+            <select id="mini-cal-filter" class="form-ctrl" style="width:auto; padding:4px 8px; font-size:12px;" onchange="renderMiniCal()">
+              <option value="all">All Properties</option>
+            </select>
+          </div>
+          <div id="mini-cal"></div>
+        </div>
+        <div class="card">
+          <div class="sec-hdr"><div class="sec-title">Monthly Revenue (₹L)</div></div>
+          <div class="chart-bars" id="rev-chart"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-view" id="page-properties">
+    <div class="topbar">
+      <div><div class="page-title">Properties</div><div class="page-subtitle">Manage all your villas and stays</div></div>
+      <div class="topbar-right">
+        <input class="search-inp" placeholder="Search properties…" oninput="filterProps(this.value)"/>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add Property</button>
+      </div>
+    </div>
+    <div class="prop-grid" id="prop-grid"></div>
+  </div>
+
+  <div class="page-view" id="page-bookings">
+    <div class="topbar">
+      <div><div class="page-title">Bookings</div><div class="page-subtitle">All reservations in one place</div></div>
+      <div class="topbar-right">
+        <input class="search-inp" placeholder="Search guest or property…" oninput="filterBookings(this.value)"/>
+        <select class="search-inp" style="width:140px" onchange="filterByStatus(this.value)">
+          <option value="">All Status</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="pending">Pending</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#ID</th><th>Guest</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Guests</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔥 ADVANCED CALENDAR PAGE (AIRBNB STYLE) 🔥 -->
+  <div class="page-view" id="page-calendar">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Pricing & Availability</div>
+        <div class="page-subtitle">Manage blocks, notes, and custom pricing for specific dates</div>
+      </div>
+      <div class="topbar-right">
+        <select class="form-ctrl" id="adv-cal-property" onchange="changeAdvCalProperty()" style="width: 220px; font-weight: 600;">
+          <option value="">Loading Properties...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="editor-layout">
+      <!-- LEFT: MAIN CALENDAR GRID -->
+      <div class="editor-main">
+        <div class="cal-header-bar">
+          <button class="btn btn-outline" onclick="changeAdvMonth(-1)">‹ Prev</button>
+          <div class="cal-month-title" id="adv-cal-title">May 2026</div>
+          <button class="btn btn-outline" onclick="changeAdvMonth(1)">Next ›</button>
+        </div>
+        <div class="adv-cal-grid" id="adv-cal-grid">
+          <!-- JS will render dates here -->
+        </div>
+      </div>
+
+      <!-- RIGHT: SIDEBAR CONTROLS -->
+      <div class="editor-sidebar">
+        <div style="font-size: 18px; font-weight: 800; margin-bottom: 6px;" id="side-date-label">Select dates</div>
+        <p style="font-size: 13px; color: var(--gray-500); margin-bottom: 24px;" id="side-date-hint">Click on calendar to edit availability or price.</p>
+
+        <div id="side-controls" style="display: none; opacity: 0; transition: opacity 0.2s;">
+          <div class="side-card" id="avail-card">
+            <div class="side-title">Availability</div>
+            <div class="status-toggle">
+              <div class="status-btn active" id="btn-avail" onclick="setSideStatus('available')">Available</div>
+              <div class="status-btn" id="btn-block" onclick="setSideStatus('blocked')">Blocked</div>
+            </div>
+            <div class="form-grp" id="note-group" style="display:none;">
+              <label class="form-lbl" style="font-size: 11px; color: var(--gray-500);">Internal Note</label>
+              <input type="text" class="form-ctrl" id="side-note" placeholder="e.g. Maintenance" style="font-size: 13px; padding: 7px 10px;"/>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-title">Price per night</div>
+            <div style="position: relative;">
+              <span style="position: absolute; left: 12px; top: 9px; font-weight: 600; color: var(--gray-500);">₹</span>
+              <input type="number" class="form-ctrl" id="side-price" placeholder="Base Price" style="padding-left: 26px; font-weight: 700; font-size: 15px;"/>
+            </div>
+            <p style="font-size: 11px; color: var(--gray-500); margin-top: 8px;">Leave empty to use base price.</p>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 24px;">
+            <button class="btn btn-outline" style="flex:1" onclick="clearSelection()">Cancel</button>
+            <button class="btn btn-black" style="flex:1" onclick="saveCalendarChanges()">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-view" id="page-users">
+    <div class="topbar">
+      <div><div class="page-title">Users</div><div class="page-subtitle">All registered guests on StayDekho</div></div>
+      <div class="topbar-right"><input class="search-inp" placeholder="Search users…" oninput="filterUsers(this.value)"/></div>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Bookings</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔥 REVIEWS PAGE (WITH ADD BUTTON & PHOTO) 🔥 -->
+  <div class="page-view" id="page-reviews">
+    <div class="topbar">
+      <div><div class="page-title">Reviews</div><div class="page-subtitle">Guest testimonials and ratings</div></div>
+      <button class="btn btn-primary" onclick="openAddReviewModal()">+ Add Review</button>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Guest</th><th>Property</th><th>Rating</th><th>Review</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="reviews-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-view" id="page-reels">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Guest Reels</div>
+        <div class="page-subtitle">Homepage pe dikhne wale video testimonials manage karo</div>
+      </div>
+      <button class="btn btn-primary" onclick="showModal('reel-add-modal')">+ Add Reel</button>
+    </div>
+    <div id="reels-admin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;padding:4px 0"></div>
+    <p id="reels-empty-msg" style="display:none;color:var(--gray-400);text-align:center;padding:48px 0">Koi reel nahi hai abhi. "Add Reel" button se pehli reel add karo!</p>
+  </div>
+
+  <div class="page-view" id="page-today">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Today's Operations</div>
+        <div class="page-subtitle">Check-ins and check-outs strictly for <span id="today-date">today</span></div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadToday()">↻ Refresh</button>
+    </div>
+    <div class="dash-grid" style="grid-template-columns:1fr 1fr">
+      <div class="card">
+        <div class="sec-hdr"><div class="sec-title">⬇️ Check-ins today (<span id="today-checkins-count">0</span>)</div></div>
+        <div class="table-wrap"><table><thead><tr><th>Guest</th><th>Phone</th><th>Property</th><th>Guests</th><th>Status</th></tr></thead><tbody id="today-checkins-tbody"><tr><td colspan="5" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="sec-hdr"><div class="sec-title">⬆️ Check-outs today (<span id="today-checkouts-count">0</span>)</div></div>
+        <div class="table-wrap"><table><thead><tr><th>Guest</th><th>Phone</th><th>Property</th><th>Guests</th><th>Status</th></tr></thead><tbody id="today-checkouts-tbody"><tr><td colspan="5" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-view" id="page-site-settings">
+    <div class="topbar">
+      <div><div class="page-title">Site Settings</div><div class="page-subtitle">Hero, stats, contact info — live on homepage</div></div>
+      <button class="btn btn-primary" onclick="saveSiteSettings()">Save Changes</button>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="sec-hdr"><div class="sec-title">Hero Section</div></div>
+      <div class="form-grp"><label class="form-lbl">Eyebrow text</label><input class="form-ctrl" id="ss-hero-eyebrow"/></div>
+      <div class="form-grp"><label class="form-lbl">Headline <span style="color:var(--gray-400);font-weight:400">(HTML allowed — <br/>, <em>)</span></label><textarea class="form-ctrl" id="ss-hero-headline" rows="2"></textarea></div>
+      <div class="form-grp"><label class="form-lbl">Sub-headline</label><textarea class="form-ctrl" id="ss-hero-sub" rows="2"></textarea></div>
+      <div class="form-grp"><label class="form-lbl">Background photo URLs <span style="color:var(--gray-400);font-weight:400">(one per line)</span></label><textarea class="form-ctrl" id="ss-hero-slides" rows="6"></textarea></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="sec-hdr"><div class="sec-title">Hero Statistics <span style="color:var(--gray-400);font-weight:400;font-size:12px">(blank = auto from DB)</span></div></div>
+      <div class="form-row"><div class="form-grp"><label class="form-lbl">Curated Villas override</label><input class="form-ctrl" id="ss-stats-villas" placeholder="e.g. 12+"/></div><div class="form-grp"><label class="form-lbl">Destinations override</label><input class="form-ctrl" id="ss-stats-dest" placeholder="e.g. 6+"/></div></div>
+      <div class="form-row"><div class="form-grp"><label class="form-lbl">Happy Guests override</label><input class="form-ctrl" id="ss-stats-guests" placeholder="e.g. 500+"/></div><div class="form-grp"><label class="form-lbl">Avg Rating override</label><input class="form-ctrl" id="ss-stats-rating" placeholder="e.g. 4.9★"/></div></div>
+    </div>
+    <div class="card">
+      <div class="sec-hdr"><div class="sec-title">Contact & Social</div></div>
+      <div class="form-row"><div class="form-grp"><label class="form-lbl">Contact Email</label><input class="form-ctrl" id="ss-email"/></div><div class="form-grp"><label class="form-lbl">Phone</label><input class="form-ctrl" id="ss-phone"/></div></div>
+      <div class="form-row"><div class="form-grp"><label class="form-lbl">Safety Email</label><input class="form-ctrl" id="ss-safety-email"/></div><div class="form-grp"><label class="form-lbl">Instagram URL</label><input class="form-ctrl" id="ss-ig"/></div></div>
+      <div class="form-row"><div class="form-grp"><label class="form-lbl">Twitter / X URL</label><input class="form-ctrl" id="ss-tw"/></div><div class="form-grp"><label class="form-lbl">WhatsApp URL</label><input class="form-ctrl" id="ss-wa"/></div></div>
+    </div>
+  </div>
+
+  <div class="page-view" id="page-ical">
+    <div class="topbar">
+      <div><div class="page-title">iCal Sync</div><div class="page-subtitle">Import blocks from Airbnb / Agoda / MMT, export your own iCal links</div></div>
+      <button class="btn btn-primary" onclick="syncAllIcal()">↻ Sync now</button>
+    </div>
+    <div class="card"><div id="ical-property-list" style="display:flex;flex-direction:column;gap:18px"></div></div>
+  </div>
+
+  <div class="page-view" id="page-guides">
+    <div class="topbar">
+      <div><div class="page-title">Travel Guides</div><div class="page-subtitle">City-wise pages, shown in the footer</div></div>
+      <button class="btn btn-primary" onclick="newGuide()">+ New Guide</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>City</th><th>Title</th><th>Slug</th><th>Status</th><th>Actions</th></tr></thead><tbody id="guides-tbody"><tr><td colspan="5" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody></table></div></div>
+  </div>
+
+  <div class="page-view" id="page-addons">
+    <div class="topbar"><div><div class="page-title">Add-on Requests</div><div class="page-subtitle">Guest requests for services on their bookings</div></div></div>
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Guest</th><th>Phone</th><th>Property</th><th>Add-on</th><th>Note</th><th>Status</th><th>Actions</th></tr></thead><tbody id="addons-tbody"><tr><td colspan="8" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody></table></div></div>
+  </div>
+
+  <div class="page-view" id="page-blog">
+    <div class="topbar">
+      <div><div class="page-title">Blog Posts</div><div class="page-subtitle">Create and manage blog articles shown on blog.html</div></div>
+      <button class="btn btn-primary" onclick="openBlogModal()">+ New Post</button>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>Category</th><th>Author</th><th>Status</th><th>Published</th><th>Actions</th></tr></thead>
+          <tbody id="blog-tbody"><tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- 🔥 MODALS 🔥 -->
+
+<div class="modal-bd" id="review-add-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-hdr"><div class="modal-title" id="rev-modal-title">Add Guest Review</div><button class="modal-close" onclick="closeModal('review-add-modal')">✕</button></div>
+    <div class="form-grp"><label class="form-lbl">Guest Name *</label><input class="form-ctrl" id="rev-guest" placeholder="e.g. Rahul Verma"/></div>
+    <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="rev-property"><option value="">Select Property...</option></select></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Rating (1-5)</label><input class="form-ctrl" type="number" id="rev-rating" min="1" max="5" value="5"/></div><div class="form-grp"><label class="form-lbl">Date (Optional)</label><input class="form-ctrl" type="date" id="rev-date"/></div></div>
+    <div class="form-grp"><label class="form-lbl">Guest Photo (Image URL) *</label><input class="form-ctrl" id="rev-image-url" placeholder="e.g. guest1.jpg or https://..."/><div style="font-size: 11.5px; color: var(--gray-400); margin-top: 4px;">Yeh photo index page pe card ke background mein dikhegi.</div></div>
+    <div class="form-grp"><label class="form-lbl">Review Text *</label><textarea class="form-ctrl" id="rev-text" rows="4" placeholder="Guest ka experience yahan likhiye..."></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-outline" onclick="closeModal('review-add-modal')">Cancel</button><button class="btn btn-primary" id="rev-save-btn" onclick="saveAdminReview()">Save Review</button></div>
+  </div>
+</div>
+
+<div class="modal-bd" id="add-modal">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Add New Property</div><button class="modal-close" onclick="closeModal('add-modal')">✕</button></div>
+    <div class="form-grp"><label class="form-lbl">Property Images</label><div class="multi-img-section"><div class="img-thumb-grid" id="add-thumb-grid"><div class="img-add-btn" onclick="document.getElementById('add-img-file').click()"><span class="add-icon">＋</span><span>Add Image</span></div></div><input type="file" id="add-img-file" accept="image/*" multiple style="display:none" onchange="handleMultiUpload(this,'add')"/><div class="img-url-row"><input class="img-url-inp" id="add-img-url" placeholder="Or paste image URL and press Enter…" onkeydown="if(event.key==='Enter'){addImgUrl('add');event.preventDefault()}"/><button class="btn btn-outline btn-sm" onclick="addImgUrl('add')">Add URL</button></div></div></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Property Name *</label><input class="form-ctrl" id="add-name"/></div><div class="form-grp"><label class="form-lbl">Location *</label><input class="form-ctrl" id="add-location"/></div></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Price / Night (₹) *</label><input class="form-ctrl" id="add-price" type="number"/></div><div class="form-grp"><label class="form-lbl">Max Guests</label><input class="form-ctrl" id="add-guests" type="number"/></div></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Bedrooms</label><input class="form-ctrl" id="add-beds" type="number"/></div><div class="form-grp"><label class="form-lbl">Bathrooms</label><input class="form-ctrl" id="add-baths" type="number"/></div></div>
+    <div class="form-grp"><label class="form-lbl">Description</label><textarea class="form-ctrl" id="add-desc" rows="3"></textarea></div>
+    <div class="form-grp"><label class="form-lbl">Amenities</label><input class="form-ctrl" id="add-amenities"/></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Check-in time</label><input class="form-ctrl" id="add-checkin"/></div><div class="form-grp"><label class="form-lbl">Check-out time</label><input class="form-ctrl" id="add-checkout"/></div></div>
+    <div class="form-grp"><label class="form-lbl">Google Maps URL</label><input class="form-ctrl" id="add-map-url"/></div>
+    <div class="form-grp"><label class="form-lbl">House Rules</label><textarea class="form-ctrl" id="add-rules" rows="3"></textarea></div>
+    <div class="form-grp"><label class="form-lbl">Add-ons</label><textarea class="form-ctrl" id="add-addons" rows="3"></textarea></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">FOMO: bookings</label><input class="form-ctrl" id="add-fomo-bookings" type="number"/></div><div class="form-grp"><label class="form-lbl">FOMO: viewers</label><input class="form-ctrl" id="add-fomo-viewers" type="number"/></div></div>
+    <div class="form-grp"><label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="add-fomo-enabled" checked/> Show FOMO badges on this property</label></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"><button class="btn btn-outline" onclick="closeModal('add-modal')">Cancel</button><button class="btn btn-primary" onclick="saveNewProperty()">Save Property</button></div>
+  </div>
+</div>
+
+<div class="modal-bd" id="edit-modal">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Edit Property</div><button class="modal-close" onclick="closeModal('edit-modal')">✕</button></div>
+    <input type="hidden" id="edit-id"/>
+    <div class="form-grp">
+      <label class="form-lbl">Property Images</label>
+      <div class="multi-img-section"><div class="img-thumb-grid" id="edit-thumb-grid"><div class="img-add-btn" onclick="document.getElementById('edit-img-file').click()"><span class="add-icon">＋</span><span>Add Image</span></div></div><input type="file" id="edit-img-file" accept="image/*" multiple style="display:none" onchange="handleMultiUpload(this,'edit')"/><div class="img-url-row"><input class="img-url-inp" id="edit-img-url" placeholder="Or paste image URL and press Enter…" onkeydown="if(event.key==='Enter'){addImgUrl('edit');event.preventDefault()}"/><button class="btn btn-outline btn-sm" onclick="addImgUrl('edit')">Add URL</button></div></div>
+    </div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Property Name *</label><input class="form-ctrl" id="edit-name"/></div><div class="form-grp"><label class="form-lbl">Location *</label><input class="form-ctrl" id="edit-location"/></div></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Price / Night (₹)</label><input class="form-ctrl" id="edit-price" type="number"/></div><div class="form-grp"><label class="form-lbl">Max Guests</label><input class="form-ctrl" id="edit-guests" type="number"/></div></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Bedrooms</label><input class="form-ctrl" id="edit-beds" type="number"/></div><div class="form-grp"><label class="form-lbl">Status</label><select class="form-ctrl" id="edit-status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div></div>
+    <div class="form-grp"><label class="form-lbl">Description</label><textarea class="form-ctrl" id="edit-desc" rows="3" style="resize:vertical"></textarea></div>
+    <div class="form-grp"><label class="form-lbl">Amenities</label><input class="form-ctrl" id="edit-amenities"/></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Check-in time</label><input class="form-ctrl" id="edit-checkin"/></div><div class="form-grp"><label class="form-lbl">Check-out time</label><input class="form-ctrl" id="edit-checkout"/></div></div>
+    <div class="form-grp"><label class="form-lbl">Google Maps URL</label><input class="form-ctrl" id="edit-map-url"/></div>
+    <div class="form-grp"><label class="form-lbl">House Rules</label><textarea class="form-ctrl" id="edit-rules" rows="3"></textarea></div>
+    <div class="form-grp"><label class="form-lbl">Add-ons</label><textarea class="form-ctrl" id="edit-addons" rows="3"></textarea></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">FOMO: bookings</label><input class="form-ctrl" id="edit-fomo-bookings" type="number"/></div><div class="form-grp"><label class="form-lbl">FOMO: viewers</label><input class="form-ctrl" id="edit-fomo-viewers" type="number"/></div></div>
+    <div class="form-grp"><label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="edit-fomo-enabled"/> Show FOMO badges</label></div>
+    <div class="form-grp"><label class="form-lbl">Brochure (PDF)</label><div id="edit-brochure-current" style="font-size:12.5px;color:var(--gray-500);margin-bottom:6px"></div><input type="file" id="edit-brochure-file" accept="application/pdf" onchange="uploadBrochureFile()"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"><button class="btn btn-outline" onclick="closeModal('edit-modal')">Cancel</button><button class="btn btn-primary" onclick="saveEditProperty()">Save Changes</button></div>
+  </div>
+</div>
+
+<div class="modal-bd" id="reel-add-modal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-hdr"><div class="modal-title">Add Guest Reel</div><button class="modal-close" onclick="closeModal('reel-add-modal')">✕</button></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Guest Name *</label><input class="form-ctrl" id="rl-name"/></div><div class="form-grp"><label class="form-lbl">Location (City)</label><input class="form-ctrl" id="rl-location"/></div></div>
+    <div class="form-grp"><label class="form-lbl">Stay Name *</label><input class="form-ctrl" id="rl-stay"/></div>
+    <div class="form-grp"><label class="form-lbl">Review Quote</label><textarea class="form-ctrl" id="rl-quote" rows="2"></textarea></div>
+    <div class="form-row"><div class="form-grp"><label class="form-lbl">Stars (1–5)</label><input class="form-ctrl" id="rl-stars" type="number" min="1" max="5" value="5"/></div><div class="form-grp"><label class="form-lbl">Sort Order</label><input class="form-ctrl" id="rl-order" type="number" value="0" min="0"/></div></div>
+    <div class="form-grp"><label class="form-lbl">🎬 Video File <span style="font-weight:400;color:var(--gray-400)">(MP4/MOV, max 300MB)</span></label><input class="form-ctrl" id="rl-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Ya URL paste karo</label><input class="form-ctrl" id="rl-video-url"/></div>
+    <div class="form-grp"><label class="form-lbl">🖼️ Poster Image <span style="font-weight:400;color:var(--gray-400)">(thumbnail — JPG/PNG)</span></label><input class="form-ctrl" id="rl-poster-file" type="file" accept="image/*" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Ya URL paste karo</label><input class="form-ctrl" id="rl-poster-url"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-outline" onclick="closeModal('reel-add-modal')">Cancel</button><button class="btn btn-primary" id="rl-save-btn" onclick="saveReel()">Save Reel</button></div>
+  </div>
+</div>
+
+<div class="modal-bd" id="blog-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-hdr"><div class="modal-title" id="blog-modal-title">New Blog Post</div><button class="modal-close" onclick="closeModal('blog-modal')">✕</button></div>
+    <input type="hidden" id="blog-edit-id"/>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Title *</label><input class="form-ctrl" id="blog-title" placeholder="e.g. Top 10 Villas in Goa"/></div>
+      <div class="form-grp"><label class="form-lbl">Category</label>
+        <select class="form-ctrl" id="blog-category">
+          <option>Destinations</option><option>Travel Guides</option><option>Experiences</option><option>General</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Author</label><input class="form-ctrl" id="blog-author" placeholder="StayDekho Team"/></div>
+      <div class="form-grp"><label class="form-lbl">Cover Image URL</label><input class="form-ctrl" id="blog-cover" placeholder="https://images.unsplash.com/..."/></div>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Excerpt (short summary)</label><textarea class="form-ctrl" id="blog-excerpt" rows="2" placeholder="1-2 lines about this post…"></textarea></div>
+    <div class="form-grp"><label class="form-lbl">Body *</label><textarea class="form-ctrl" id="blog-body" rows="10" style="font-family:monospace;font-size:13px;resize:vertical" placeholder="Full article content here…"></textarea></div>
+    <div class="form-grp"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="blog-published"/> Publish immediately (visible on blog.html)</label></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-outline" onclick="closeModal('blog-modal')">Cancel</button>
+      <button class="btn btn-primary" id="blog-save-btn" onclick="saveBlogPost()">Save Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/api.js"></script>
+<script>
+function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── AUTH CHECK ──
+function checkAdminAccess() {
+  if (typeof api === 'undefined' || !api.isLoggedIn()) { window.location.href = 'login.html'; return false; }
+  const user = JSON.parse(localStorage.getItem('sd_user') || 'null');
+  if (!user || user.role !== 'admin') { alert('Admin access required.'); window.location.href = 'index.html'; return false; }
+  return true;
+}
+
+// ── NAVIGATION & MODALS ──
+function showPage(name) {
+  document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById('page-'+name);
+  if(target) target.classList.add('active');
+  
+  document.querySelectorAll('.sidebar-link[onclick]').forEach(l => {
+    l.classList.toggle('active', l.getAttribute('onclick') === `showPage('${name}')`);
+  });
+  
+  if(name === 'calendar') { loadDatePricesForProp().then(() => renderAdvCalendar()); }
+  if(name === 'today') loadToday();
+  if(name === 'site-settings') loadSiteSettings();
+  if(name === 'ical') loadIcalPage();
+  if(name === 'guides') loadGuides();
+  if(name === 'addons') loadAddons();
+  if(name === 'blog') loadBlogPosts();
+}
+
+function showModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bd').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ── GLOBALS ──
+let properties = [];
+let bookings   = [];
+let users      = [];
+let reels      = [];
+let reviews    = [];
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); } catch { return d; }
+}
+
+// ── INIT ADMIN ──
+async function initAdmin() {
+  if (!checkAdminAccess()) return;
+  try {
+    const [statsRes, propsRes, booksRes, usersRes, reelsRes] = await Promise.all([
+      api && api.adminStats ? api.adminStats().catch(()=>({stats:{}, recentBookings:[], monthlyRevenue:[]})) : Promise.resolve({stats:{}, recentBookings:[], monthlyRevenue:[]}), 
+      api && api.listProperties ? api.listProperties().catch(()=>({properties:[]})) : Promise.resolve({properties:[]}), 
+      api && api.listBookings ? api.listBookings().catch(()=>({bookings:[]})) : Promise.resolve({bookings:[]}), 
+      api && api.adminUsers ? api.adminUsers().catch(()=>({users:[]})) : Promise.resolve({users:[]}), 
+      api && api.listAllReels ? api.listAllReels().catch(()=>({reels:[]})) : Promise.resolve({reels:[]})
+    ]);
+
+    const s = statsRes.stats || {};
+    document.getElementById('stat-props').textContent = s.totalProperties || 0;
+    document.getElementById('stat-books').textContent = s.totalBookings || 0;
+    document.getElementById('stat-users-count').textContent = s.totalUsers || 0;
+    document.getElementById('stat-rev').textContent = (s.monthRevenue || 0) >= 100000 ? '₹' + ((s.monthRevenue || 0)/100000).toFixed(1) + 'L' : '₹' + (s.monthRevenue || 0).toLocaleString('en-IN');
+
+    properties = (propsRes.properties || []).map(p => ({
+      id: p.id, name: p.name || p.title, location: p.location, price: p.price, guests: p.guests || p.max_guests || 10, beds: p.beds || 4, amenities: Array.isArray(p.amenities) ? p.amenities.join(', ') : (p.amenities || ''), desc: p.description || '', status: p.status || 'Active', images: p.images && p.images.length ? p.images : (p.main_image ? [p.main_image] : []),
+    }));
+    
+    bookings = (booksRes.bookings || []).map(b => ({
+      id: b.id, guest: b.guest_name || b.user_name || '—', property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout, guests: b.guests || 1, amount: b.amount || 0, status: b.status || 'pending',
+    }));
+    
+    users = (usersRes.users || []).map(u => ({
+      id: u.id, name: u.name, email: u.email, phone: u.phone || '—', bookings: u.booking_count || 0, joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : '—', role: u.role,
+    }));
+    
+    reels = reelsRes.reels || [];
+
+    // Fetch Reviews
+    const baseUrl = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
+    try {
+      const revReq = await fetch(`${baseUrl}/reviews`);
+      if(revReq.ok) {
+        const revData = await revReq.json();
+        reviews = (revData.reviews || []).map(r => ({
+          id: r.id, guest: r.user_name || r.guest || '—', property: r.property_name || '—', rating: r.rating || 5, text: r.text || r.review || '',
+          date: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'Recent', image_url: r.image_url || r.photo_url || ''
+        }));
+      }
+    } catch(e){ console.log("Reviews load error", e); }
+
+    // Fetch iCal Blocks
+    try {
+      const token = localStorage.getItem('sd_token');
+      for (const p of properties) {
+        const res = await fetch(`${baseUrl}/ical/property/${p.id}/blocks`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.blocks) {
+            data.blocks.forEach(blk => { bookings.push({ id: 'ext-' + blk.id, guest: '🗓️ ' + (blk.summary || 'Airbnb Block'), property: p.name, checkin: blk.start_date, checkout: blk.end_date, status: 'confirmed', isExternal: true }); });
+          }
+        }
+      }
+    } catch(e) { console.error('Failed to load iCal blocks:', e); }
+
+    renderProps(properties);
+    renderBookings(bookings);
+    renderUsers(users);
+    renderReviews();
+    renderReels();
+    renderRecentBookings(statsRes.recentBookings || bookings);
+    renderChartFromData(statsRes.monthlyRevenue || []);
+    
+    const propSelect = document.getElementById('adv-cal-property');
+    if(propSelect) {
+      propSelect.innerHTML = properties.map(p => `<option value="${p.name}">🏡 ${p.name}</option>`).join('');
+      if(properties.length > 0) selectedProp = properties[0].name;
+    }
+
+    const miniCalFilter = document.getElementById('mini-cal-filter');
+    if(miniCalFilter) miniCalFilter.innerHTML = '<option value="all">All Properties</option>' + properties.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+    renderMiniCal();
+
+  } catch (err) { console.error("Admin init error:", err); }
+}
+
+// ── RECENT BOOKINGS & MINI CAL (DASHBOARD) ──
+function renderRecentBookings(list) {
+  const tbody = document.getElementById('recent-bookings-tbody');
+  if (!tbody) return;
+  const rows = list.filter(b => !b.isExternal).slice(0, 5); 
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:20px">No bookings yet</td></tr>'; return; }
+  tbody.innerHTML = rows.map(b => {
+    const st = b.status || 'pending'; const checkinFmt = b.checkin ? new Date(b.checkin).toLocaleDateString('en-IN', {day:'numeric', month:'short'}) : '—';
+    return `<tr><td><b>${b.guest_name || b.user_name || b.guest || '—'}</b></td><td>${b.property_name || b.property || '—'}</td><td>${checkinFmt}</td><td>₹${Number(b.amount || 0).toLocaleString('en-IN')}</td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase() + st.slice(1)}</span></td></tr>`;
+  }).join('');
+}
+
+function renderMiniCal() {
+  const today  = new Date(); const year = today.getFullYear(); const month = today.getMonth(); 
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const filterEl = document.getElementById('mini-cal-filter'); const selectedP = filterEl ? filterEl.value : 'all';
+  const titleEl = document.getElementById('mini-cal-title');
+  if(titleEl) titleEl.textContent = `📅 ${MONTH_NAMES[month]} ${year}`;
+
+  const bookedDays = getBookedDaysForProp(selectedP, year, month);
+  const first = new Date(year, month, 1).getDay(); const days  = new Date(year, month + 1, 0).getDate();
+  const dns   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let h = `<div class="cal-grid">`; dns.forEach(d => { h += `<div class="cal-dn">${d}</div>`; });
+  for (let i=0;i<first;i++) h += `<div class="cal-day other"></div>`;
+  for (let d=1;d<=days;d++) {
+    const isToday = d===today.getDate() && month===today.getMonth() && year===today.getFullYear();
+    const isBooked = bookedDays[d] && bookedDays[d].length>0;
+    let cls = 'cal-day'; if (isToday) cls += ' today'; if (isBooked) cls += ' booked'; if (!isToday && !isBooked) cls += ' avail';
+    h += `<div class="${cls}">${d}</div>`;
+  }
+  h += `</div>`;
+  const miniCalEl = document.getElementById('mini-cal');
+  if(miniCalEl) miniCalEl.innerHTML = h;
+}
+
+function getBookedDaysForProp(propName, year, month) {
+  const result = {};
+  const filtered = propName==='all' ? bookings : bookings.filter(b=>b.property===propName && b.status !== 'cancelled');
+  filtered.forEach(b => {
+    const start = new Date(b.checkin); const end = new Date(b.checkout);
+    for (let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
+      if (d.getFullYear()===year && d.getMonth()===month) {
+        const day = d.getDate(); if (!result[day]) result[day] = []; result[day].push(b);
+      }
+    }
+  });
+  return result;
+}
+
+// ── ADVANCED CALENDAR LOGIC (AIRBNB STYLE) ──
+let calY = new Date().getFullYear(), calM = new Date().getMonth();
+const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let selectedProp = "";
+let selectedDates = new Set();
+let calendarModifications = {}; 
+
+async function changeAdvCalProperty() {
+  selectedProp = document.getElementById('adv-cal-property').value;
+  clearSelection();
+  await loadDatePricesForProp();
+  renderAdvCalendar();
+}
+
+async function loadDatePricesForProp() {
+  const propObj = properties.find(p => p.name === selectedProp);
+  if (!propObj) return;
+  try {
+    const { date_prices } = await api.getDatePrices(propObj.id);
+    if (!calendarModifications[selectedProp]) calendarModifications[selectedProp] = {};
+    date_prices.forEach(r => {
+      calendarModifications[selectedProp][r.date] = {
+        blocked:     r.blocked === 1,
+        customPrice: r.price   || null,
+        note:        r.note    || '',
+      };
+    });
+  } catch (e) { console.warn('date-prices load failed:', e.message); }
+}
+function changeAdvMonth(delta) { calM += delta; if(calM < 0) { calM = 11; calY--; } if(calM > 11) { calM = 0; calY++; } clearSelection(); renderAdvCalendar(); }
+
+function renderAdvCalendar() {
+  document.getElementById('adv-cal-title').textContent = `${CAL_MONTHS[calM]} ${calY}`;
+  const grid = document.getElementById('adv-cal-grid');
+  if(!grid) return;
+  const firstDay = new Date(calY, calM, 1).getDay(); const daysInMonth = new Date(calY, calM + 1, 0).getDate();
+  const dns = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let h = ''; dns.forEach(d => { h += `<div class="adv-cal-dn">${d}</div>`; });
+  for (let i = 0; i < firstDay; i++) { h += `<div class="adv-day other-month"></div>`; }
+  
+  const propObj = properties.find(p => p.name === selectedProp);
+  const bPrice = propObj ? propObj.price : 5000;
+  if(!calendarModifications[selectedProp]) calendarModifications[selectedProp] = {};
+  const mods = calendarModifications[selectedProp];
+
+  const bookedDates = [];
+  bookings.forEach(b => {
+    if(b.property === selectedProp && b.status !== 'cancelled') {
+      let d = new Date(b.checkin); let end = new Date(b.checkout);
+      while(d <= end) { bookedDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); d.setDate(d.getDate()+1); }
+    }
+  });
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isBooked = bookedDates.includes(dateStr);
+    const modData = mods[dateStr] || {};
+    const isBlocked = modData.blocked === true;
+    const customPrice = modData.customPrice;
+    const isSelected = selectedDates.has(dateStr);
+    
+    let cls = 'adv-day';
+    if(isBooked) cls += ' booked'; if(isBlocked) cls += ' blocked'; if(customPrice) cls += ' has-custom'; if(isSelected) cls += ' selected';
+    
+    let priceHtml = `₹${(bPrice/1000).toFixed(1)}K`;
+    if(customPrice) priceHtml = `<strike>₹${(bPrice/1000).toFixed(1)}K</strike> ₹${(customPrice/1000).toFixed(1)}K`;
+    
+    h += `<div class="${cls}" data-date="${dateStr}" onclick="toggleDateSelection('${dateStr}', ${isBooked})">
+        <span class="day-num">${d}</span><span class="day-price">${priceHtml}</span>
+      </div>`;
+  }
+  grid.innerHTML = h; updateSidebarUI();
+}
+
+function toggleDateSelection(dateStr, isBooked) {
+  if(isBooked) return;
+  if(selectedDates.has(dateStr)) selectedDates.delete(dateStr); else selectedDates.add(dateStr);
+  renderAdvCalendar();
+}
+function clearSelection() { selectedDates.clear(); renderAdvCalendar(); }
+
+let currentSidebarStatus = 'available';
+function updateSidebarUI() {
+  const panel = document.getElementById('side-controls'); const label = document.getElementById('side-date-label'); const hint = document.getElementById('side-date-hint');
+  const propObj = properties.find(p => p.name === selectedProp); const bPrice = propObj ? propObj.price : 5000;
+  
+  if(selectedDates.size === 0) {
+    panel.style.opacity = '0'; setTimeout(() => panel.style.display = 'none', 200);
+    label.textContent = "Select dates"; hint.textContent = "Click on calendar to edit availability or price."; return;
+  }
+  
+  panel.style.display = 'block'; setTimeout(() => panel.style.opacity = '1', 10);
+  label.textContent = `${selectedDates.size} date(s) selected`; hint.textContent = Array.from(selectedDates).sort().join(', ');
+
+  if(selectedDates.size === 1) {
+    const dStr = Array.from(selectedDates)[0]; const mod = calendarModifications[selectedProp][dStr] || {};
+    setSideStatus(mod.blocked ? 'blocked' : 'available'); document.getElementById('side-note').value = mod.note || ''; document.getElementById('side-price').value = mod.customPrice || ''; document.getElementById('side-price').placeholder = bPrice;
+  } else {
+    setSideStatus('available'); document.getElementById('side-note').value = ''; document.getElementById('side-price').value = ''; document.getElementById('side-price').placeholder = `Base: ₹${bPrice}`;
+  }
+}
+
+function setSideStatus(status) {
+  currentSidebarStatus = status; const btnAvail = document.getElementById('btn-avail'); const btnBlock = document.getElementById('btn-block'); const noteGrp = document.getElementById('note-group'); const card = document.getElementById('avail-card');
+  if(status === 'available') { btnAvail.className = 'status-btn active'; btnBlock.className = 'status-btn'; noteGrp.style.display = 'none'; card.className = 'side-card'; } 
+  else { btnAvail.className = 'status-btn'; btnBlock.className = 'status-btn active blk'; noteGrp.style.display = 'block'; card.className = 'side-card dark'; }
+}
+
+async function saveCalendarChanges() {
+  const isBlocked   = currentSidebarStatus === 'blocked';
+  const note        = document.getElementById('side-note').value.trim();
+  const priceInput  = document.getElementById('side-price').value;
+  const customPrice = priceInput ? parseInt(priceInput) : null;
+
+  if (!calendarModifications[selectedProp]) calendarModifications[selectedProp] = {};
+
+  selectedDates.forEach(dateStr => {
+    if (!isBlocked && !customPrice)
+      delete calendarModifications[selectedProp][dateStr];
+    else
+      calendarModifications[selectedProp][dateStr] = { blocked: isBlocked, note: isBlocked ? note : '', customPrice };
+  });
+
+  // Persist to DB
+  const propObj = properties.find(p => p.name === selectedProp);
+  if (propObj) {
+    const mods = calendarModifications[selectedProp];
+    const prices = Object.entries(mods).map(([date, m]) => ({
+      date,
+      price:   m.customPrice || null,
+      blocked: m.blocked ? 1 : 0,
+      note:    m.note || '',
+    }));
+    // Also send deletes (dates that were removed from mods)
+    selectedDates.forEach(dateStr => {
+      if (!mods[dateStr]) prices.push({ date: dateStr, price: null, blocked: 0, note: '' });
+    });
+    try {
+      await api.saveDatePrices(propObj.id, prices);
+      showAdminToast('Prices saved ✓', 'success');
+    } catch (e) { showAdminToast('Save failed: ' + e.message, 'error'); }
+  }
+
+  clearSelection();
+}
+
+function showAdminToast(msg, type) {
+  let t = document.getElementById('_admin_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_admin_toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.15);transition:opacity .3s;';
+    document.body.appendChild(t);
+  }
+  t.style.background = type === 'success' ? '#16a34a' : '#dc2626';
+  t.style.color = '#fff';
+  t.style.opacity = '1';
+  t.textContent = msg;
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+// ── REVIEWS SYSTEM ──
+function renderReviews() {
+  const tbody = document.getElementById('reviews-tbody');
+  if (!reviews.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px">No reviews yet</td></tr>`; return; }
+  tbody.innerHTML = reviews.map(r => {
+    let avatar = r.image_url ? `<img src="${r.image_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:50%;background:var(--red-light);color:var(--red);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;flex-shrink:0;">${r.guest.charAt(0).toUpperCase()}</div>`;
+    return `<tr><td><div style="display:flex;align-items:center;gap:10px">${avatar}<b>${r.guest}</b></div></td><td>${r.property}</td><td><span class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span></td><td style="max-width:250px;color:var(--gray-600);font-size:13px">${r.text}</td><td style="color:var(--gray-400);white-space:nowrap">${r.date}</td><td><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteReview(${r.id})">🗑 Delete</button></td></tr>`;
+  }).join('');
+}
+
+function openAddReviewModal() {
+  document.getElementById('rev-guest').value = ''; document.getElementById('rev-rating').value = 5; document.getElementById('rev-text').value = ''; document.getElementById('rev-image-url').value = ''; document.getElementById('rev-date').value = new Date().toISOString().split('T')[0];
+  const propSelect = document.getElementById('rev-property');
+  propSelect.innerHTML = '<option value="">Select Property...</option>' + properties.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+  showModal('review-add-modal');
+}
+
+async function saveAdminReview() {
+  const guest = document.getElementById('rev-guest').value.trim(); const property = document.getElementById('rev-property').value; const rating = document.getElementById('rev-rating').value; const text = document.getElementById('rev-text').value.trim(); const imageUrl = document.getElementById('rev-image-url').value.trim();
+  if (!guest || !property || !text) { alert('Please fill required fields!'); return; }
+  const btn = document.getElementById('rev-save-btn'); btn.textContent = 'Saving...'; btn.disabled = true;
+  try {
+    const token = localStorage.getItem('sd_token') || ''; const baseUrl = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
+    const res = await fetch(`${baseUrl}/reviews`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ user_name: guest, property_name: property, rating: parseInt(rating), text: text, image_url: imageUrl }) });
+    if (!res.ok) throw new Error('Failed to save on backend.');
+    closeModal('review-add-modal'); await initAdmin(); alert("Review saved!");
+  } catch (err) { alert('Error: ' + err.message); } finally { btn.textContent = 'Save Review'; btn.disabled = false; }
+}
+
+async function deleteReview(id) {
+  if (!confirm('Delete review?')) return;
+  try {
+    const token = localStorage.getItem('sd_token'); const baseUrl = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
+    await fetch(`${baseUrl}/reviews/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+    await initAdmin();
+  } catch (e) { alert(e.message); }
+}
+
+// ── CRUD PROPERTIES ──
+const modalImages = { add: [], edit: [] };
+function renderThumbGrid(modalKey) {
+  const grid = document.getElementById(modalKey + '-thumb-grid'); const imgs = modalImages[modalKey];
+  grid.innerHTML = imgs.map((src, i) => `<div class="img-thumb"><img src="${src}" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=200&q=60'"/><button class="img-thumb-remove" onclick="removeImg('${modalKey}',${i})">✕</button>${i===0 ? '<span class="img-thumb-cover">COVER</span>' : ''}</div>`).join('') + `<div class="img-add-btn" onclick="document.getElementById('${modalKey}-img-file').click()"><span class="add-icon">＋</span><span>Add Image</span></div>`;
+}
+function handleMultiUpload(input, modalKey) {
+  const files = Array.from(input.files); let loaded = 0;
+  files.forEach(file => { const reader = new FileReader(); reader.onload = e => { modalImages[modalKey].push(e.target.result); loaded++; if (loaded === files.length) renderThumbGrid(modalKey); }; reader.readAsDataURL(file); });
+  input.value = '';
+}
+function addImgUrl(modalKey) {
+  const inp = document.getElementById(modalKey + '-img-url'); const url = inp.value.trim();
+  if (!url) return; modalImages[modalKey].push(url); renderThumbGrid(modalKey); inp.value = '';
+}
+function removeImg(modalKey, idx) { modalImages[modalKey].splice(idx, 1); renderThumbGrid(modalKey); }
+
+function openAddModal() {
+  modalImages.add = []; ['add-name','add-location','add-price','add-guests','add-beds','add-baths','add-desc','add-amenities','add-img-url','add-map-url','add-checkin','add-checkout','add-rules','add-addons','add-fomo-bookings','add-fomo-viewers'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const fe = document.getElementById('add-fomo-enabled'); if (fe) fe.checked = true; renderThumbGrid('add'); showModal('add-modal');
+}
+function parseLines(text) { return String(text || '').split('\n').map(s => s.trim()).filter(Boolean); }
+function parseAddons(text) {
+  return parseLines(text).map(line => { const [name, description, price] = line.split('|').map(s => s.trim()); const obj = { name }; if (description) obj.description = description; if (price && !isNaN(Number(price))) obj.price = Number(price); return obj; });
+}
+async function saveNewProperty() {
+  const name = document.getElementById('add-name').value.trim(); const location = document.getElementById('add-location').value.trim();
+  if (!name || !location) { alert('Please fill in Name and Location'); return; }
+  const images = modalImages.add.length ? [...modalImages.add] : ['https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'];
+  const btn = document.querySelector('#add-modal .btn-primary'); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const fomoB = document.getElementById('add-fomo-bookings').value; const fomoV = document.getElementById('add-fomo-viewers').value;
+    await api.createProperty({ name, location, price: parseInt(document.getElementById('add-price').value) || 5000, guests: parseInt(document.getElementById('add-guests').value) || 10, beds: parseInt(document.getElementById('add-beds').value) || 4, bathrooms: parseInt(document.getElementById('add-baths').value) || 2, amenities: document.getElementById('add-amenities').value, description: document.getElementById('add-desc').value, status: 'Active', map_url: document.getElementById('add-map-url').value.trim(), checkin_time: document.getElementById('add-checkin').value.trim() || '2:00 PM', checkout_time: document.getElementById('add-checkout').value.trim() || '11:00 AM', rules: parseLines(document.getElementById('add-rules').value), addons: parseAddons(document.getElementById('add-addons').value), fomo_bookings: fomoB === '' ? null : Number(fomoB), fomo_viewers: fomoV === '' ? null : Number(fomoV), fomo_enabled: document.getElementById('add-fomo-enabled').checked, images });
+    closeModal('add-modal'); await initAdmin();
+  } catch (err) { alert('Failed to create property: ' + err.message); } finally { if (btn) { btn.disabled = false; btn.textContent = 'Save Property'; } }
+}
+function editProp(id) { window.location.href = `property-edit.html?id=${id}`; }
+async function uploadBrochureFile() { alert('Brochure upload dummy'); }
+async function saveEditProperty() { alert('Saved Edit'); closeModal('edit-modal'); }
+async function updateBookingStatus(id, status) {
+  if (!confirm(`Change booking #${id} to "${status}"?`)) return;
+  try { await api.updateBookingStatus(id, status); await initAdmin(); } catch (err) { alert('Failed: ' + err.message); }
+}
+
+// ── REELS CRUD ──
+let reelEditId = null;
+function openAddReel() {
+  reelEditId = null; document.querySelector('#reel-add-modal .modal-title').textContent = 'Add Guest Reel'; document.getElementById('rl-save-btn').textContent = 'Save Reel';
+  ['rl-name','rl-location','rl-stay','rl-quote','rl-video-url','rl-poster-url'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('rl-stars').value = 5; document.getElementById('rl-order').value = 0; document.getElementById('rl-video-file').value  = ''; document.getElementById('rl-poster-file').value = '';
+  showModal('reel-add-modal');
+}
+function openEditReel(id) {
+  const r = reels.find(x => x.id === id); if (!r) return; reelEditId = id;
+  document.querySelector('#reel-add-modal .modal-title').textContent = 'Edit Guest Reel'; document.getElementById('rl-save-btn').textContent = 'Update Reel';
+  document.getElementById('rl-name').value = r.name || ''; document.getElementById('rl-location').value = r.location || ''; document.getElementById('rl-stay').value = r.stay || ''; document.getElementById('rl-quote').value = r.quote || ''; document.getElementById('rl-stars').value = r.stars || 5; document.getElementById('rl-order').value = r.sort_order || 0; document.getElementById('rl-video-url').value = r.video_url || ''; document.getElementById('rl-poster-url').value = r.poster_url || ''; document.getElementById('rl-video-file').value = ''; document.getElementById('rl-poster-file').value = '';
+  showModal('reel-add-modal');
+}
+async function saveReel() {
+  const name = document.getElementById('rl-name').value.trim(); const stay = document.getElementById('rl-stay').value.trim();
+  if (!name || !stay) { alert('Guest Name aur Stay Name required hain!'); return; }
+  const btn = document.getElementById('rl-save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
+  const fd = new FormData(); fd.append('name', name); fd.append('location', document.getElementById('rl-location').value.trim()); fd.append('stay', stay); fd.append('quote', document.getElementById('rl-quote').value.trim()); fd.append('stars', document.getElementById('rl-stars').value); fd.append('sort_order', document.getElementById('rl-order').value); fd.append('video_url', document.getElementById('rl-video-url').value.trim()); fd.append('poster_url', document.getElementById('rl-poster-url').value.trim());
+  const videoFile = document.getElementById('rl-video-file').files[0]; const posterFile = document.getElementById('rl-poster-file').files[0];
+  if (videoFile) fd.append('video', videoFile); if (posterFile) fd.append('poster', posterFile);
+  try { if (reelEditId) { await api.updateReel(reelEditId, fd); } else { await api.createReel(fd); } closeModal('reel-add-modal'); await initAdmin(); showPage('reels'); } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.textContent = reelEditId ? 'Update Reel' : 'Save Reel'; }
+}
+async function deleteReel(id) { if (!confirm('Is reel ko permanently delete karna chahte ho?')) return; try { await api.deleteReel(id); await initAdmin(); showPage('reels'); } catch (err) { alert('Delete failed: ' + err.message); } }
+async function toggleReelActive(id, active) { const fd = new FormData(); fd.append('active', active); try { await api.updateReel(id, fd); await initAdmin(); showPage('reels'); } catch (err) { alert('Update failed: ' + err.message); } }
+
+// ── TODAY (admin) ──
+async function loadToday() {
+  try {
+    const { date, checkins, checkouts } = await api.adminToday();
+    document.getElementById('today-date').textContent = date;
+    document.getElementById('today-checkins-count').textContent = checkins.length; document.getElementById('today-checkouts-count').textContent = checkouts.length;
+    const row = (b) => `<tr><td><strong>${b.guest_name || '—'}</strong></td><td>${b.guest_phone || '—'}</td><td>${b.property_name} <span style="color:var(--gray-400)">· ${b.property_location || ''}</span></td><td>${b.guests}</td><td><span class="badge b-${b.status}">${b.status}</span></td></tr>`;
+    document.getElementById('today-checkins-tbody').innerHTML  = checkins.length ? checkins.map(row).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--gray-400)">No check-ins today</td></tr>`;
+    document.getElementById('today-checkouts-tbody').innerHTML = checkouts.length ? checkouts.map(row).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--gray-400)">No check-outs today</td></tr>`;
+  } catch (e) { console.log(e); }
+}
+
+// ── SITE SETTINGS ──
+async function loadSiteSettings() {
+  try {
+    const { settings } = await api.getSiteSettings();
+    document.getElementById('ss-hero-eyebrow').value  = settings.hero_eyebrow  || ''; document.getElementById('ss-hero-headline').value = settings.hero_headline || ''; document.getElementById('ss-hero-sub').value      = settings.hero_sub      || ''; document.getElementById('ss-hero-slides').value   = (settings.hero_slides || []).join('\n');
+    document.getElementById('ss-stats-villas').value  = settings.stats_villas_override        || ''; document.getElementById('ss-stats-dest').value    = settings.stats_destinations_override || ''; document.getElementById('ss-stats-guests').value  = settings.stats_guests_override        || ''; document.getElementById('ss-stats-rating').value  = settings.stats_rating_override        || '';
+    document.getElementById('ss-email').value         = settings.contact_email        || ''; document.getElementById('ss-phone').value         = settings.contact_phone        || ''; document.getElementById('ss-safety-email').value  = settings.contact_safety_email || '';
+    document.getElementById('ss-ig').value            = settings.social_instagram || ''; document.getElementById('ss-tw').value            = settings.social_twitter   || ''; document.getElementById('ss-wa').value            = settings.social_whatsapp  || '';
+  } catch (e) { console.log(e); }
+}
+async function saveSiteSettings() {
+  try {
+    const slides = document.getElementById('ss-hero-slides').value.split('\n').map(s => s.trim()).filter(Boolean);
+    await api.updateSiteSettings({ hero_eyebrow: document.getElementById('ss-hero-eyebrow').value, hero_headline: document.getElementById('ss-hero-headline').value, hero_sub: document.getElementById('ss-hero-sub').value, hero_slides: slides, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
+    alert('Saved!');
+  } catch (e) { alert('Save failed'); }
+}
+
+// ── ICAL ──
+async function loadIcalPage() {
+  try {
+    const propsRes = await api.listProperties({ status: '' }).catch(() => api.listProperties());
+    const list = document.getElementById('ical-property-list');
+    list.innerHTML = '<p style="color:var(--gray-400)">Loading…</p>';
+    const html = [];
+    for (const p of propsRes.properties || []) {
+      try {
+        const data = await api.icalForProperty(p.id);
+        html.push(`
+          <div style="border-bottom:1px solid var(--gray-100);padding-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong>${p.name}</strong>
+              <a class="btn btn-outline btn-sm" href="${data.export_url}" target="_blank">Copy export URL</a>
+            </div>
+            <code style="display:block;background:var(--gray-50);padding:8px;border-radius:6px;font-size:11px;word-break:break-all;margin-bottom:8px">${data.export_url}</code>
+            <div style="margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--gray-600)">Import URLs (Airbnb / Agoda / MMT)</div>
+            <ul style="font-size:12.5px;color:var(--gray-600);padding-left:0;list-style:none">
+              ${(data.sources || []).map(s => `<li style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--gray-100)">
+                <span>${s.label || 'External'} — <code>${s.url}</code> ${s.last_error ? `<span style="color:#dc2626">(${s.last_error})</span>` : ''}</span>
+                <button class="btn-icon" onclick="delIcalSource(${s.id})">✕</button>
+              </li>`).join('')}
+            </ul>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input class="form-ctrl" placeholder="https://www.airbnb.com/calendar/ical/…ics" id="ical-url-${p.id}"/>
+              <input class="form-ctrl" placeholder="Label e.g. Airbnb" style="max-width:140px" id="ical-label-${p.id}"/>
+              <button class="btn btn-primary btn-sm" onclick="addIcalSource(${p.id})">+ Add</button>
+              <button class="btn btn-sm" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearIcalBlocks(${p.id}, '${p.name}')">🧹 Clear blocks</button>
+            </div>
+          </div>`);
+      } catch (e) { /* skip property on error */ }
+    }
+    list.innerHTML = html.join('') || '<p style="color:var(--gray-400)">No properties yet</p>';
+  } catch (e) { console.log(e); }
+}
+
+async function addIcalSource(propId) {
+  const url   = document.getElementById('ical-url-'+propId).value.trim(); const label = document.getElementById('ical-label-'+propId).value.trim();
+  if (!url) return alert('URL required');
+  try { await api.addIcalSource(propId, { url, label }); loadIcalPage(); alert('Added — click Sync now'); } catch (e) { alert(e.message); }
+}
+async function delIcalSource(id) { if (!confirm('Remove this source?')) return; try { await api.deleteIcalSource(id); loadIcalPage(); } catch (e) { alert(e.message); } }
+async function syncAllIcal() { try { const r = await api.syncIcal(); alert(`Synced ${r.sources_checked} source(s), ${r.imported} block(s) imported`); loadIcalPage(); } catch (e) { alert(e.message); } }
+async function clearIcalBlocks(propId, propName) {
+  if (!confirm(`Clear all external blocked dates for "${propName}"?\n\nThis will unblock all iCal-imported dates. You can re-sync to restore them from active sources.`)) return;
+  try {
+    const token = localStorage.getItem('sd_token');
+    const apiBase = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
+    const res = await fetch(`${apiBase}/ical/property/${propId}/blocks`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.error || 'Failed');
+    showAdminToast(`Cleared ${r.deleted} blocked date(s). Reloading…`, 'success');
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) { alert(e.message); }
+}
+
+// ── GUIDES ──
+async function loadGuides() {
+  try {
+    const { guides } = await api.listGuides();
+    const tbody = document.getElementById('guides-tbody');
+    tbody.innerHTML = guides.length ? guides.map(g => `<tr><td>${g.city}</td><td>${g.title}</td><td><code>${g.slug}</code></td><td><span class="badge b-active">published</span></td><td><button class="btn-icon" onclick="editGuide(${g.id})">✏️</button><button class="btn-icon" onclick="deleteGuide(${g.id})">🗑️</button></td></tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--gray-400)">No guides yet — add the first one</td></tr>`;
+  } catch (e) { console.log(e); }
+}
+async function newGuide() { const city = prompt('City'); if(!city) return; const title = prompt('Title'); if(!title) return; const summary = prompt('Summary')||''; const body = prompt('Body')||''; try { await api.createGuide({city, title, summary, body}); loadGuides(); } catch(e) { alert(e.message); } }
+async function editGuide(id) { const title = prompt('New title'); const summary = prompt('New summary'); const body = prompt('New body'); const payload = {}; if(title) payload.title = title; if(summary!==null) payload.summary = summary; if(body!==null) payload.body = body; try { await api.updateGuide(id, payload); loadGuides(); } catch(e) { alert(e.message); } }
+async function deleteGuide(id) { if(!confirm('Delete this guide?')) return; try { await api.deleteGuide(id); loadGuides(); } catch(e) { alert(e.message); } }
+
+// ── ADDONS ──
+async function loadAddons() {
+  try {
+    const { requests } = await api.listAddonRequests();
+    const tbody = document.getElementById('addons-tbody');
+    tbody.innerHTML = requests.length ? requests.map(r => `<tr><td>${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short' }) : '—'}</td><td>${r.user_name || '—'}</td><td>${r.user_phone || '—'}</td><td>${r.property_name || '—'}</td><td><strong>${r.addon}</strong></td><td style="max-width:240px">${r.note || ''}</td><td><span class="badge b-${r.status}">${r.status}</span></td><td><button class="btn-icon" title="Approve" onclick="setAddonStatus(${r.id},'approved')">✓</button><button class="btn-icon" title="Fulfilled" onclick="setAddonStatus(${r.id},'fulfilled')">✔️</button><button class="btn-icon" title="Reject" onclick="setAddonStatus(${r.id},'rejected')">✕</button></td></tr>`).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--gray-400)">No requests yet</td></tr>`;
+  } catch (e) { console.log(e); }
+}
+async function setAddonStatus(id, status) { try { await api.setAddonStatus(id, status); loadAddons(); } catch (e) { alert(e.message); } }
+
+// ── BLOG ──
+async function loadBlogPosts() {
+  const tbody = document.getElementById('blog-tbody');
+  try {
+    const { posts } = await api.listBlogPosts();
+    if (!posts.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No blog posts yet. Click + New Post to create one.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = posts.map(p => `
+      <tr>
+        <td><b>${esc(p.title)}</b></td>
+        <td><span class="badge b-pending" style="background:#f0f4ff;color:#3b5bdb">${esc(p.category)}</span></td>
+        <td>${esc(p.author)}</td>
+        <td>${p.published ? '<span class="badge b-active">Published</span>' : '<span class="badge b-inactive">Draft</span>'}</td>
+        <td style="font-size:12px;color:var(--gray-400)">${p.published_at ? new Date(p.published_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—'}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" onclick="editBlogPost(${p.id})">✏️ Edit</button>
+            <button class="btn btn-outline btn-sm" onclick="toggleBlogPublish(${p.id}, ${p.published ? 0 : 1})">${p.published ? '🙈 Unpublish' : '📢 Publish'}</button>
+            <button class="btn-icon" style="color:#b91c1c" title="Delete" onclick="deleteBlogPost(${p.id})">🗑</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Error: ${esc(e.message)}</td></tr>`; }
+}
+
+function openBlogModal(post) {
+  document.getElementById('blog-edit-id').value = post ? post.id : '';
+  document.getElementById('blog-modal-title').textContent = post ? 'Edit Blog Post' : 'New Blog Post';
+  document.getElementById('blog-title').value = post ? post.title : '';
+  document.getElementById('blog-category').value = post ? post.category : 'Destinations';
+  document.getElementById('blog-author').value = post ? post.author : 'StayDekho Team';
+  document.getElementById('blog-cover').value = post ? post.cover_image : '';
+  document.getElementById('blog-excerpt').value = post ? post.excerpt : '';
+  document.getElementById('blog-body').value = post ? post.body : '';
+  document.getElementById('blog-published').checked = post ? !!post.published : false;
+  showModal('blog-modal');
+}
+
+async function editBlogPost(id) {
+  try {
+    const { posts } = await api.listBlogPosts();
+    const post = posts.find(p => p.id === id);
+    if (post) openBlogModal(post);
+  } catch (e) { alert(e.message); }
+}
+
+async function saveBlogPost() {
+  const id = document.getElementById('blog-edit-id').value;
+  const body = {
+    title:       document.getElementById('blog-title').value.trim(),
+    category:    document.getElementById('blog-category').value,
+    author:      document.getElementById('blog-author').value.trim() || 'StayDekho Team',
+    cover_image: document.getElementById('blog-cover').value.trim(),
+    excerpt:     document.getElementById('blog-excerpt').value.trim(),
+    body:        document.getElementById('blog-body').value.trim(),
+    published:   document.getElementById('blog-published').checked,
+  };
+  if (!body.title || !body.body) { alert('Title aur body required hain'); return; }
+  const btn = document.getElementById('blog-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    if (id) await api.updateBlogPost(id, body);
+    else    await api.createBlogPost(body);
+    closeModal('blog-modal');
+    loadBlogPosts();
+  } catch (e) { alert(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save Post'; }
+}
+
+async function toggleBlogPublish(id, published) {
+  try { await api.updateBlogPost(id, { published }); loadBlogPosts(); } catch (e) { alert(e.message); }
+}
+
+async function deleteBlogPost(id) {
+  if (!confirm('Is post ko delete karna chahte ho?')) return;
+  try { await api.deleteBlogPost(id); loadBlogPosts(); } catch (e) { alert(e.message); }
+}
+
+window.openBlogModal = openBlogModal;
+window.editBlogPost  = editBlogPost;
+window.saveBlogPost  = saveBlogPost;
+window.toggleBlogPublish = toggleBlogPublish;
+window.deleteBlogPost    = deleteBlogPost;
+
+// ── RENDER ──
+function filterProps(q) { renderProps(properties.filter(p => p.name.toLowerCase().includes(q.toLowerCase()) || p.location.toLowerCase().includes(q.toLowerCase()))); }
+function filterBookings(q) { renderBookings(bookings.filter(b => !b.isExternal && ((b.guest || '').toLowerCase().includes(q.toLowerCase()) || (b.property || '').toLowerCase().includes(q.toLowerCase())))); }
+function filterByStatus(s) { renderBookings(s ? bookings.filter(b => b.status === s && !b.isExternal) : bookings); }
+function filterUsers(q) { renderUsers(users.filter(u => (u.name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase()))); }
+
+function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp(${p.id})">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c;flex:1" onclick="deleteProp(${p.id})">🗑 Delete</button></div></div></div>`; }).join(''); }
+function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="updateBookingStatus(${b.id},'confirmed')">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus(${b.id},'cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(typeof API !== 'undefined' ? API : 'http://localhost:5000/api'+'/bookings/${b.id}/invoice?token='+localStorage.getItem('sd_token'),'_blank')" title="Invoice">🧾</button>`); return `<tr><td style="color:var(--gray-400);font-size:11.5px">#${b.id}</td><td><b>${b.guest}</b></td><td>${b.property}</td><td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td><td>${b.guests}</td><td><b>₹${Number(b.amount||0).toLocaleString('en-IN')}</b></td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td><td><div style="display:flex;gap:4px">${actions.join('')}</div></td></tr>`; }).join(''); }
+function renderUsers(list) { document.getElementById('users-tbody').innerHTML = list.map(u => `<tr><td style="color:var(--gray-400);font-size:11.5px">#${u.id}</td><td><b>${u.name}</b>${u.role==='admin'?'<span class="badge b-confirmed" style="margin-left:6px;font-size:10px">Admin</span>':''}</td><td>${u.email}</td><td>${u.phone || '—'}</td><td>${u.bookings || 0} bookings</td><td style="color:var(--gray-400)">${u.joined}</td><td><div style="display:flex;gap:5px"><a class="btn btn-outline btn-sm" href="mailto:${u.email}">Email</a></div></td></tr>`).join(''); }
+function renderReels() { const STAR = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#FFD700"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`; const grid = document.getElementById('reels-admin-grid'); const empty = document.getElementById('reels-empty-msg'); if (!grid) return; if (!reels.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; } if (empty) empty.style.display = 'none'; grid.innerHTML = reels.map(r => `<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.1);position:relative"><div style="position:relative;aspect-ratio:9/16;background:#1a0a0a;overflow:hidden">${r.poster_url ? `<img src="${r.poster_url}" alt="${r.name}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.3);font-size:2rem">🎬</div>`}<span style="position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:20px;font-size:.6rem;font-weight:700; background:${r.active ? 'rgba(34,197,94,.9)' : 'rgba(239,68,68,.9)'};color:#fff">${r.active ? 'Active' : 'Hidden'}</span>${r.video_url ? `<span style="position:absolute;top:8px;left:8px;background:rgba(139,23,23,.85);color:#fff;font-size:.58rem;font-weight:700;padding:3px 8px;border-radius:20px">🎬 Video</span>` : ''}</div><div style="padding:12px"><div style="font-size:.7rem;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${r.stay}</div><div style="font-weight:700;font-size:.85rem;margin-bottom:2px">${r.name}</div><div style="font-size:.72rem;color:var(--gray-400);margin-bottom:6px">${r.location || '—'}</div><div style="display:flex;gap:2px;margin-bottom:6px">${STAR.repeat(r.stars || 5)}</div>${r.quote ? `<div style="font-size:.68rem;color:var(--gray-500);line-height:1.4;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">"${r.quote}"</div>` : ''}<div style="display:flex;gap:6px"><button onclick="openEditReel(${r.id})" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">✏️ Edit</button><button onclick="toggleReelActive(${r.id}, ${r.active ? 0 : 1})" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">${r.active ? '🙈 Hide' : '👁 Show'}</button><button onclick="deleteReel(${r.id})" style="padding:5px 8px;border-radius:6px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:.72rem;cursor:pointer">🗑</button></div></div></div>`).join(''); }
+function renderChartFromData(monthlyRevenue) { const data = [...(monthlyRevenue||[])].reverse().slice(0, 6).map(m => ({ l: m.month ? new Date(m.month + '-01').toLocaleDateString('en-IN', { month:'short' }) : '?', v: Math.round((m.revenue || 0) / 100000 * 10) / 10, })); const max = Math.max(...data.map(d => d.v), 1); document.getElementById('rev-chart').innerHTML = data.map(d => `<div class="bar-col"><div style="font-size:10px;color:var(--gray-600);font-weight:600;margin-bottom:4px">${d.v > 0 ? '₹'+d.v+'L' : ''}</div><div class="bar" style="height:${Math.round((d.v/max)*85)||4}px" title="₹${d.v}L"></div><div class="bar-lbl">${d.l}</div></div>`).join(''); }
+
+// START
+initAdmin();
+</script>
+</body>
+</html>

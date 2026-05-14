@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>StayDekho Fix</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding: 50px;">
+    <h2>StayDekho Payment Test</h2>
+    <p>Amount: <b>₹150.00</b></p>
+    <button id="rzp-button" style="padding: 10px 20px; background: #3399cc; color: #fff; border: none; cursor: pointer;">
+        Pay Now
+    </button>
+
+    <script>
+        document.getElementById('rzp-button').onclick = async function() {
+            try {
+                // Backend se order lena
+                const res = await fetch('http://localhost:5000/api/payments/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const options = {
+                    "key": data.key_id,
+                    "amount": data.amount,
+                    "currency": "INR",
+                    "name": "StayDekho Udaipur",
+                    "order_id": data.order_id,
+                    "handler": function (response) {
+                        alert("Payment Success! ID: " + response.razorpay_payment_id);
+                    },
+                    "theme": { "color": "#3399cc" }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        };
+    </script>
+</body>
+</html>

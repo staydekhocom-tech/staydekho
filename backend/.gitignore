@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads (user files)
+uploads/images/*
+uploads/brochures/*
+uploads/avatars/*
+!uploads/images/.gitkeep
+!uploads/brochures/.gitkeep
+!uploads/avatars/.gitkeep
+
+# Node
+node_modules/
+npm-debug.log*

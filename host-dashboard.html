@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Host Dashboard — StayDekho</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<section style="background:linear-gradient(135deg,var(--red-dark),var(--red));padding:32px 0">
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <div>
+      <h2 style="color:var(--white);margin-bottom:4px" id="greeting">Host Dashboard</h2>
+      <p style="color:rgba(255,255,255,.75)" id="host-sub">Welcome back. Here's how your properties are doing.</p>
+    </div>
+    <button class="btn btn-white" onclick="openAddListingModal()">+ Add New Property</button>
+  </div>
+</section>
+
+<section class="section-sm">
+  <div class="container">
+    <div class="dashboard-layout">
+
+      <aside class="dashboard-sidebar reveal-left">
+        <div class="sidebar-profile">
+          <div class="sidebar-avatar" style="background:var(--red)" id="side-avatar">?</div>
+          <div class="sidebar-name" id="side-name">—</div>
+          <div class="sidebar-email" id="side-email">Host</div>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#overview" class="active">Overview</a>
+          <a href="#listings">My Listings</a>
+          <a href="#bookings">Bookings</a>
+          <a href="guest-dashboard.html">Switch to Guest</a>
+          <a href="#" onclick="doLogout();return false" style="color:var(--red)">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="dashboard-main">
+
+        <div class="stats-row stagger" id="overview">
+          <div class="stat-card red"><div class="label">Total Earnings</div><div class="value" id="stat-earn">₹0</div><div class="sub">Confirmed + completed</div></div>
+          <div class="stat-card"><div class="label">Bookings</div><div class="value" id="stat-book">0</div><div class="sub">All-time</div></div>
+          <div class="stat-card"><div class="label">Listings</div><div class="value" id="stat-list">0</div><div class="sub">Active properties</div></div>
+          <div class="stat-card"><div class="label">Avg. Rating</div><div class="value" id="stat-rate">—</div><div class="sub">Across listings</div></div>
+        </div>
+
+        <div class="dashboard-header reveal" id="listings">
+          <h3 id="listings-heading">My Listings</h3>
+          <button class="btn btn-primary btn-sm" onclick="openAddListingModal()">+ Add Property</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px" id="listings-list">
+          <div style="color:var(--gray-400);padding:20px">Loading…</div>
+        </div>
+
+        <div class="dashboard-header reveal" id="bookings">
+          <h3>Incoming Bookings</h3>
+        </div>
+        <div class="booking-list stagger" id="host-bookings-list">
+          <div style="color:var(--gray-400);padding:20px">Loading…</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="modal-overlay" id="add-listing-modal">
+  <div class="modal" style="max-width:560px">
+    <button class="modal-close" onclick="closeModal('add-listing-modal')">✕</button>
+    <div class="modal-title">Add New Property</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group"><label>Property Name</label><input type="text" id="np-title" placeholder="e.g. Sunset Villa, Goa"/></div>
+      <div class="form-group"><label>Type</label>
+        <select id="np-type" style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;outline:none">
+          <option value="villa">Villa</option><option value="cottage">Cottage</option><option value="farmhouse">Farmhouse</option>
+          <option value="heritage">Heritage Home</option><option value="houseboat">Houseboat</option><option value="homestay">Homestay</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Category</label>
+        <select id="np-category" style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;outline:none">
+          <option value="beach">Beach</option><option value="mountain">Mountain</option><option value="heritage">Heritage</option>
+          <option value="forest">Forest</option><option value="kerala">Kerala</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Audience</label>
+        <select id="np-audience" style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;outline:none">
+          <option value="all">All guests</option><option value="luxury">Luxury</option><option value="family">Family</option><option value="bachelor">Bachelor</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>City / Area</label><input type="text" id="np-location" placeholder="Anjuna, Goa"/></div>
+        <div class="form-group"><label>City</label><input type="text" id="np-city" placeholder="Goa"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div class="form-group"><label>Bedrooms</label><input type="number" id="np-beds" min="1" value="2"/></div>
+        <div class="form-group"><label>Bathrooms</label><input type="number" id="np-baths" min="1" value="2"/></div>
+        <div class="form-group"><label>Max Guests</label><input type="number" id="np-guests" min="1" value="4"/></div>
+      </div>
+      <div class="form-group"><label>Price per Night (₹)</label><input type="number" id="np-price" min="500" value="8000"/></div>
+      <div class="form-group"><label>Main Image URL</label><input type="text" id="np-image" placeholder="https://..."/></div>
+      <div class="form-group"><label>Short Description</label>
+        <textarea id="np-desc" rows="3" style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;resize:vertical;outline:none"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn btn-primary btn-full" onclick="submitListing()" id="np-submit">Create Listing</button>
+        <button class="btn btn-outline" onclick="closeModal('add-listing-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="footer-placeholder"></div>
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmt(n) { return Number(n||0).toLocaleString('en-IN'); }
+  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { month:'short', day:'numeric', year:'numeric' }) : ''; }
+
+  if (!api.isLoggedIn()) { api.requireLogin(); }
+
+  async function load() {
+    try {
+      const user = await api.me();
+      document.getElementById('greeting').textContent = `Host Dashboard`;
+      document.getElementById('host-sub').textContent = `Welcome back, ${user.name.split(' ')[0]}. Here's how your properties are doing.`;
+      document.getElementById('side-avatar').textContent = user.name.charAt(0).toUpperCase();
+      document.getElementById('side-name').textContent = user.name;
+      document.getElementById('side-email').textContent = user.role === 'admin' ? 'Admin' : 'Host';
+
+      const [listings, bookings] = await Promise.all([api.myListings(), api.hostBookings()]);
+      renderListings(listings.properties || []);
+      renderBookings(bookings.bookings || []);
+    } catch (err) {
+      showToast(err.message || 'Failed to load', 'error');
+    }
+  }
+
+  function renderListings(props) {
+    document.getElementById('stat-list').textContent = props.length;
+    document.getElementById('listings-heading').textContent = `My Listings (${props.length})`;
+    const avg = props.filter(p => p.rating).reduce((s,p) => s + Number(p.rating), 0) / (props.filter(p=>p.rating).length || 1);
+    document.getElementById('stat-rate').textContent = props.length && avg ? avg.toFixed(1) + '★' : '—';
+
+    const list = document.getElementById('listings-list');
+    if (!props.length) {
+      list.innerHTML = '<div style="color:var(--gray-400);padding:20px">No listings yet. Click <b>+ Add Property</b> to create your first listing.</div>';
+      return;
+    }
+    list.innerHTML = props.map(p => `
+      <div class="host-listing-card">
+        <img class="host-listing-img" src="${esc(p.main_image || '')}" alt="${esc(p.title || p.name)}"/>
+        <div class="host-listing-info">
+          <div class="host-listing-name">${esc(p.title || p.name)}</div>
+          <div class="host-listing-meta">${p.beds} beds · ${p.baths || p.bathrooms} baths · ₹${fmt(p.price)}/night · ${esc(p.location)}</div>
+          <div class="listing-status live">${p.status || 'Active'}</div>
+          <div class="host-listing-actions">
+            <a href="property.html?id=${p.id}" class="btn btn-outline btn-sm">Preview</a>
+            <button class="btn btn-sm" style="border:1px solid var(--red);color:var(--red)" onclick="deleteListing(${p.id})">Delete</button>
+          </div>
+        </div>
+        <div class="host-listing-stats">
+          <div class="hls"><div class="val">${p.review_count||0}</div><div class="lbl">Reviews</div></div>
+          <div class="hls"><div class="val">${p.rating ? Number(p.rating).toFixed(1)+'★' : '—'}</div><div class="lbl">Rating</div></div>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderBookings(bs) {
+    const active = bs.filter(b => b.status !== 'cancelled');
+    document.getElementById('stat-book').textContent = active.length;
+    const earn = active
+      .filter(b => b.status === 'confirmed' || b.status === 'checked_in' || b.status === 'checked_out')
+      .reduce((s, b) => s + (b.amount || b.total || 0), 0);
+    document.getElementById('stat-earn').textContent = '₹' + fmt(earn);
+
+    const list = document.getElementById('host-bookings-list');
+    if (!bs.length) {
+      list.innerHTML = '<div style="color:var(--gray-400);padding:20px">No bookings yet.</div>';
+      return;
+    }
+    list.innerHTML = bs.map(b => {
+      const checkin  = b.checkin  || b.check_in;
+      const checkout = b.checkout || b.check_out;
+      const propName = b.property_name || b.property_title || 'Property';
+      const amount   = b.amount || b.total || 0;
+      const imgs     = JSON.parse(b.property_images || '[]');
+      const thumb    = imgs[0] || '';
+      const statusClass = { pending:'pending', confirmed:'upcoming', checked_in:'upcoming', checked_out:'completed', cancelled:'' }[b.status] || '';
+      const label = (b.status || '').replace('_',' ').replace(/\b\w/g, c => c.toUpperCase());
+      return `
+        <div class="booking-item">
+          ${thumb ? `<img class="booking-img" src="${esc(thumb)}" alt=""/>` : '<div class="booking-img" style="background:var(--gray-100)"></div>'}
+          <div class="booking-info">
+            <div class="booking-name">${esc(b.guest_name)} · ${b.guests} guests</div>
+            <div class="booking-dates">${esc(propName)} · ${fmtDate(checkin)} – ${fmtDate(checkout)} · ${b.nights} nights</div>
+            <span class="booking-status ${statusClass}">● ${label}</span>
+            <div class="booking-actions">
+              <a class="btn btn-outline btn-sm" href="mailto:${esc(b.guest_email)}">Email Guest</a>
+            </div>
+          </div>
+          <div class="booking-amount">₹${fmt(amount)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  async function submitListing() {
+    const payload = {
+      title: document.getElementById('np-title').value.trim(),
+      type: document.getElementById('np-type').value,
+      category: document.getElementById('np-category').value,
+      audience: document.getElementById('np-audience').value,
+      location: document.getElementById('np-location').value.trim(),
+      city: document.getElementById('np-city').value.trim(),
+      state: '',
+      beds: Number(document.getElementById('np-beds').value),
+      baths: Number(document.getElementById('np-baths').value),
+      guests: Number(document.getElementById('np-guests').value),
+      price: Number(document.getElementById('np-price').value),
+      main_image: document.getElementById('np-image').value.trim() || 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=900&q=80',
+      description: document.getElementById('np-desc').value.trim(),
+      amenities: [], images: []
+    };
+    if (!payload.title || !payload.city || !payload.price) {
+      showToast('Title, city and price are required', 'error'); return;
+    }
+    const btn = document.getElementById('np-submit');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      await api.createProperty(payload);
+      showToast('Listing created!', 'success');
+      closeModal('add-listing-modal');
+      load();
+    } catch (err) {
+      showToast(err.message || 'Failed', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Create Listing';
+    }
+  }
+
+  async function deleteListing(id) {
+    if (!confirm('Delete this listing?')) return;
+    try {
+      await api.deleteProperty(id);
+      showToast('Listing deleted', '');
+      load();
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  function openAddListingModal() { document.getElementById('add-listing-modal').classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  });
+
+  window.deleteListing = deleteListing;
+  window.submitListing = submitListing;
+  window.openAddListingModal = openAddListingModal;
+  window.closeModal = closeModal;
+
+  load();
+
+  window.addEventListener('scroll', () => {
+    document.getElementById('scroll-top').classList.toggle('visible', window.scrollY > 300);
+  }, { passive: true });
+</script>
+</body>
+</html>

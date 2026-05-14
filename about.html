@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Our Story — StayDekho</title>
+  <meta name="description" content="Sanskar & Jayant Patidar launched StayDekho in 2026 from Udaipur with one idea: everyone deserves a beautiful group stay at a price that feels right."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .page-hero {
+      background: linear-gradient(135deg, #8B1717 0%, #6b1010 60%, #3d0808 100%);
+      min-height: 320px;
+      display: flex;
+      align-items: center;
+      padding: 90px 0 70px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .page-hero .container { position: relative; z-index: 1; }
+    .page-hero h1 { color: #fff; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; margin: 0 0 16px; line-height: 1.15; }
+    .page-hero p { color: rgba(255,255,255,.82); font-size: 1.1rem; max-width: 600px; margin: 0 auto; line-height: 1.7; }
+    .page-hero .eyebrow { color: rgba(255,255,255,.65); font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+    .pull-quote {
+      border-left: 4px solid #8B1717;
+      padding: 20px 28px;
+      background: #fff5f5;
+      border-radius: 0 12px 12px 0;
+      margin: 32px 0;
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #4a1010;
+      line-height: 1.7;
+    }
+    .pull-quote cite { display: block; font-style: normal; font-size: .85rem; font-weight: 700; color: #8B1717; margin-top: 10px; }
+
+    .mission-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+    @media (max-width: 768px) { .mission-grid { grid-template-columns: 1fr; gap: 32px; } }
+    .mission-text h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; margin: 0 0 20px; line-height: 1.2; }
+    .mission-text h2 em { color: #8B1717; font-style: normal; }
+    .mission-text p { color: #555; line-height: 1.8; font-size: 1.05rem; margin: 0 0 18px; }
+    .mission-img { border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.15); }
+    .mission-img img { width: 100%; height: 380px; object-fit: cover; display: block; }
+
+    .origin-section { background: #fdfaf9; }
+    .origin-content { max-width: 780px; margin: 0 auto; }
+    .origin-content p { color: #555; line-height: 1.85; font-size: 1.05rem; margin: 0 0 22px; }
+    .origin-content p:last-child { margin-bottom: 0; }
+    .origin-content h3 { font-size: 1.25rem; font-weight: 700; color: #1a1a1a; margin: 32px 0 12px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin: 48px 0 0;
+    }
+    @media (max-width: 768px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(139,23,23,.07);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(139,23,23,.12); }
+    .stat-card .stat-number { font-size: 2.2rem; font-weight: 800; color: #8B1717; display: block; line-height: 1; margin-bottom: 8px; }
+    .stat-card .stat-label { font-size: .85rem; color: #777; font-weight: 500; }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    @media (max-width: 600px) { .team-grid { grid-template-columns: 1fr; } }
+    .team-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 16px;
+      padding: 36px 28px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .team-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(139,23,23,.1); }
+    .team-avatar {
+      width: 160px; height: 160px; border-radius: 50%;
+      background: linear-gradient(135deg, #8B1717, #6b1010);
+      color: #fff; font-size: 2rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 20px rgba(139,23,23,.25);
+      overflow: hidden;
+    }
+    .team-avatar img {
+      width: 100%; height: 100%; object-fit: cover; object-position: top center;
+      display: block;
+    }
+    .team-card h3 { font-size: 1.15rem; font-weight: 700; margin: 0 0 4px; }
+    .team-card .role { font-size: .85rem; color: #8B1717; font-weight: 600; margin-bottom: 12px; }
+    .team-card p { font-size: .9rem; color: #666; line-height: 1.65; margin: 0; }
+
+    .values-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 48px;
+    }
+    @media (max-width: 768px) { .values-grid { grid-template-columns: 1fr; } }
+    .value-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 16px;
+      padding: 32px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .value-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(139,23,23,.1); }
+    .value-icon {
+      width: 52px; height: 52px;
+      background: #fff5f5; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px; color: #8B1717;
+    }
+    .value-card h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 10px; }
+    .value-card p { font-size: .9rem; color: #666; line-height: 1.65; margin: 0; }
+
+    .difference-list { list-style: none; padding: 0; margin: 24px 0 0; }
+    .difference-list li {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 18px 0; border-bottom: 1px solid #f5eeee;
+      font-size: 1rem; color: #444; line-height: 1.65;
+    }
+    .difference-list li:last-child { border-bottom: none; }
+    .diff-icon {
+      width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px;
+      background: #fff5f5; display: flex; align-items: center;
+      justify-content: center; color: #8B1717; margin-top: 2px;
+    }
+    .diff-label { font-weight: 700; color: #1a1a1a; display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<section class="page-hero">
+  <div class="container">
+    <div class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Rooted in Udaipur · Founded 2026
+    </div>
+    <h1>More Than Just a Booking</h1>
+    <p>We started StayDekho because we saw a gap between the warmth of Indian hospitality and the cold experience of booking platforms. This is our story.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="mission-grid">
+      <div class="mission-text">
+        <div class="eyebrow">The Problem We Noticed</div>
+        <h2>Planning a group trip shouldn't be a <em>compromise</em></h2>
+        <p>Have you ever noticed that when planning a trip for your entire family or a large group of friends, the biggest challenge is finding the right stay?</p>
+        <p>Usually, you face a tough choice: either split your group up into separate hotel rooms, or stretch your budget for a private luxury villa. But we noticed an even deeper issue in the travel industry: the booking platform is often someone else, and the actual host is someone entirely different.</p>
+        <p>In that gap between a third-party website and an unknown host, the warmth of service, trust, and guest experience can easily get lost. Seeing this firsthand in Udaipur, we knew something had to change.</p>
+      </div>
+      <div class="mission-img">
+        <!-- Yahan par purana broken link hatakar aapki nayi photo laga di gayi hai -->
+        <img src="review no10.jpeg" alt="Happy group of guests at StayDekho villa" loading="lazy"/>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section origin-section">
+  <div class="container">
+    <div class="section-header" style="justify-content:center;text-align:center">
+      <div>
+        <div class="eyebrow">How It All Began</div>
+        <h2>Our Story</h2>
+      </div>
+    </div>
+    <div class="origin-content">
+      <h3>The idea, born in Udaipur</h3>
+      <p>In 2026, we — Sanskar Patidar and Jayant Patidar — launched StayDekho. Our vision was big but simple: <strong>everyone deserves to experience a beautiful group stay at a price that feels right, without compromising on care and comfort.</strong></p>
+      <p>We grew up in Udaipur — a city that has been welcoming guests for centuries and understands, perhaps better than anywhere else in India, that hospitality is not a service. It is a relationship.</p>
+
+      <h3>Why we are different</h3>
+      <p>There are thousands of booking websites out there, but StayDekho is built differently. We are not just a middleman. <strong>We directly manage all of our properties ourselves.</strong></p>
+      <p>When the platform and the host are the same, our commitment is directly to you. By managing the properties firsthand, we ensure that every time you stay with us, you experience consistent quality, spotless spaces, and the genuine warmth of a home.</p>
+      <p>We have balanced premium stays with accessible pricing so that you never have to worry about a heavy bill — only about making memories.</p>
+
+      <div class="pull-quote">
+        "Hosting is a personal connection, not just a transaction. When you book with StayDekho, you aren't just reserving a space — you are stepping into a welcoming, stress-free environment."
+        <cite>— Sanskar & Jayant Patidar, Co-Founders</cite>
+      </div>
+
+      <h3>Our promise to you</h3>
+      <p>Whether it is a family reunion or a much-needed escape with friends, we have created spaces where your group can truly be together. Rooted in the rich hospitality of Udaipur, we believe every stay should feel personal, not transactional.</p>
+      <p>Our care, your memories. Welcome to StayDekho.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="max-width:820px;margin:0 auto">
+    <div class="section-header" style="justify-content:center;text-align:center">
+      <div>
+        <div class="eyebrow">What Sets Us Apart</div>
+        <h2>The StayDekho Difference</h2>
+      </div>
+    </div>
+    <ul class="difference-list">
+      <li>
+        <div class="diff-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div>
+          <span class="diff-label">We own and manage every property directly</span>
+          There is no unknown third-party host. When you book with us, you are dealing with us — the same people who maintain, staff, and care for the property you are staying in.
+        </div>
+      </li>
+      <li>
+        <div class="diff-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <span class="diff-label">Built for groups, priced for everyone</span>
+          Our properties are sized and designed for families and friends travelling together — not hotel rooms that require you to split up. And we price them so the whole group can afford it comfortably.
+        </div>
+      </li>
+      <li>
+        <div class="diff-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <span class="diff-label">Consistent quality, every single time</span>
+          Because we manage every stay ourselves, we can guarantee quality standards that no marketplace can. What you see is exactly what you get — no surprises on arrival.
+        </div>
+      </li>
+      <li>
+        <div class="diff-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div>
+          <span class="diff-label">Rooted in Udaipur's hospitality tradition</span>
+          We did not build StayDekho from a boardroom. We built it from a city that has hosted kings and travellers for centuries — where generosity and warmth are not policies, they are a way of life.
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="section" style="background:#fdfaf9">
+  <div class="container">
+    <div class="section-header" style="justify-content:center;text-align:center">
+      <div>
+        <div class="eyebrow">The Founders</div>
+        <h2>Meet Sanskar & Jayant</h2>
+        <p style="color:#666;max-width:500px;margin:10px auto 0">Two brothers from Udaipur who believed hospitality should feel personal.</p>
+      </div>
+    </div>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-avatar">
+          <img src="staydekhosanskar-aboutus.jpeg" alt="Sanskar Patidar"/>
+        </div>
+        <h3>Sanskar Patidar</h3>
+        <div class="role">Co-Founder</div>
+        <p>Grew up witnessing Udaipur's legendary hospitality and wanted to bring that same personal warmth to every property StayDekho manages.</p>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">
+          <img src="staydekhojayant-about.jpeg" alt="Jayant Patidar"/>
+        </div>
+        <h3>Jayant Patidar</h3>
+        <div class="role">Co-Founder</div>
+        <p>Saw firsthand how the gap between platforms and hosts eroded guest trust — and built StayDekho to close that gap by doing both, together.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header" style="justify-content:center;text-align:center">
+      <div>
+        <div class="eyebrow">What Drives Us</div>
+        <h2>Our Values</h2>
+      </div>
+    </div>
+    <div class="values-grid">
+      <div class="value-card">
+        <div class="value-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <h3>Personal Care</h3>
+        <p>We are not a faceless platform. Every booking matters to us personally because we are the hosts — and your experience reflects directly on us.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+        <h3>Trust & Transparency</h3>
+        <p>No hidden charges. No mystery hosts. No gap between what is promised and what is delivered. When the platform and the host are the same, trust is built-in.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Togetherness</h3>
+        <p>Great trips are made by being together. Every space we create is designed so families, friends and groups can share the same roof, the same memories, and the same joy.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-sm">
+  <div class="container">
+    <div class="host-cta">
+      <div class="host-cta-text">
+        <h2>Ready to Experience the Difference?</h2>
+        <p>Browse our directly managed properties across India. No middlemen, no surprises — just a stay that genuinely cares about you.</p>
+      </div>
+      <div class="host-cta-actions">
+        <a href="listings.html" class="btn btn-white btn-lg">Explore Stays →</a>
+        <a href="contact.html" class="btn btn-ghost btn-lg">Get in Touch</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+</body>
+</html>

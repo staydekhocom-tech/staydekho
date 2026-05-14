@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>How It Works — StayDekho</title>
+  <meta name="description" content="Learn how StayDekho works — from searching and booking to check-in and beyond. Simple, secure, and seamless villa stays across India."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ── Page hero ── */
+    .page-hero {
+      background: linear-gradient(135deg, #8B1717 0%, #6b1010 60%, #3d0808 100%);
+      min-height: 280px;
+      display: flex;
+      align-items: center;
+      padding: 80px 0 60px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .page-hero .container { position: relative; z-index: 1; }
+    .page-hero h1 { color: #fff; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; margin: 0 0 12px; }
+    .page-hero p { color: rgba(255,255,255,.8); font-size: 1.1rem; max-width: 540px; margin: 0 auto; }
+    .page-hero .eyebrow { color: rgba(255,255,255,.65); font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+    /* ── Steps layout ── */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+      position: relative;
+    }
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 36px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg, #8B1717, #e8c4c4);
+      z-index: 0;
+    }
+    @media (max-width: 900px) {
+      .steps-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps-grid::before { display: none; }
+    }
+    @media (max-width: 560px) {
+      .steps-grid { grid-template-columns: 1fr; }
+    }
+    .step-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .step-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(139,23,23,.12); }
+    .step-number {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #8B1717;
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 14px rgba(139,23,23,.35);
+    }
+    .step-icon {
+      color: #8B1717;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: center;
+    }
+    .step-card h3 { font-size: 1rem; font-weight: 700; margin: 0 0 8px; }
+    .step-card p { font-size: .875rem; color: #666; line-height: 1.6; margin: 0; }
+
+    /* ── Hosts section ── */
+    .hosts-section { background: #fdfaf9; }
+    .host-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 48px;
+    }
+    @media (max-width: 768px) { .host-steps-grid { grid-template-columns: 1fr; } }
+    .host-step-card {
+      background: #fff;
+      border: 1px solid #f0e8e8;
+      border-radius: 16px;
+      padding: 32px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .host-step-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(139,23,23,.1); }
+    .host-step-num {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #8B1717;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .host-step-body h3 { font-size: 1rem; font-weight: 700; margin: 0 0 6px; }
+    .host-step-body p { font-size: .875rem; color: #666; line-height: 1.6; margin: 0; }
+
+    /* ── FAQ ── */
+    .faq-list { max-width: 760px; margin: 48px auto 0; }
+    .faq-item {
+      border: 1px solid #f0e8e8;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 1px 6px rgba(0,0,0,.04);
+    }
+    .faq-item summary {
+      padding: 20px 24px;
+      font-size: .975rem;
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #1a1a1a;
+      user-select: none;
+      transition: background .15s;
+    }
+    .faq-item summary:hover { background: #fdf6f6; }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after {
+      content: '+';
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: #8B1717;
+      transition: transform .25s;
+      line-height: 1;
+    }
+    .faq-item[open] summary::after { transform: rotate(45deg); }
+    .faq-item[open] summary { background: #fdf6f6; color: #8B1717; }
+    .faq-answer {
+      padding: 0 24px 20px;
+      font-size: .9rem;
+      color: #666;
+      line-height: 1.7;
+      border-top: 1px solid #f5eded;
+    }
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- ── HERO ──────────────────────────────────────────────────── -->
+<section class="page-hero">
+  <div class="container">
+    <div class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Simple &amp; Seamless
+    </div>
+    <h1>How StayDekho Works</h1>
+    <p>From discovery to check-out, we've made every step of your villa holiday simple, safe, and stress-free.</p>
+  </div>
+</section>
+
+<!-- ── FOR GUESTS ─────────────────────────────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="section-header reveal" style="justify-content:center; text-align:center">
+      <div>
+        <div class="eyebrow">For Travellers</div>
+        <h2>Book Your Perfect Stay in 4 Steps</h2>
+        <p>No hassle, no hidden surprises — just an incredible villa waiting for you.</p>
+      </div>
+    </div>
+
+    <div class="steps-grid stagger">
+      <!-- Step 1 -->
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <h3>Search &amp; Discover</h3>
+        <p>Browse 500+ handpicked villas by destination, dates, guest count, and property type. Use filters to find your ideal match — pool villa, mountain chalet, beach bungalow, and more.</p>
+      </div>
+      <!-- Step 2 -->
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <h3>Book Securely</h3>
+        <p>Pick your dates, confirm your details, and pay through our 100% encrypted payment gateway. Receive an instant booking confirmation with your property details and caretaker contact.</p>
+      </div>
+      <!-- Step 3 -->
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <h3>Check In</h3>
+        <p>Arrive at your villa and be welcomed by your dedicated caretaker. They'll walk you through the property, share local tips, and remain available throughout your stay for anything you need.</p>
+      </div>
+      <!-- Step 4 -->
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <h3>Enjoy &amp; Review</h3>
+        <p>Make memories, explore the destination, and unwind in your private villa. After check-out, share your experience with a review to help fellow travellers discover great stays.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="section-header reveal" style="justify-content:center; text-align:center">
+      <div>
+        <div class="eyebrow">Got Questions?</div>
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know before booking your first stay.</p>
+      </div>
+    </div>
+
+    <div class="faq-list reveal">
+      <details class="faq-item">
+        <summary>Is my payment secure?</summary>
+        <div class="faq-answer">
+          Absolutely. All payments on StayDekho are processed through bank-grade 256-bit SSL encrypted gateways. We support UPI, credit/debit cards, and net banking. We never store your card details, and every transaction generates an instant confirmation receipt sent to your email.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Can I cancel my booking?</summary>
+        <div class="faq-answer">
+          Yes. We offer a flexible free cancellation policy for most properties — full refund if cancelled 7 or more days before check-in, 50% refund if cancelled 3–6 days before. Cancellations within 48 hours of check-in are non-refundable. Specific cancellation terms are always displayed clearly on each property page before you book.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>What is a caretaker and what do they do?</summary>
+        <div class="faq-answer">
+          A caretaker is a dedicated staff member assigned to your specific property for the duration of your stay. They welcome you on arrival, give you a full property walkthrough, assist with any requests during your stay — such as arranging meals, firewood, or local activities — and are your primary point of contact if anything needs attention. Every StayDekho property comes with a caretaker included.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Are the properties exactly as shown in photos?</summary>
+        <div class="faq-answer">
+          Yes — every property on StayDekho is personally visited and photographed by our team. We do not allow hosts to submit their own photos without our verification. If you ever find that a property significantly differs from its listing, we'll offer you an immediate rebooking or full refund with no questions asked.
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOST CTA ───────────────────────────────────────────────── -->
+<section class="section-sm">
+  <div class="container">
+    <div class="host-cta reveal-scale">
+      <div class="host-cta-text">
+        <h2>Ready to Experience StayDekho?</h2>
+        <p>A small, personally managed collection growing rapidly across India. Browse every stay and book directly with us.</p>
+      </div>
+      <div class="host-cta-actions">
+        <a href="listings.html" class="btn btn-white btn-lg">Explore Stays →</a>
+        <a href="about.html" class="btn btn-ghost btn-lg">Our Story</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+
+<!-- Scroll to top -->
+<button id="scroll-top" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  // Scroll-to-top button
+  window.addEventListener('scroll', () => {
+    document.getElementById('scroll-top').classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+
+  // Page fade-in
+  document.body.style.opacity = '0';
+  window.addEventListener('load', () => {
+    document.body.style.transition = 'opacity .4s ease';
+    document.body.style.opacity = '1';
+  });
+</script>
+</body>
+</html>

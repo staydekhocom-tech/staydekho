@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Travel Guide — StayDekho</title>
+  <meta name="description" content="City-wise travel guides for India's best destinations — what to see, where to eat, when to go."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    #navbar.nav-top, #navbar { background: #fff !important; box-shadow: 0 2px 14px rgba(0,0,0,.06); }
+    #navbar.nav-top .nav-inner { background: #fff !important; }
+    #navbar.nav-top .nav-links a { color: var(--gray-600) !important; }
+    #navbar.nav-top .logo-stay, #navbar.nav-top .logo-dekh { color: var(--red) !important; }
+    body { padding-top: 72px; }
+    .tg-hero { background: linear-gradient(135deg, var(--red-dark, #6b1010), var(--red, #8B1717)); color: #fff; padding: 56px 0 44px; }
+    .tg-hero h1 { font-size: 2.2rem; margin-bottom: 8px; }
+    .tg-hero p  { opacity: .88; max-width: 620px; }
+    .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; padding: 32px 0; }
+    .tg-card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); display: flex; flex-direction: column; }
+    .tg-card img { width: 100%; aspect-ratio: 16/10; object-fit: cover; }
+    .tg-card .body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; }
+    .tg-city { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--red); font-weight: 700; }
+    .tg-title { font-size: 1.05rem; font-weight: 800; margin-top: 6px; }
+    .tg-summary { color: var(--gray-500, #6b7280); font-size: .92rem; margin-top: 8px; flex: 1; }
+    .tg-empty { color: var(--gray-400); text-align: center; padding: 60px 0; }
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<section class="tg-hero">
+  <div class="container">
+    <h1>Travel Guides</h1>
+    <p>City-wise tips for India's best destinations — handpicked by people who actually run stays there. New guides added regularly.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="tg-grid" id="tg-grid">
+      <div class="tg-empty">Loading guides…</div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  async function load() {
+    const grid = document.getElementById('tg-grid');
+    try {
+      const { guides } = await api.listGuides();
+      if (!guides.length) {
+        grid.innerHTML = '<div class="tg-empty">No guides published yet — check back soon.</div>';
+        return;
+      }
+      grid.innerHTML = guides.map(g => `
+        <a class="tg-card" href="travel-guide.html?slug=${encodeURIComponent(g.slug)}">
+          ${g.hero_image ? `<img src="${esc(g.hero_image)}" alt="${esc(g.title)}"/>` : ''}
+          <div class="body">
+            <div class="tg-city">${esc(g.city)}</div>
+            <div class="tg-title">${esc(g.title)}</div>
+            ${g.summary ? `<div class="tg-summary">${esc(g.summary)}</div>` : ''}
+          </div>
+        </a>`).join('');
+    } catch (e) {
+      grid.innerHTML = `<div class="tg-empty">Could not load guides: ${esc(e.message)}</div>`;
+    }
+  }
+
+  // If ?slug=... → render single guide
+  const slug = new URLSearchParams(location.search).get('slug');
+  if (slug) {
+    (async () => {
+      const grid = document.getElementById('tg-grid');
+      try {
+        const { guide } = await api.getGuide(slug);
+        grid.outerHTML = `
+          <article style="max-width:760px;margin:32px auto;padding:0 20px">
+            <a href="travel-guide.html" style="color:var(--red);font-size:13px;font-weight:600">← All guides</a>
+            ${guide.hero_image ? `<img src="${esc(guide.hero_image)}" style="width:100%;border-radius:14px;margin:14px 0 20px"/>` : ''}
+            <div class="tg-city">${esc(guide.city)}</div>
+            <h1 style="margin:4px 0 14px">${esc(guide.title)}</h1>
+            ${guide.summary ? `<p style="color:var(--gray-500);font-size:1.05rem;margin-bottom:18px">${esc(guide.summary)}</p>` : ''}
+            <div style="line-height:1.75;font-size:1rem;white-space:pre-wrap">${esc(guide.body)}</div>
+          </article>`;
+      } catch (e) {
+        grid.innerHTML = `<div class="tg-empty">Guide not found.</div>`;
+      }
+    })();
+  } else {
+    load();
+  }
+</script>
+</body>
+</html>
