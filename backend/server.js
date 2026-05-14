@@ -7,15 +7,21 @@ const path       = require('path');
 
 const app = express();
 
+// ── Trust proxy (Railway/Vercel ke peeche hai) ────────
+app.set('trust proxy', 1);
+
 // ── Security & Middleware ─────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));  // CSP off — local dev
 const allowedOrigins = [
-  'null',       // file:// origin (local dev)
+  'null',
   /^file:/,
   /^http:\/\/localhost/,
   /^http:\/\/127\.0\.0\.1/,
+  'https://staydekho.com',
+  'https://www.staydekho.com',
+  /\.vercel\.app$/,
 ];
-if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
+if (process.env.FRONTEND_URL)   allowedOrigins.push(process.env.FRONTEND_URL);
 if (process.env.FRONTEND_URL_2) allowedOrigins.push(process.env.FRONTEND_URL_2);
 
 app.use(cors({
