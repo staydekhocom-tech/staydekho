@@ -1,11 +1,11 @@
 // Auto-detect API URL
 // - file:// ya empty hostname  → localhost:5000
 // - localhost / 127.0.0.1      → localhost:5000
-// - koi aur IP/domain          → same host pe port 5000
+// - production (Vercel/domain) → Railway backend
 const _h = window.location.hostname;
 const API = (!_h || _h === 'localhost' || _h === '127.0.0.1')
   ? 'http://localhost:5000/api'
-  : `http://${_h}:5000/api`;
+  : 'https://staydekho-production.up.railway.app/api';
 
 function getToken()   { return localStorage.getItem('sd_token'); }
 function getUser()    { return JSON.parse(localStorage.getItem('sd_user') || 'null'); }
