@@ -1435,14 +1435,13 @@ body { opacity: 1 !important; }
   #sd-float-cta { bottom: 80px !important; right: 14px !important; gap: 10px !important; }
   .sd-fab { width: 44px !important; height: 44px !important; }
 
-  /* Fix touch scroll on horizontal swipe carousels — allow vertical page scroll */
-  .swipe-wrap,
-  .review-grid-new,
-  .reel-track { touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+  /* Horizontal swipe carousels — keep pan-x for swipe */
+  .swipe-wrap { touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+  .review-grid-new { touch-action: pan-x; -webkit-overflow-scrolling: touch; }
 
-  /* Images inside carousels — don't block touch */
+  /* Images inside carousels — don't block touch events */
   .swipe-wrap img,
-  .property-card img { pointer-events: none; }
+  .property-card img { pointer-events: none; user-select: none; }
 
   /* Prevent horizontal overflow on all pages */
   body { overflow-x: hidden; }
