@@ -1241,6 +1241,20 @@
         width: 40px; height: 40px; border-radius: 50%; font-size: 1.4rem;
         cursor: pointer; display: flex; align-items: center; justify-content: center;
       }
+      /* Mobile container padding fix */
+      .container { padding: 0 16px; }
+      /* Category cards — ensure no overflow */
+      .stay-types-grid { gap: 10px; overflow: hidden; }
+      .stay-type-card { min-height: 200px; }
+      /* Fix touch scroll on horizontal carousels */
+      .swipe-wrap { touch-action: pan-y; }
+      .review-grid-new { touch-action: pan-y; }
+      /* Scroll top position on mobile — above float CTA */
+      #scroll-top { bottom: 170px; right: 16px; width: 40px; height: 40px; }
+    }
+    @media (max-width: 480px) {
+      .stay-type-name { font-size: 1rem; }
+      .stay-type-desc { font-size: .7rem; }
     }
   </style>
 </head>
