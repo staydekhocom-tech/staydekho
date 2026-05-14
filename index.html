@@ -603,7 +603,7 @@
         scroll-snap-type: x mandatory;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
-        touch-action: pan-x;
+        touch-action: pan-x pan-y;
       }
       .swipe-wrap::-webkit-scrollbar { display: none; }
       .swipe-wrap .property-card {
@@ -1209,7 +1209,7 @@
         overflow-x: auto; overflow-y: visible;
         scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
         gap: 16px; padding: 4px 20px 16px; margin: 0 -20px;
-        scrollbar-width: none; touch-action: pan-x;
+        scrollbar-width: none; touch-action: pan-x pan-y;
       }
       .why-grid::-webkit-scrollbar { display: none; }
       .why-grid .why-card { flex: 0 0 80%; min-width: 240px; max-width: 300px; scroll-snap-align: start; }
@@ -1259,8 +1259,8 @@
       .stay-types-grid { gap: 10px; overflow: hidden; }
       .stay-type-card { min-height: 200px; }
       /* Horizontal swipe carousels */
-      .swipe-wrap { touch-action: pan-x; }
-      .review-grid-new { touch-action: pan-x; }
+      .swipe-wrap { touch-action: pan-x pan-y; }
+      .review-grid-new { touch-action: pan-x pan-y; }
       /* Scroll top position on mobile — above float CTA */
       #scroll-top { bottom: 200px; right: 14px; width: 40px; height: 40px; }
     }
