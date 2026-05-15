@@ -13,14 +13,13 @@
     .auth-card { background: #fff; border-radius: 20px; padding: 36px 32px; box-shadow: 0 8px 40px rgba(0,0,0,.12); border: 1px solid #f0ece8; }
 
     @media (max-width: 500px) {
-      html, body { height: 100%; height: 100dvh; }
+      html { height: 100%; }
       body {
-        align-items: flex-start;
-        justify-content: center;
-        padding: 0;
-        margin: 0;
+        display: block !important;
+        padding: 0 !important;
+        margin: 0 !important;
         min-height: 100dvh;
-        background: #fff;
+        background: #fff !important;
         overflow-y: auto;
       }
       .auth-wrap {
@@ -31,20 +30,21 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        align-items: center;
+        align-items: stretch;
       }
       .auth-card {
         width: 100%;
         border-radius: 0;
         box-shadow: none;
         border: none;
-        padding: 40px 24px 32px;
+        padding: 48px 24px 40px;
         flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
+        margin: 0;
       }
-      .auth-logo { margin-bottom: 32px; }
+      .auth-logo { margin-bottom: 28px; }
       .auth-logo .wordmark { font-size: 1.5rem; }
       .otp-box { width: 42px; height: 50px; font-size: 1.3rem; }
       .send-otp-btn, .verify-otp-btn, .login-btn { font-size: 1rem; padding: 14px; }
