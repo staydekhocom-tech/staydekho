@@ -1435,9 +1435,10 @@ body { opacity: 1 !important; }
   #sd-float-cta { bottom: 80px !important; right: 14px !important; gap: 10px !important; }
   .sd-fab { width: 44px !important; height: 44px !important; }
 
-  /* Horizontal swipe carousels — keep pan-x for swipe */
-  .swipe-wrap { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
-  .review-grid-new { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
+  /* Horizontal swipe carousels — allow swipe + page scroll */
+  .swipe-wrap { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .review-grid-new { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .why-grid { overscroll-behavior-x: contain; }
 
   /* Images inside carousels — don't block touch events */
   .swipe-wrap img,
