@@ -1,11 +1,11 @@
 const router = require('express').Router();
 const db     = require('../db/database');
 const { protect, adminOnly, optionalAuth } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 // Map DB row → frontend-friendly shape
 function normalize(p) {
   const raw = JSON.parse(p.images || '[]');
-  // Support both legacy string[] and new {url,cat}[] formats
   const categorized_images = raw.map(img =>
     typeof img === 'string' ? { url: img, cat: 'Exterior' } : img
   );
@@ -28,7 +28,7 @@ function normalize(p) {
     amenities,
     rules,
     addons,
-    map_url:       p.map_url      || '',
+    map_url:       p.map_url       || '',
     brochure_url:  p.brochure_url || '',
     fomo_enabled:  p.fomo_enabled !== 0,
     fomo_bookings: p.fomo_bookings,
@@ -42,10 +42,10 @@ function normalize(p) {
   };
 }
 
-// GET /api/properties  — public (admin sees all, guests see only Active)
+// GET /api/properties — public
 router.get('/', optionalAuth, (req, res) => {
   const { location, q, minPrice, maxPrice, guests, status } = req.query;
-  const search = location || q;   // accept both
+  const search = location || q;
   let sql    = `
     SELECT p.*,
       (SELECT ROUND(AVG(r.rating),1) FROM reviews r WHERE r.property_id = p.id) as avg_rating,
@@ -78,14 +78,13 @@ router.get('/', optionalAuth, (req, res) => {
   res.json({ properties: rows });
 });
 
-// GET /api/properties/:id  — public
+// GET /api/properties/:id — public
 router.get('/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Property not found' });
 
   const host = db.prepare("SELECT id, name, email, created_at FROM users WHERE role='admin' LIMIT 1").get() || {};
 
-  // Fetch real reviews
   const reviews = db.prepare(`
     SELECT r.*, u.name as user_name FROM reviews r
     JOIN users u ON r.user_id = u.id
@@ -102,79 +101,98 @@ router.get('/:id', (req, res) => {
   res.json({ property: prop, host, reviews });
 });
 
-// GET /api/properties/:id/availability  — public, returns booked date ranges
-router.get('/:id/availability', (req, res) => {
-  const { id } = req.params;
-  const prop = db.prepare('SELECT id FROM properties WHERE id = ?').get(id);
-  if (!prop) return res.status(404).json({ error: 'Property not found' });
+// POST /api/properties — admin only
+router.post('/', protect, adminOnly, upload.array('images', 10), (req, res) => {
+  const data = req.body;
 
-  const booked = db.prepare(`
-    SELECT checkin, checkout FROM bookings
-    WHERE property_id = ? AND status IN ('pending','confirmed','checked_in')
-    AND checkout >= date('now')
-  `).all(id);
-
-  res.json({ booked });
-});
-
-// POST /api/properties  — admin only
-router.post('/', protect, adminOnly, (req, res) => {
-  const { name, location, price, guests, beds, bathrooms, description, amenities, images, status,
-          map_url, brochure_url, rules, addons, checkin_time, checkout_time,
-          fomo_bookings, fomo_viewers, fomo_enabled } = req.body;
-  if (!name || !location || !price)
+  if (!data.name || !data.location || !data.price)
     return res.status(400).json({ error: 'Name, location and price are required' });
+
+  let finalImages = [];
+  // Agar files upload hui hain
+  if (req.files && req.files.length > 0) {
+    finalImages = req.files.map(file => ({ url: file.path, cat: 'Exterior' }));
+  } 
+  // Agar sirf URL/Link aaya hai
+  else if (data.images) {
+    let rawImages = data.images;
+    if (typeof rawImages === 'string') {
+      try {
+        rawImages = JSON.parse(rawImages);
+      } catch (e) {
+        rawImages = [{ url: rawImages, cat: 'Exterior' }];
+      }
+    }
+    finalImages = rawImages;
+  }
 
   const result = db.prepare(`
     INSERT INTO properties (name, location, price, guests, beds, bathrooms, description, amenities, images, status,
       map_url, brochure_url, rules, addons, checkin_time, checkout_time,
       fomo_bookings, fomo_viewers, fomo_enabled)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(name, location, price, guests||10, beds||4, bathrooms||3, description||'', amenities||'',
-         JSON.stringify(images||[]), status||'Active',
-         map_url || '', brochure_url || '',
-         JSON.stringify(rules || []), JSON.stringify(addons || []),
-         checkin_time || '2:00 PM', checkout_time || '11:00 AM',
-         fomo_bookings ?? null, fomo_viewers ?? null,
-         fomo_enabled === false ? 0 : 1);
+  `).run(
+    data.name, data.location, data.price, data.guests||10, data.beds||4, data.bathrooms||3, 
+    data.description||'', data.amenities||'', JSON.stringify(finalImages), data.status||'Active',
+    data.map_url || '', data.brochure_url || '',
+    JSON.stringify(data.rules || []), JSON.stringify(data.addons || []),
+    data.checkin_time || '2:00 PM', data.checkout_time || '11:00 AM',
+    data.fomo_bookings ?? null, data.fomo_viewers ?? null,
+    data.fomo_enabled === false ? 0 : 1
+  );
 
   const prop = db.prepare('SELECT * FROM properties WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json({ property: normalize(prop) });
 });
 
-// PUT /api/properties/:id  — admin only
-router.put('/:id', protect, adminOnly, (req, res) => {
+// PUT /api/properties/:id — admin only
+router.put('/:id', protect, adminOnly, upload.array('images', 10), (req, res) => {
   const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Property not found' });
 
-  const { name, location, price, guests, beds, bathrooms, description, amenities, images, status,
-          checkin_time, checkout_time, rules, addons, map_url, brochure_url,
-          fomo_bookings, fomo_viewers, fomo_enabled } = req.body;
+  const data = req.body;
+  let finalImages = existing.images;
+
+  if (req.files && req.files.length > 0) {
+    const newImages = req.files.map(file => ({ url: file.path, cat: 'Exterior' }));
+    finalImages = JSON.stringify(newImages);
+  } else if (data.images) {
+    let rawImages = data.images;
+    if (typeof rawImages === 'string') {
+        try {
+            rawImages = JSON.parse(rawImages);
+        } catch(e) {
+            rawImages = [{ url: rawImages, cat: 'Exterior' }];
+        }
+    }
+    finalImages = JSON.stringify(rawImages);
+  }
+
   db.prepare(`
     UPDATE properties SET name=?, location=?, price=?, guests=?, beds=?, bathrooms=?,
       description=?, amenities=?, images=?, status=?, checkin_time=?, checkout_time=?, rules=?,
       addons=?, map_url=?, brochure_url=?, fomo_bookings=?, fomo_viewers=?, fomo_enabled=?
     WHERE id=?
   `).run(
-    name         || existing.name,
-    location     || existing.location,
-    price        || existing.price,
-    guests       || existing.guests,
-    beds         || existing.beds,
-    bathrooms    || existing.bathrooms,
-    description  ?? existing.description,
-    amenities    ?? existing.amenities,
-    images       ? JSON.stringify(images) : existing.images,
-    status       || existing.status,
-    checkin_time  ?? existing.checkin_time  ?? '2:00 PM',
-    checkout_time ?? existing.checkout_time ?? '11:00 AM',
-    rules  !== undefined ? JSON.stringify(rules  || []) : (existing.rules  || '[]'),
-    addons !== undefined ? JSON.stringify(addons || []) : (existing.addons || '[]'),
-    map_url      ?? existing.map_url      ?? '',
-    brochure_url ?? existing.brochure_url ?? '',
-    fomo_bookings !== undefined ? fomo_bookings : existing.fomo_bookings,
-    fomo_viewers  !== undefined ? fomo_viewers  : existing.fomo_viewers,
-    fomo_enabled === undefined ? (existing.fomo_enabled ?? 1) : (fomo_enabled ? 1 : 0),
+    data.name         || existing.name,
+    data.location     || existing.location,
+    data.price        || existing.price,
+    data.guests       || existing.guests,
+    data.beds         || existing.beds,
+    data.bathrooms    || existing.bathrooms,
+    data.description  ?? existing.description,
+    data.amenities    ?? existing.amenities,
+    finalImages,
+    data.status       || existing.status,
+    data.checkin_time  ?? existing.checkin_time  ?? '2:00 PM',
+    data.checkout_time ?? existing.checkout_time ?? '11:00 AM',
+    data.rules  !== undefined ? (typeof data.rules === 'string' ? data.rules : JSON.stringify(data.rules || [])) : (existing.rules || '[]'),
+    data.addons !== undefined ? (typeof data.addons === 'string' ? data.addons : JSON.stringify(data.addons || [])) : (existing.addons || '[]'),
+    data.map_url      ?? existing.map_url      ?? '',
+    data.brochure_url ?? existing.brochure_url ?? '',
+    data.fomo_bookings !== undefined ? data.fomo_bookings : existing.fomo_bookings,
+    data.fomo_viewers  !== undefined ? data.fomo_viewers  : existing.fomo_viewers,
+    data.fomo_enabled === undefined ? (existing.fomo_enabled ?? 1) : (data.fomo_enabled ? 1 : 0),
     req.params.id
   );
 
@@ -182,7 +200,7 @@ router.put('/:id', protect, adminOnly, (req, res) => {
   res.json({ property: normalize(updated) });
 });
 
-// GET /api/properties/:id/date-prices  — public
+// GET /api/properties/:id/date-prices
 router.get('/:id/date-prices', (req, res) => {
   const rows = db.prepare(
     'SELECT date, price, blocked, note FROM date_prices WHERE property_id = ? ORDER BY date'
@@ -190,8 +208,7 @@ router.get('/:id/date-prices', (req, res) => {
   res.json({ date_prices: rows });
 });
 
-// POST /api/properties/:id/date-prices  — admin: bulk upsert
-// body: { prices: [{ date, price, blocked, note }] }
+// POST /api/properties/:id/date-prices
 router.post('/:id/date-prices', protect, adminOnly, (req, res) => {
   const { prices } = req.body;
   if (!Array.isArray(prices)) return res.status(400).json({ error: 'prices array required' });
@@ -229,7 +246,7 @@ router.post('/:id/date-prices', protect, adminOnly, (req, res) => {
   res.json({ date_prices: updated });
 });
 
-// DELETE /api/properties/:id  — admin only
+// DELETE /api/properties/:id
 router.delete('/:id', protect, adminOnly, (req, res) => {
   const existing = db.prepare('SELECT id FROM properties WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Property not found' });

@@ -8,9 +8,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
   <style>
-    body { background: var(--off-white, #faf8f5); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--off-white, #faf8f5); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: 'Inter', sans-serif; overflow-y: auto; }
     .auth-wrap { width: 100%; max-width: 420px; padding: 20px; }
     .auth-card { background: #fff; border-radius: 20px; padding: 36px 32px; box-shadow: 0 8px 40px rgba(0,0,0,.12); border: 1px solid #f0ece8; }
+
+    @media (max-width: 500px) {
+      body { align-items: flex-start; padding-top: 24px; }
+      .auth-wrap { padding: 16px; }
+      .auth-card { padding: 24px 20px; border-radius: 16px; }
+      .auth-logo .wordmark { font-size: 1.4rem; }
+      .otp-box { width: 40px; height: 48px; font-size: 1.2rem; }
+    }
     .auth-logo { text-align: center; margin-bottom: 28px; }
     .auth-logo .wordmark { font-size: 1.6rem; font-weight: 800; letter-spacing: -.5px; }
     .auth-logo .stay { color: #8B1717; }

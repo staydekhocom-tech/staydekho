@@ -1,7 +1,3 @@
-// Auto-detect API URL
-// - file:// ya empty hostname  → localhost:5000
-// - localhost / 127.0.0.1      → localhost:5000
-// - production (Vercel/domain) → Railway backend
 const _h = window.location.hostname;
 const API = (!_h || _h === 'localhost' || _h === '127.0.0.1')
   ? 'http://localhost:5000/api'
@@ -28,7 +24,6 @@ async function request(method, path, body) {
   return data;
 }
 
-// Multipart upload (for files — does NOT set Content-Type, browser sets it automatically)
 async function uploadRequest(method, path, formData) {
   const headers = {};
   const token = getToken();
@@ -41,9 +36,7 @@ async function uploadRequest(method, path, formData) {
 }
 
 const api = {
-  // ── Auth ────────────────────────────────────────────
-  // ── OTP Auth ─────────────────────────────────────────
-  sendOtp:   (phone)       => request('POST', '/auth/send-otp',   { phone }),
+  sendOtp:   (phone)      => request('POST', '/auth/send-otp',   { phone }),
   verifyOtp: (phone, otp, name) => request('POST', '/auth/verify-otp', { phone, otp, name }).then(d => {
     localStorage.setItem('sd_token', d.token);
     localStorage.setItem('sd_user',  JSON.stringify(d.user));
@@ -72,12 +65,9 @@ const api = {
     setTimeout(() => { window.location.href = 'login.html?redirect=' + encodeURIComponent(location.href); }, 800);
   },
 
-  // ── Properties ──────────────────────────────────────
   listProperties: (params = {}) => {
-    // accept 'q' as search alias
     const mapped = { ...params };
     if (mapped.q) { mapped.location = mapped.q; delete mapped.q; }
-    // remove null/undefined keys
     Object.keys(mapped).forEach(k => (mapped[k] == null || mapped[k] === '') && delete mapped[k]);
     const q = new URLSearchParams(mapped).toString();
     return request('GET', `/properties${q ? '?' + q : ''}`);
@@ -87,11 +77,9 @@ const api = {
   updateProperty: (id, body) => request('PUT',    `/properties/${id}`, body),
   deleteProperty: (id)       => request('DELETE', `/properties/${id}`),
 
-  // ── Bookings ────────────────────────────────────────
   listBookings:  ()     => request('GET',  '/bookings'),
   getBooking:    (id)   => request('GET',  `/bookings/${id}`),
   createBooking: (body) => {
-    // normalise check_in → checkin, check_out → checkout
     const b = { ...body };
     if (b.check_in)  { b.checkin  = b.check_in;  delete b.check_in; }
     if (b.check_out) { b.checkout = b.check_out; delete b.check_out; }
@@ -100,7 +88,6 @@ const api = {
   updateBookingStatus: (id, status) => request('PUT',    `/bookings/${id}/status`, { status }),
   cancelBooking:       (id)         => request('DELETE', `/bookings/${id}`),
 
-  // ── Wishlist (backend when logged in, localStorage fallback) ──
   toggleWishlist: async (propertyId) => {
     const id = Number(propertyId);
     if (isLoggedIn()) {
@@ -111,7 +98,6 @@ const api = {
         return request('POST', `/wishlist/${id}`);
       }
     }
-    // fallback: localStorage for guests
     const key = 'sd_wishlist';
     const list = JSON.parse(localStorage.getItem(key) || '[]');
     const idx  = list.indexOf(id);
@@ -127,19 +113,15 @@ const api = {
   },
   getWishlist: () => JSON.parse(localStorage.getItem('sd_wishlist') || '[]'),
 
-  // ── Payments ────────────────────────────────────────
   createOrder:   (booking_id) => request('POST', '/payments/create-order', { booking_id }),
   verifyPayment: (body)       => request('POST', '/payments/verify', body),
   listPayments:  ()           => request('GET',  '/payments'),
 
-  // ── Host dashboard helpers ───────────────────────────
   myListings:   ()    => api.listProperties(),
   hostBookings: ()    => api.listBookings(),
 
-  // ── Guest dashboard helpers ──────────────────────────
   myBookings: () => api.listBookings(),
   myTrips: () => api.listBookings().then(d => {
-    // normalize booking fields for dashboard display
     const bookings = (d.bookings || []).map(b => ({
       ...b,
       title:      b.property_name || b.title || 'Property',
@@ -159,38 +141,31 @@ const api = {
     }));
   },
 
-  // ── Reviews ──────────────────────────────────────────
   listReviews:   (property_id) => request('GET', `/reviews?property_id=${property_id}`),
   createReview:  (body)        => request('POST', '/reviews', body),
   deleteReview:  (id)          => request('DELETE', `/reviews/${id}`),
 
-  // ── Contact ──────────────────────────────────────────
   submitContact: (body) => request('POST', '/contact', body),
 
-  // ── Forgot / Reset Password ──────────────────────────
   forgotPassword: (phone)                  => request('POST', '/auth/forgot-password', { phone }),
   resetPassword:  (phone, otp, password)   => request('POST', '/auth/reset-password',  { phone, otp, password }),
 
-  // ── Google OAuth ─────────────────────────────────────
   googleLogin: (credential) => request('POST', '/auth/google', { credential }).then(d => {
     localStorage.setItem('sd_token', d.token);
     localStorage.setItem('sd_user',  JSON.stringify(d.user));
     return d;
   }),
 
-  // ── Image Upload ─────────────────────────────────────
   uploadImage: (file) => {
     const fd = new FormData();
     fd.append('image', file);
     return uploadRequest('POST', '/uploads/image', fd);
   },
 
-  // ── Availability ─────────────────────────────────────
   getAvailability:  (property_id)         => request('GET',  `/properties/${property_id}/availability`),
   getDatePrices:    (property_id)         => request('GET',  `/properties/${property_id}/date-prices`),
   saveDatePrices:   (property_id, prices) => request('POST', `/properties/${property_id}/date-prices`, { prices }),
 
-  // ── Admin ───────────────────────────────────────────
   adminStats:    () => request('GET', '/admin/stats'),
   adminUsers:    () => request('GET', '/admin/users'),
   adminReviews:  () => request('GET', '/admin/reviews'),
@@ -201,12 +176,10 @@ const api = {
     return request('GET', `/admin/bookings${q ? '?' + q : ''}`);
   },
 
-  // ── Site settings (public read, admin write) ─────────
   getSiteSettings:    () => request('GET', '/site-settings'),
   getPublicStats:     () => request('GET', '/site-settings/public-stats'),
   updateSiteSettings: (settings) => request('PUT', '/site-settings', { settings }),
 
-  // ── Brochure + avatar uploads ────────────────────────
   uploadBrochure: (propertyId, file) => {
     const fd = new FormData();
     fd.append('brochure', file);
@@ -218,20 +191,17 @@ const api = {
     return uploadRequest('POST', '/uploads/avatar', fd);
   },
 
-  // ── iCal sync ────────────────────────────────────────
   icalForProperty:    (id)        => request('GET',    `/ical/property/${id}`),
   addIcalSource:      (id, body)  => request('POST',   `/ical/property/${id}/sources`, body),
   deleteIcalSource:   (id)        => request('DELETE', `/ical/sources/${id}`),
   syncIcal:           (body = {}) => request('POST',   '/ical/sync', body),
 
-  // ── Travel guides ────────────────────────────────────
   listGuides:    ()        => request('GET',    '/guides'),
   getGuide:      (slug)    => request('GET',    `/guides/${slug}`),
   createGuide:   (body)    => request('POST',   '/guides', body),
   updateGuide:   (id, b)   => request('PUT',    `/guides/${id}`, b),
   deleteGuide:   (id)      => request('DELETE', `/guides/${id}`),
 
-  // ── Blog ─────────────────────────────────────────────
   listBlogPosts:  (params = {}) => {
     const q = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([,v]) => v))).toString();
     return request('GET', `/blog${q ? '?' + q : ''}`);
@@ -241,20 +211,17 @@ const api = {
   updateBlogPost: (id, body)   => request('PUT',    `/blog/${id}`, body),
   deleteBlogPost: (id)         => request('DELETE', `/blog/${id}`),
 
-  // ── Addon requests (guest dashboard) ─────────────────
   listMyAddonRequests: ()         => request('GET',  '/addons/mine'),
   createAddonRequest:  (body)     => request('POST', '/addons', body),
   listAddonRequests:   ()         => request('GET',  '/addons'),
   setAddonStatus:      (id, s)    => request('PUT',  `/addons/${id}/status`, { status: s }),
 
-  // ── Guest Reels ──────────────────────────────────────
   listReels:    ()          => request('GET', '/reels'),
   listAllReels: ()          => request('GET', '/reels/all'),
-  createReel:   (fd)        => uploadRequest('POST',  '/reels',       fd),
+  createReel:   (fd)        => uploadRequest('POST',  '/reels',        fd),
   updateReel:   (id, fd)    => uploadRequest('PUT',   `/reels/${id}`, fd),
   deleteReel:   (id)        => request('DELETE', `/reels/${id}`),
 
-  // ── Razorpay checkout helper ────────────────────────
   openRazorpay({ order_id, amount, currency, key_id, booking, onSuccess, onError }) {
     const options = {
       key:         key_id,
@@ -291,7 +258,6 @@ const api = {
   }
 };
 
-// ── Toast helper ─────────────────────────────────────
 function showToast(msg, type = 'info') {
   if (window._toastTimeout) clearTimeout(window._toastTimeout);
   let t = document.getElementById('_sd_toast');
