@@ -569,6 +569,15 @@
     <div class="form-grp"><label class="form-lbl">Add-ons</label><textarea class="form-ctrl" id="add-addons" rows="3"></textarea></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">FOMO: bookings</label><input class="form-ctrl" id="add-fomo-bookings" type="number"/></div><div class="form-grp"><label class="form-lbl">FOMO: viewers</label><input class="form-ctrl" id="add-fomo-viewers" type="number"/></div></div>
     <div class="form-grp"><label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="add-fomo-enabled" checked/> Show FOMO badges on this property</label></div>
+    <div class="form-grp">
+      <label class="form-lbl">Property Categories</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="add-type-pool"     value="pool"     style="accent-color:var(--red)"/> 🏊 Pool Villa</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="add-type-family"   value="family"   style="accent-color:var(--red)"/> 👪 Family Stay</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="add-type-bachelor" value="bachelor" style="accent-color:var(--red)"/> 🎉 Bachelor Party</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="add-type-party"    value="party"    style="accent-color:var(--red)"/> 🎊 Party Villa</label>
+      </div>
+    </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"><button class="btn btn-outline" onclick="closeModal('add-modal')">Cancel</button><button class="btn btn-primary" onclick="saveNewProperty()">Save Property</button></div>
   </div>
 </div>
@@ -592,6 +601,15 @@
     <div class="form-grp"><label class="form-lbl">Add-ons</label><textarea class="form-ctrl" id="edit-addons" rows="3"></textarea></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">FOMO: bookings</label><input class="form-ctrl" id="edit-fomo-bookings" type="number"/></div><div class="form-grp"><label class="form-lbl">FOMO: viewers</label><input class="form-ctrl" id="edit-fomo-viewers" type="number"/></div></div>
     <div class="form-grp"><label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="edit-fomo-enabled"/> Show FOMO badges</label></div>
+    <div class="form-grp">
+      <label class="form-lbl">Property Categories</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="edit-type-pool"     value="pool"     style="accent-color:var(--red)"/> 🏊 Pool Villa</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="edit-type-family"   value="family"   style="accent-color:var(--red)"/> 👪 Family Stay</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="edit-type-bachelor" value="bachelor" style="accent-color:var(--red)"/> 🎉 Bachelor Party</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="edit-type-party"    value="party"    style="accent-color:var(--red)"/> 🎊 Party Villa</label>
+      </div>
+    </div>
     <div class="form-grp"><label class="form-lbl">Brochure (PDF)</label><div id="edit-brochure-current" style="font-size:12.5px;color:var(--gray-500);margin-bottom:6px"></div><input type="file" id="edit-brochure-file" accept="application/pdf" onchange="uploadBrochureFile()"/></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"><button class="btn btn-outline" onclick="closeModal('edit-modal')">Cancel</button><button class="btn btn-primary" onclick="saveEditProperty()">Save Changes</button></div>
   </div>
@@ -1080,7 +1098,9 @@ function removeImg(modalKey, idx) { modalImages[modalKey].splice(idx, 1); render
 
 function openAddModal() {
   modalImages.add = []; ['add-name','add-location','add-price','add-guests','add-beds','add-baths','add-desc','add-amenities','add-img-url','add-map-url','add-checkin','add-checkout','add-rules','add-addons','add-fomo-bookings','add-fomo-viewers'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const fe = document.getElementById('add-fomo-enabled'); if (fe) fe.checked = true; renderThumbGrid('add'); showModal('add-modal');
+  const fe = document.getElementById('add-fomo-enabled'); if (fe) fe.checked = true;
+  ['add-type-pool','add-type-family','add-type-bachelor','add-type-party'].forEach(id => { const cb = document.getElementById(id); if (cb) cb.checked = false; });
+  renderThumbGrid('add'); showModal('add-modal');
 }
 function parseLines(text) { return String(text || '').split('\n').map(s => s.trim()).filter(Boolean); }
 function parseAddons(text) {
@@ -1093,7 +1113,8 @@ async function saveNewProperty() {
   const btn = document.querySelector('#add-modal .btn-primary'); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
     const fomoB = document.getElementById('add-fomo-bookings').value; const fomoV = document.getElementById('add-fomo-viewers').value;
-    await api.createProperty({ name, location, price: parseInt(document.getElementById('add-price').value) || 5000, guests: parseInt(document.getElementById('add-guests').value) || 10, beds: parseInt(document.getElementById('add-beds').value) || 4, bathrooms: parseInt(document.getElementById('add-baths').value) || 2, amenities: document.getElementById('add-amenities').value, description: document.getElementById('add-desc').value, status: 'Active', map_url: document.getElementById('add-map-url').value.trim(), checkin_time: document.getElementById('add-checkin').value.trim() || '2:00 PM', checkout_time: document.getElementById('add-checkout').value.trim() || '11:00 AM', rules: parseLines(document.getElementById('add-rules').value), addons: parseAddons(document.getElementById('add-addons').value), fomo_bookings: fomoB === '' ? null : Number(fomoB), fomo_viewers: fomoV === '' ? null : Number(fomoV), fomo_enabled: document.getElementById('add-fomo-enabled').checked, images });
+    const propTypes = ['pool','family','bachelor','party'].filter(t => { const cb = document.getElementById('add-type-'+t); return cb && cb.checked; });
+    await api.createProperty({ name, location, price: parseInt(document.getElementById('add-price').value) || 5000, guests: parseInt(document.getElementById('add-guests').value) || 10, beds: parseInt(document.getElementById('add-beds').value) || 4, bathrooms: parseInt(document.getElementById('add-baths').value) || 2, amenities: document.getElementById('add-amenities').value, description: document.getElementById('add-desc').value, status: 'Active', map_url: document.getElementById('add-map-url').value.trim(), checkin_time: document.getElementById('add-checkin').value.trim() || '2:00 PM', checkout_time: document.getElementById('add-checkout').value.trim() || '11:00 AM', rules: parseLines(document.getElementById('add-rules').value), addons: parseAddons(document.getElementById('add-addons').value), fomo_bookings: fomoB === '' ? null : Number(fomoB), fomo_viewers: fomoV === '' ? null : Number(fomoV), fomo_enabled: document.getElementById('add-fomo-enabled').checked, property_types: propTypes, images });
     closeModal('add-modal'); await initAdmin();
   } catch (err) { alert('Failed to create property: ' + err.message); } finally { if (btn) { btn.disabled = false; btn.textContent = 'Save Property'; } }
 }

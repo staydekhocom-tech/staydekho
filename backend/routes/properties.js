@@ -17,34 +17,37 @@ function normalize(p) {
   const rules  = JSON.parse(p.rules  || '[]');
   const addons = JSON.parse(p.addons || '[]');
 
+  const property_types = JSON.parse(p.property_types || '[]');
+
   return {
     ...p,
-    title:         p.name,
-    main_image:    images[0] || null,
+    title:          p.name,
+    main_image:     images[0] || null,
     images,
     categorized_images,
-    baths:         p.bathrooms,
-    max_guests:    p.guests,
+    baths:          p.bathrooms,
+    max_guests:     p.guests,
     amenities,
     rules,
     addons,
-    map_url:       p.map_url       || '',
-    brochure_url:  p.brochure_url || '',
-    fomo_enabled:  p.fomo_enabled !== 0,
-    fomo_bookings: p.fomo_bookings,
-    fomo_viewers:  p.fomo_viewers,
-    checkin_time:  p.checkin_time  || '2:00 PM',
-    checkout_time: p.checkout_time || '11:00 AM',
-    rating:        null,
-    review_count:  0,
-    badge:         null,
-    wishlisted:    false,
+    property_types,
+    map_url:        p.map_url       || '',
+    brochure_url:   p.brochure_url  || '',
+    fomo_enabled:   p.fomo_enabled !== 0,
+    fomo_bookings:  p.fomo_bookings,
+    fomo_viewers:   p.fomo_viewers,
+    checkin_time:   p.checkin_time  || '2:00 PM',
+    checkout_time:  p.checkout_time || '11:00 AM',
+    rating:         null,
+    review_count:   0,
+    badge:          null,
+    wishlisted:     false,
   };
 }
 
 // GET /api/properties — public
 router.get('/', optionalAuth, (req, res) => {
-  const { location, q, minPrice, maxPrice, guests, status } = req.query;
+  const { location, q, minPrice, maxPrice, guests, status, type } = req.query;
   const search = location || q;
   let sql    = `
     SELECT p.*,
@@ -59,6 +62,8 @@ router.get('/', optionalAuth, (req, res) => {
   if (guests)   { sql += ' AND p.guests >= ?';           args.push(Number(guests)); }
   if (minPrice) { sql += ' AND p.price >= ?';            args.push(Number(minPrice)); }
   if (maxPrice) { sql += ' AND p.price <= ?';            args.push(Number(maxPrice)); }
+  // Filter by property type/category (pool, family, bachelor, party)
+  if (type)     { sql += ' AND p.property_types LIKE ?'; args.push(`%"${type}"%`); }
 
   sql += ' ORDER BY p.created_at DESC';
 
@@ -126,19 +131,24 @@ router.post('/', protect, adminOnly, upload.array('images', 10), (req, res) => {
     finalImages = rawImages;
   }
 
+  const propTypes = Array.isArray(data.property_types)
+    ? JSON.stringify(data.property_types)
+    : (typeof data.property_types === 'string' ? data.property_types : '[]');
+
   const result = db.prepare(`
     INSERT INTO properties (name, location, price, guests, beds, bathrooms, description, amenities, images, status,
       map_url, brochure_url, rules, addons, checkin_time, checkout_time,
-      fomo_bookings, fomo_viewers, fomo_enabled)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      fomo_bookings, fomo_viewers, fomo_enabled, property_types)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    data.name, data.location, data.price, data.guests||10, data.beds||4, data.bathrooms||3, 
+    data.name, data.location, data.price, data.guests||10, data.beds||4, data.bathrooms||3,
     data.description||'', data.amenities||'', JSON.stringify(finalImages), data.status||'Active',
     data.map_url || '', data.brochure_url || '',
     JSON.stringify(data.rules || []), JSON.stringify(data.addons || []),
     data.checkin_time || '2:00 PM', data.checkout_time || '11:00 AM',
     data.fomo_bookings ?? null, data.fomo_viewers ?? null,
-    data.fomo_enabled === false ? 0 : 1
+    data.fomo_enabled === false ? 0 : 1,
+    propTypes
   );
 
   const prop = db.prepare('SELECT * FROM properties WHERE id = ?').get(result.lastInsertRowid);
@@ -168,10 +178,15 @@ router.put('/:id', protect, adminOnly, upload.array('images', 10), (req, res) =>
     finalImages = JSON.stringify(rawImages);
   }
 
+  const updPropTypes = data.property_types !== undefined
+    ? (Array.isArray(data.property_types) ? JSON.stringify(data.property_types) : data.property_types)
+    : (existing.property_types || '[]');
+
   db.prepare(`
     UPDATE properties SET name=?, location=?, price=?, guests=?, beds=?, bathrooms=?,
       description=?, amenities=?, images=?, status=?, checkin_time=?, checkout_time=?, rules=?,
-      addons=?, map_url=?, brochure_url=?, fomo_bookings=?, fomo_viewers=?, fomo_enabled=?
+      addons=?, map_url=?, brochure_url=?, fomo_bookings=?, fomo_viewers=?, fomo_enabled=?,
+      property_types=?
     WHERE id=?
   `).run(
     data.name         || existing.name,
@@ -193,6 +208,7 @@ router.put('/:id', protect, adminOnly, upload.array('images', 10), (req, res) =>
     data.fomo_bookings !== undefined ? data.fomo_bookings : existing.fomo_bookings,
     data.fomo_viewers  !== undefined ? data.fomo_viewers  : existing.fomo_viewers,
     data.fomo_enabled === undefined ? (existing.fomo_enabled ?? 1) : (data.fomo_enabled ? 1 : 0),
+    updPropTypes,
     req.params.id
   );
 

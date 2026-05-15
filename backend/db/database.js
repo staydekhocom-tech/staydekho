@@ -128,9 +128,10 @@ function init() {
     "ALTER TABLE properties ADD COLUMN brochure_url  TEXT DEFAULT ''",
     "ALTER TABLE properties ADD COLUMN ical_url      TEXT DEFAULT ''",
     "ALTER TABLE properties ADD COLUMN ical_uid      TEXT DEFAULT ''",
-    "ALTER TABLE properties ADD COLUMN fomo_bookings INTEGER DEFAULT NULL",
-    "ALTER TABLE properties ADD COLUMN fomo_viewers  INTEGER DEFAULT NULL",
-    "ALTER TABLE properties ADD COLUMN fomo_enabled  INTEGER DEFAULT 1",
+    "ALTER TABLE properties ADD COLUMN fomo_bookings    INTEGER DEFAULT NULL",
+    "ALTER TABLE properties ADD COLUMN fomo_viewers     INTEGER DEFAULT NULL",
+    "ALTER TABLE properties ADD COLUMN fomo_enabled     INTEGER DEFAULT 1",
+    "ALTER TABLE properties ADD COLUMN property_types   TEXT    DEFAULT '[]'",
     "ALTER TABLE users ADD COLUMN avatar_url TEXT DEFAULT ''",
   ]) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }

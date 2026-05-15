@@ -509,11 +509,27 @@
     const grid = document.getElementById('listings-grid');
     let list = [...allProperties];
 
-    // Pool filter
+    // Type/category filter from URL (pool, family, bachelor, party)
+    if (activeTypeFilter) {
+      list = list.filter(p => {
+        const types = Array.isArray(p.property_types) ? p.property_types : [];
+        // Also fallback: pool type checks amenities for "Pool"
+        if (activeTypeFilter === 'pool') {
+          const hasPoolType = types.includes('pool');
+          const hasPoolAmenity = (Array.isArray(p.amenities) ? p.amenities : [])
+            .some(a => a.toLowerCase().includes('pool'));
+          return hasPoolType || hasPoolAmenity;
+        }
+        return types.includes(activeTypeFilter);
+      });
+    }
+
+    // Pool quick-filter chip
     if (quickFilters.pool) {
       list = list.filter(p => {
         const am = Array.isArray(p.amenities) ? p.amenities : [];
-        return am.some(a => a.toLowerCase().includes('pool'));
+        const types = Array.isArray(p.property_types) ? p.property_types : [];
+        return types.includes('pool') || am.some(a => a.toLowerCase().includes('pool'));
       });
     }
     // City Centre filter
@@ -524,7 +540,7 @@
         return t.includes('city') || tags.includes('city');
       });
     }
-    // Category filter
+    // Category dropdown filter
     const catVal = (document.getElementById('filter-category')?.value||'').toLowerCase();
     if (catVal) {
       list = list.filter(p => (p.type||p.category||'').toLowerCase().includes(catVal));
@@ -553,9 +569,12 @@ const sorted = sortProps(list);
     const checkin = document.getElementById('filter-checkin').value;
     const guests  = document.getElementById('filter-guests').value;
     const params  = {};
-    if (q)       params.q       = q;
-    if (guests)  params.guests  = guests;
-    if (checkin) params.checkin = checkin;
+    if (q)                params.q       = q;
+    if (guests)           params.guests  = guests;
+    if (checkin)          params.checkin = checkin;
+    // For pool type also send to backend; others rely on client-side filter
+    // (backend LIKE match on JSON field handles all types correctly)
+    if (activeTypeFilter) params.type    = activeTypeFilter;
     try {
       const [r, wl] = await Promise.all([
         api.listProperties(params),
@@ -607,6 +626,37 @@ const sorted = sortProps(list);
   if (_p.get('checkin'))  document.getElementById('filter-checkin').value  = _p.get('checkin');
   if (_p.get('checkout')) document.getElementById('filter-checkout').value = _p.get('checkout');
   if (_p.get('guests'))   document.getElementById('filter-guests').value   = _p.get('guests');
+
+  /* ── Category type from URL (e.g. ?type=pool) ────── */
+  const CATEGORY_LABELS = {
+    pool:     { label: 'Pool Villa',      emoji: '🏊' },
+    family:   { label: 'Family Stay',     emoji: '👨‍👩‍👧' },
+    bachelor: { label: 'Bachelor Party',  emoji: '🎉' },
+    party:    { label: 'Party Villa',     emoji: '🎊' },
+  };
+  const _urlType = _p.get('type') || '';
+  let activeTypeFilter = _urlType;
+
+  // Show a filter badge when a type is active
+  function applyTypeFilterUI() {
+    let badge = document.getElementById('type-filter-badge');
+    if (activeTypeFilter && CATEGORY_LABELS[activeTypeFilter]) {
+      const { label, emoji } = CATEGORY_LABELS[activeTypeFilter];
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'type-filter-badge';
+        badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:#fef2f2;color:#8B1717;border:1.5px solid #fecaca;border-radius:20px;padding:6px 14px;font-size:.82rem;font-weight:700;margin-bottom:12px;cursor:pointer';
+        badge.onclick = () => { activeTypeFilter = ''; applyTypeFilterUI(); renderGrid(); };
+        const grid = document.getElementById('listings-grid');
+        grid && grid.parentNode.insertBefore(badge, grid);
+      }
+      badge.innerHTML = `${emoji} ${label} &nbsp;<span style="opacity:.6;font-size:.9em">× clear</span>`;
+      badge.style.display = 'inline-flex';
+    } else if (badge) {
+      badge.style.display = 'none';
+    }
+  }
+  applyTypeFilterUI();
 
   /* ── Scroll-to-top ──────────────────────────────────── */
   window.addEventListener('scroll', () => {
