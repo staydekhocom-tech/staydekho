@@ -557,7 +557,7 @@
 <div class="modal-bd" id="add-modal">
   <div class="modal">
     <div class="modal-hdr"><div class="modal-title">Add New Property</div><button class="modal-close" onclick="closeModal('add-modal')">✕</button></div>
-    <div class="form-grp"><label class="form-lbl">Property Images <span style="color:var(--gray-400);font-weight:400">(pehli photo = cover · max 40)</span></label><div class="multi-img-section" id="add-drop-zone" ondragover="handleDragOver(event,'add')" ondragleave="handleDragLeave(event,'add')" ondrop="handleDrop(event,'add')"><div class="upload-actions"><button class="upload-btn primary" onclick="document.getElementById('add-img-file').click()" type="button">📁 Device se Upload</button><span class="upload-counter" id="add-img-count">0 / 40 photos</span></div><input type="file" id="add-img-file" accept="image/*" multiple style="display:none" onchange="handleMultiUpload(this,'add')"/><div class="img-thumb-grid" id="add-thumb-grid"></div><div class="upload-status" id="add-upload-status">Ya neeche URL paste karo</div><div class="img-url-row"><input class="img-url-inp" id="add-img-url" placeholder="Image URL paste karo aur Enter dabao…" onkeydown="if(event.key==='Enter'){addImgUrl('add');event.preventDefault()}"/><button class="btn btn-outline btn-sm" onclick="addImgUrl('add')">Add URL</button></div></div></div>
+    <div class="form-grp"><label class="form-lbl">Property Images <span style="color:var(--gray-400);font-weight:400">(first photo = cover · max 40)</span></label><div class="multi-img-section" id="add-drop-zone" ondragover="handleDragOver(event,'add')" ondragleave="handleDragLeave(event,'add')" ondrop="handleDrop(event,'add')"><div class="upload-actions"><button class="upload-btn primary" onclick="document.getElementById('add-img-file').click()" type="button">📁 Upload from Device</button><span class="upload-counter" id="add-img-count">0 / 40 photos</span></div><input type="file" id="add-img-file" accept="image/*" multiple style="display:none" onchange="handleMultiUpload(this,'add')"/><div class="img-thumb-grid" id="add-thumb-grid"></div><div class="upload-status" id="add-upload-status">Or paste an image URL below</div><div class="img-url-row"><input class="img-url-inp" id="add-img-url" placeholder="Paste image URL and press Enter…" onkeydown="if(event.key==='Enter'){addImgUrl('add');event.preventDefault()}"/><button class="btn btn-outline btn-sm" onclick="addImgUrl('add')">Add URL</button></div></div></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Property Name *</label><input class="form-ctrl" id="add-name"/></div><div class="form-grp"><label class="form-lbl">Location *</label><input class="form-ctrl" id="add-location"/></div></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Price / Night (₹) *</label><input class="form-ctrl" id="add-price" type="number"/></div><div class="form-grp"><label class="form-lbl">Max Guests</label><input class="form-ctrl" id="add-guests" type="number"/></div></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Bedrooms</label><input class="form-ctrl" id="add-beds" type="number"/></div><div class="form-grp"><label class="form-lbl">Bathrooms</label><input class="form-ctrl" id="add-baths" type="number"/></div></div>
@@ -578,8 +578,8 @@
     <div class="modal-hdr"><div class="modal-title">Edit Property</div><button class="modal-close" onclick="closeModal('edit-modal')">✕</button></div>
     <input type="hidden" id="edit-id"/>
     <div class="form-grp">
-      <label class="form-lbl">Property Images <span style="color:var(--gray-400);font-weight:400">(pehli photo = cover · max 40)</span></label>
-      <div class="multi-img-section" id="edit-drop-zone" ondragover="handleDragOver(event,'edit')" ondragleave="handleDragLeave(event,'edit')" ondrop="handleDrop(event,'edit')"><div class="upload-actions"><button class="upload-btn primary" onclick="document.getElementById('edit-img-file').click()" type="button">📁 Device se Upload</button><span class="upload-counter" id="edit-img-count">0 / 40 photos</span></div><input type="file" id="edit-img-file" accept="image/*" multiple style="display:none" onchange="handleMultiUpload(this,'edit')"/><div class="img-thumb-grid" id="edit-thumb-grid"></div><div class="upload-status" id="edit-upload-status">Ya neeche URL paste karo</div><div class="img-url-row"><input class="img-url-inp" id="edit-img-url" placeholder="Image URL paste karo aur Enter dabao…" onkeydown="if(event.key==='Enter'){addImgUrl('edit');event.preventDefault()}"/><button class="btn btn-outline btn-sm" onclick="addImgUrl('edit')">Add URL</button></div></div>
+      <label class="form-lbl">Property Images <span style="color:var(--gray-400);font-weight:400">(first photo = cover · max 40)</span></label>
+      <div class="multi-img-section" id="edit-drop-zone" ondragover="handleDragOver(event,'edit')" ondragleave="handleDragLeave(event,'edit')" ondrop="handleDrop(event,'edit')"><div class="upload-actions"><button class="upload-btn primary" onclick="document.getElementById('edit-img-file').click()" type="button">📁 Upload from Device</button><span class="upload-counter" id="edit-img-count">0 / 40 photos</span></div><input type="file" id="edit-img-file" accept="image/*" multiple style="display:none" onchange="handleMultiUpload(this,'edit')"/><div class="img-thumb-grid" id="edit-thumb-grid"></div><div class="upload-status" id="edit-upload-status">Or paste an image URL below</div><div class="img-url-row"><input class="img-url-inp" id="edit-img-url" placeholder="Paste image URL and press Enter…" onkeydown="if(event.key==='Enter'){addImgUrl('edit');event.preventDefault()}"/><button class="btn btn-outline btn-sm" onclick="addImgUrl('edit')">Add URL</button></div></div>
     </div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Property Name *</label><input class="form-ctrl" id="edit-name"/></div><div class="form-grp"><label class="form-lbl">Location *</label><input class="form-ctrl" id="edit-location"/></div></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Price / Night (₹)</label><input class="form-ctrl" id="edit-price" type="number"/></div><div class="form-grp"><label class="form-lbl">Max Guests</label><input class="form-ctrl" id="edit-guests" type="number"/></div></div>
@@ -604,8 +604,8 @@
     <div class="form-grp"><label class="form-lbl">Stay Name *</label><input class="form-ctrl" id="rl-stay"/></div>
     <div class="form-grp"><label class="form-lbl">Review Quote</label><textarea class="form-ctrl" id="rl-quote" rows="2"></textarea></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Stars (1–5)</label><input class="form-ctrl" id="rl-stars" type="number" min="1" max="5" value="5"/></div><div class="form-grp"><label class="form-lbl">Sort Order</label><input class="form-ctrl" id="rl-order" type="number" value="0" min="0"/></div></div>
-    <div class="form-grp"><label class="form-lbl">🎬 Video File <span style="font-weight:400;color:var(--gray-400)">(MP4/MOV, max 300MB)</span></label><input class="form-ctrl" id="rl-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Ya URL paste karo</label><input class="form-ctrl" id="rl-video-url"/></div>
-    <div class="form-grp"><label class="form-lbl">🖼️ Poster Image <span style="font-weight:400;color:var(--gray-400)">(thumbnail — JPG/PNG)</span></label><input class="form-ctrl" id="rl-poster-file" type="file" accept="image/*" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Ya URL paste karo</label><input class="form-ctrl" id="rl-poster-url"/></div>
+    <div class="form-grp"><label class="form-lbl">🎬 Video File <span style="font-weight:400;color:var(--gray-400)">(MP4/MOV, max 300MB)</span></label><input class="form-ctrl" id="rl-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Or paste URL</label><input class="form-ctrl" id="rl-video-url"/></div>
+    <div class="form-grp"><label class="form-lbl">🖼️ Poster Image <span style="font-weight:400;color:var(--gray-400)">(thumbnail — JPG/PNG)</span></label><input class="form-ctrl" id="rl-poster-file" type="file" accept="image/*" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Or paste URL</label><input class="form-ctrl" id="rl-poster-url"/></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-outline" onclick="closeModal('reel-add-modal')">Cancel</button><button class="btn btn-primary" id="rl-save-btn" onclick="saveReel()">Save Reel</button></div>
   </div>
 </div>
@@ -1038,10 +1038,10 @@ async function handleMultiUpload(input, modalKey) {
   const files = Array.from(input.files); input.value = '';
   if (!files.length) return;
   const remaining = MAX_IMAGES - modalImages[modalKey].length;
-  if (remaining <= 0) { alert(`Maximum ${MAX_IMAGES} photos allowed. Pehle kuch remove karo.`); return; }
+  if (remaining <= 0) { alert(`Maximum ${MAX_IMAGES} photos allowed per property. Please remove some first.`); return; }
   const toUpload = files.slice(0, remaining);
-  if (toUpload.length < files.length) alert(`Sirf ${toUpload.length} photos add ki ja sakti hain (limit: ${MAX_IMAGES}).`);
-  setStatus(modalKey, `⏫ ${toUpload.length} photo(s) upload ho rahi hain…`, 'uploading');
+  if (toUpload.length < files.length) alert(`Only ${toUpload.length} photos can be added (limit: ${MAX_IMAGES}).`);
+  setStatus(modalKey, `⏫ Uploading ${toUpload.length} photo(s)…`, 'uploading');
   const start = modalImages[modalKey].length;
   toUpload.forEach(() => modalImages[modalKey].push('__uploading__'));
   renderThumbGrid(modalKey);
@@ -1050,8 +1050,8 @@ async function handleMultiUpload(input, modalKey) {
     const result = await uploadRequest('POST', '/uploads/images', fd);
     result.urls.forEach((url, i) => { modalImages[modalKey][start + i] = url; });
     renderThumbGrid(modalKey);
-    setStatus(modalKey, `✅ ${result.urls.length} photo(s) upload ho gayi!`, 'done');
-    setTimeout(() => setStatus(modalKey, 'Ya neeche URL paste karo'), 3000);
+    setStatus(modalKey, `✅ ${result.urls.length} photo(s) uploaded successfully!`, 'done');
+    setTimeout(() => setStatus(modalKey, 'Or paste an image URL below'), 3000);
   } catch (err) {
     modalImages[modalKey].splice(start, toUpload.length);
     renderThumbGrid(modalKey);
@@ -1064,17 +1064,17 @@ function handleDragLeave(e, k) { document.getElementById(k+'-drop-zone')?.classL
 async function handleDrop(e, k) {
   e.preventDefault(); document.getElementById(k+'-drop-zone')?.classList.remove('drag-over');
   const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  if (!files.length) { alert('Sirf image files drop kar sakte ho.'); return; }
+  if (!files.length) { alert('Only image files can be dropped here.'); return; }
   const fakeInput = { files, value: '' }; await handleMultiUpload(fakeInput, k);
 }
 
 function addImgUrl(modalKey) {
   const inp = document.getElementById(modalKey + '-img-url'); const url = inp.value.trim();
   if (!url) return;
-  if (modalImages[modalKey].length >= MAX_IMAGES) { alert(`Maximum ${MAX_IMAGES} photos allowed.`); return; }
+  if (modalImages[modalKey].length >= MAX_IMAGES) { alert(`Maximum ${MAX_IMAGES} photos allowed per property.`); return; }
   modalImages[modalKey].push(url); renderThumbGrid(modalKey); inp.value = '';
-  setStatus(modalKey, '✅ URL add ho gayi!', 'done');
-  setTimeout(() => setStatus(modalKey, 'Ya neeche URL paste karo'), 2000);
+  setStatus(modalKey, '✅ URL added!', 'done');
+  setTimeout(() => setStatus(modalKey, 'Or paste an image URL below'), 2000);
 }
 function removeImg(modalKey, idx) { modalImages[modalKey].splice(idx, 1); renderThumbGrid(modalKey); }
 
