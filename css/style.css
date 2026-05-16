@@ -1498,3 +1498,18 @@ body { opacity: 1 !important; }
   body { overflow-x: hidden; }
   section, .container { max-width: 100vw; }
 }
+
+/* ── DESKTOP: hard-lock mobile drawer hidden ─────────────── */
+/* Placed at end of file so it wins all cascade conflicts     */
+@media (min-width: 769px) {
+  .mobile-nav-drawer,
+  .mobile-nav-drawer.open {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  .mobile-nav-close {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
