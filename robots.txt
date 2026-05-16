@@ -1,0 +1,28 @@
+User-agent: *
+Allow: /
+
+# Public pages
+Allow: /index.html
+Allow: /listings.html
+Allow: /property.html
+Allow: /about.html
+Allow: /contact.html
+Allow: /travel-guide.html
+Allow: /blog.html
+Allow: /how-it-works.html
+Allow: /help.html
+Allow: /safety.html
+Allow: /cancellation.html
+Allow: /careers.html
+Allow: /press.html
+
+# Private pages — block crawlers
+Disallow: /admin.html
+Disallow: /admin
+Disallow: /guest-dashboard.html
+Disallow: /host-dashboard.html
+Disallow: /property-edit.html
+Disallow: /test-payment.html
+Disallow: /login.html
+
+Sitemap: https://www.staydekho.com/sitemap.xml

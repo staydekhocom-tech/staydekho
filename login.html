@@ -365,8 +365,13 @@
   /* ── helpers ──────────────────────────────────────── */
   function nextUrl(user) {
     const n = new URLSearchParams(location.search).get('redirect') || new URLSearchParams(location.search).get('next');
-    if (n) return decodeURIComponent(n);
-    // Admin → admin panel, Guest → guest dashboard
+    if (n) {
+      const decoded = decodeURIComponent(n);
+      // Only allow same-origin redirects (no external URLs / open redirect protection)
+      if (decoded.startsWith('/') || decoded.startsWith(location.origin) || !decoded.includes('://')) {
+        return decoded;
+      }
+    }
     return (user && user.role === 'admin') ? 'admin.html' : 'guest-dashboard.html';
   }
   function qs(id) { return document.getElementById(id); }

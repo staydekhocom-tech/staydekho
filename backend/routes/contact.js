@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { Contact } = require('../db/models');
 const { sendEmail } = require('../services/email');
+const { protect, adminOnly } = require('../middleware/auth');
 
 // POST /api/contact
 router.post('/', async (req, res) => {
@@ -50,8 +51,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/contact  — admin use ke liye
-router.get('/', async (req, res) => {
+// GET /api/contact  — admin only
+router.get('/', protect, adminOnly, async (req, res) => {
   try {
     const submissions = await Contact.find().sort({ created_at: -1 }).lean();
     res.json({ submissions });

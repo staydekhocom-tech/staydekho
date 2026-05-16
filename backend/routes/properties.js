@@ -61,15 +61,20 @@ router.get('/', optionalAuth, async (req, res) => {
       filter.status = 'Active';
     }
     if (search) {
+      // Escape special regex chars to prevent ReDoS
+      const esc = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { location: new RegExp(search, 'i') },
-        { name: new RegExp(search, 'i') },
+        { location: new RegExp(esc, 'i') },
+        { name:     new RegExp(esc, 'i') },
       ];
     }
     if (guests)   filter.guests = { $gte: Number(guests) };
     if (minPrice) filter.price  = { ...filter.price, $gte: Number(minPrice) };
     if (maxPrice) filter.price  = { ...filter.price, $lte: Number(maxPrice) };
-    if (type)     filter.property_types = new RegExp(`"${type}"`);
+    if (type) {
+      const escType = type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.property_types = new RegExp(`"${escType}"`);
+    }
 
     const props = await Property.find(filter).sort({ created_at: -1 }).lean();
     const today = new Date().toISOString().split('T')[0];

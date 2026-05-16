@@ -89,7 +89,7 @@ const api = {
   cancelBooking:       (id)         => request('DELETE', `/bookings/${id}`),
 
   toggleWishlist: async (propertyId) => {
-    const id = Number(propertyId);
+    const id = String(propertyId); // MongoDB ObjectId is a string — never convert to Number
     if (isLoggedIn()) {
       const ids = await request('GET', '/wishlist/ids').then(d => d.ids).catch(() => []);
       if (ids.includes(id)) {
