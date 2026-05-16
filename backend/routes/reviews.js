@@ -2,6 +2,27 @@ const router = require('express').Router();
 const { Review, Property, Booking } = require('../db/models');
 const { protect } = require('../middleware/auth');
 
+// GET /api/reviews/featured  — public, for homepage carousel (top rated, no property_id needed)
+router.get('/featured', async (req, res) => {
+  try {
+    const docs = await Review.find({ rating: { $gte: 4 } })
+      .populate('user_id', 'name')
+      .sort({ rating: -1, created_at: -1 })
+      .limit(12)
+      .lean();
+
+    const reviews = docs.map(r => ({
+      ...r,
+      user_name:     r.user_id?.name || 'Guest',
+      property_name: r.property_name || 'StayDekho Property',
+    }));
+
+    res.json({ reviews });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/reviews?property_id=X  — public
 router.get('/', async (req, res) => {
   const { property_id } = req.query;

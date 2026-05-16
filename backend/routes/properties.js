@@ -22,6 +22,7 @@ function normalize(p) {
 
   return {
     ...p,
+    id:             String(p._id),   // frontend uses p.id for property links
     title:          p.name,
     main_image:     images[0] || null,
     images,

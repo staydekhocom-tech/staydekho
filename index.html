@@ -1981,12 +1981,13 @@
         </div>
       </a>`).join('');
 
-    /* Attempt to load from API; fall back to sample cards */
+    /* Attempt to load from API; fall back to sample cards (8s timeout) */
+    const _apiTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
     try {
       if (typeof api !== 'undefined') {
-        const r = await api.listProperties({});
-        const all = (r.properties || []).slice(0, 6);
-        _heroProps = r.properties || [];   // feed autocomplete
+        const r = await _apiTimeout(api.listProperties({}), 8000);
+        const all = (r.properties || []).slice(0, 6).map(p => ({ ...p, id: p.id || p._id }));
+        _heroProps = (r.properties || []).map(p => ({ ...p, id: p.id || p._id }));
         if (all.length) { grid.innerHTML = renderCards(all); return; }
       }
       throw new Error('no api');
@@ -2036,11 +2037,13 @@
     const STAR = `<svg width="15" height="15" viewBox="0 0 24 24" fill="#8B1717"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
     const VERIFIED = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Verified`;
 
+    const _revTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
     try {
       let reviews = [];
       try {
         const baseUrl = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
-        const res = await fetch(`${baseUrl}/reviews`); 
+        // Use /reviews/featured which returns top reviews without requiring property_id
+        const res = await _revTimeout(fetch(`${baseUrl}/reviews/featured`), 8000);
         const data = await res.json();
         reviews = data.reviews || [];
       } catch(e) {
@@ -2049,7 +2052,9 @@
 
       if (reviews.length === 0) {
         reviews = [
-          { property_name: "Heritage Haveli, Udaipur", rating: 5, text: "Amazing family trip! The host was super nice.", user_name: "Raj", image_url: "review no10.jpeg" }
+          { property_name: "Aravalli Pool Villa, Udaipur", rating: 5, text: "Pool ke saath amazing views! StayDekho ne poora trip banaya. Definitely coming back!", user_name: "Priya S.", image_url: "https://images.unsplash.com/photo-1529156069898-49953eb1f5ce?w=600&q=80" },
+          { property_name: "Heritage Haveli, Udaipur", rating: 5, text: "Felt like royalty! Impeccable service, authentic Rajasthani food. Our trip was truly unforgettable.", user_name: "Rahul V.", image_url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80" },
+          { property_name: "Lake View Cottage, Udaipur", rating: 5, text: "Best group trip ever! Everything perfectly managed. 10/10 will definitely book again!", user_name: "Sneha & Team", image_url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80" },
         ];
       }
 
@@ -2122,10 +2127,11 @@
       }).join('');
     }
 
-    // Try API first
+    // Try API first (8s timeout then fall back to config.js)
+    const _reelTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
     try {
       if (typeof api !== 'undefined') {
-        const data = await api.listReels();
+        const data = await _reelTimeout(api.listReels(), 8000);
         if (data.reels && data.reels.length) { renderReels(data.reels); return; }
       }
       throw new Error('no api');
