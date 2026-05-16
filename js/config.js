@@ -100,7 +100,7 @@ const SD = {
       video:    '',
       poster:   'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=400&h=710&q=80',
       stay:     'Lonavala Pool Villa',
-      quote:    'Monsoon mein pool villa — epic experience! Whole group loved it. Booking again next season for sure!',
+      quote:    'Monsoon pool villa — epic experience! The whole group loved it. Booking again next season for sure!',
       name:     'Vikram Joshi',
       location: 'Pune',
       stars:    5,

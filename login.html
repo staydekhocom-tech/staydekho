@@ -615,7 +615,7 @@
     btn.disabled = true; btn.textContent = 'Resetting…';
     try {
       await api.resetPassword(_fpPhone, otp, pass);
-      showToast('Password reset ho gaya! Ab login karo.', 'success');
+      showToast('Password reset successful! Please log in.', 'success');
       showForgot(false);
     } catch(err) {
       showToast(err.message || 'Reset failed', 'error');

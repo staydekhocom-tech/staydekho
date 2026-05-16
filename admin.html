@@ -449,12 +449,12 @@
     <div class="topbar">
       <div>
         <div class="page-title">Guest Reels</div>
-        <div class="page-subtitle">Homepage pe dikhne wale video testimonials manage karo</div>
+        <div class="page-subtitle">Manage guest video testimonials shown on the homepage</div>
       </div>
       <button class="btn btn-primary" onclick="showModal('reel-add-modal')">+ Add Reel</button>
     </div>
     <div id="reels-admin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;padding:4px 0"></div>
-    <p id="reels-empty-msg" style="display:none;color:var(--gray-400);text-align:center;padding:48px 0">Koi reel nahi hai abhi. "Add Reel" button se pehli reel add karo!</p>
+    <p id="reels-empty-msg" style="display:none;color:var(--gray-400);text-align:center;padding:48px 0">No reels yet. Click "Add Reel" to add your first guest reel!</p>
   </div>
 
   <div class="page-view" id="page-today">
@@ -548,7 +548,7 @@
     <div class="form-grp"><label class="form-lbl">Guest Name *</label><input class="form-ctrl" id="rev-guest" placeholder="e.g. Rahul Verma"/></div>
     <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="rev-property"><option value="">Select Property...</option></select></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Rating (1-5)</label><input class="form-ctrl" type="number" id="rev-rating" min="1" max="5" value="5"/></div><div class="form-grp"><label class="form-lbl">Date (Optional)</label><input class="form-ctrl" type="date" id="rev-date"/></div></div>
-    <div class="form-grp"><label class="form-lbl">Guest Photo (Image URL) *</label><input class="form-ctrl" id="rev-image-url" placeholder="e.g. guest1.jpg or https://..."/><div style="font-size: 11.5px; color: var(--gray-400); margin-top: 4px;">Yeh photo index page pe card ke background mein dikhegi.</div></div>
+    <div class="form-grp"><label class="form-lbl">Guest Photo (Image URL) *</label><input class="form-ctrl" id="rev-image-url" placeholder="e.g. guest1.jpg or https://..."/><div style="font-size: 11.5px; color: var(--gray-400); margin-top: 4px;">This photo appears as the card background on the homepage review section.</div></div>
     <div class="form-grp"><label class="form-lbl">Review Text *</label><textarea class="form-ctrl" id="rev-text" rows="4" placeholder="Guest ka experience yahan likhiye..."></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-outline" onclick="closeModal('review-add-modal')">Cancel</button><button class="btn btn-primary" id="rev-save-btn" onclick="saveAdminReview()">Save Review</button></div>
   </div>
@@ -1131,7 +1131,7 @@ async function saveNewProperty() {
 }
 function editProp(id) { window.location.href = `property-edit.html?id=${id}`; }
 async function deleteProp(id) {
-  if (!confirm('Kya aap is property ko permanently delete karna chahte hain?')) return;
+  if (!confirm('Are you sure you want to permanently delete this property?')) return;
   try {
     await api.deleteProperty(id);
     showAdminToast('Property delete ho gayi!', 'success');
@@ -1166,14 +1166,14 @@ function openEditReel(id) {
 }
 async function saveReel() {
   const name = document.getElementById('rl-name').value.trim(); const stay = document.getElementById('rl-stay').value.trim();
-  if (!name || !stay) { alert('Guest Name aur Stay Name required hain!'); return; }
+  if (!name || !stay) { alert('Guest Name and Stay Name are required!'); return; }
   const btn = document.getElementById('rl-save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
   const fd = new FormData(); fd.append('name', name); fd.append('location', document.getElementById('rl-location').value.trim()); fd.append('stay', stay); fd.append('quote', document.getElementById('rl-quote').value.trim()); fd.append('stars', document.getElementById('rl-stars').value); fd.append('sort_order', document.getElementById('rl-order').value); fd.append('video_url', document.getElementById('rl-video-url').value.trim()); fd.append('poster_url', document.getElementById('rl-poster-url').value.trim());
   const videoFile = document.getElementById('rl-video-file').files[0]; const posterFile = document.getElementById('rl-poster-file').files[0];
   if (videoFile) fd.append('video', videoFile); if (posterFile) fd.append('poster', posterFile);
   try { if (reelEditId) { await api.updateReel(reelEditId, fd); } else { await api.createReel(fd); } closeModal('reel-add-modal'); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.textContent = reelEditId ? 'Update Reel' : 'Save Reel'; }
 }
-async function deleteReel(id) { if (!confirm('Is reel ko permanently delete karna chahte ho?')) return; try { await api.deleteReel(id); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Delete failed: ' + err.message); } }
+async function deleteReel(id) { if (!confirm('Are you sure you want to permanently delete this reel?')) return; try { await api.deleteReel(id); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Delete failed: ' + err.message); } }
 async function toggleReelActive(id, active) { const fd = new FormData(); fd.append('active', active); try { await api.updateReel(id, fd); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Update failed: ' + err.message); } }
 
 // ── TODAY (admin) ──
@@ -1347,7 +1347,7 @@ async function saveBlogPost() {
     body:        document.getElementById('blog-body').value.trim(),
     published:   document.getElementById('blog-published').checked,
   };
-  if (!body.title || !body.body) { alert('Title aur body required hain'); return; }
+  if (!body.title || !body.body) { alert('Title and body content are required'); return; }
   const btn = document.getElementById('blog-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
@@ -1364,7 +1364,7 @@ async function toggleBlogPublish(id, published) {
 }
 
 async function deleteBlogPost(id) {
-  if (!confirm('Is post ko delete karna chahte ho?')) return;
+  if (!confirm('Are you sure you want to delete this blog post?')) return;
   try { await api.deleteBlogPost(id); loadBlogPosts(); } catch (e) { alert(e.message); }
 }
 
