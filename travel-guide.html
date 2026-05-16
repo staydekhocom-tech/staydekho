@@ -9,14 +9,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
   <style>
-    #navbar.nav-top, #navbar { background: #fff !important; box-shadow: 0 2px 14px rgba(0,0,0,.06); }
-    #navbar.nav-top .nav-inner { background: #fff !important; }
-    #navbar.nav-top .nav-links a { color: var(--gray-600) !important; }
-    #navbar.nav-top .logo-stay, #navbar.nav-top .logo-dekh { color: var(--red) !important; }
-    body { padding-top: 72px; }
-    .tg-hero { background: linear-gradient(135deg, var(--red-dark, #6b1010), var(--red, #8B1717)); color: #fff; padding: 56px 0 44px; }
-    .tg-hero h1 { font-size: 2.2rem; margin-bottom: 8px; }
-    .tg-hero p  { opacity: .88; max-width: 620px; }
+    .tg-hero {
+      background: linear-gradient(135deg, #8B1717 0%, #6b1010 60%, #3d0808 100%);
+      color: #fff;
+      min-height: 280px;
+      display: flex;
+      align-items: center;
+      padding: 110px 0 70px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .tg-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .tg-hero .container { position: relative; z-index: 1; width: 100%; }
+    .tg-hero h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin: 0 0 14px; line-height: 1.15; }
+    .tg-hero p  { opacity: .85; max-width: 620px; margin: 0 auto; font-size: 1.05rem; line-height: 1.7; }
     .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; padding: 32px 0; }
     .tg-card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); display: flex; flex-direction: column; }
     .tg-card img { width: 100%; aspect-ratio: 16/10; object-fit: cover; }

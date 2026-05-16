@@ -978,7 +978,7 @@
 
       /* ── Mobile Hamburger ─────────────────────────── */
       .nav-hamburger {
-        display: flex; flex-direction: column; justify-content: center;
+        display: flex !important; flex-direction: column; justify-content: center;
         gap: 5px; cursor: pointer; padding: 6px; border: none; background: none;
         margin-left: 12px; color: inherit;
       }
