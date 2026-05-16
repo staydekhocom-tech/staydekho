@@ -1928,12 +1928,24 @@
         </div>`).join('');
     }
     drop.innerHTML = html;
-    // Position fixed dropdown below the input (needed because .hero has overflow:hidden)
+    // Position fixed dropdown — show ABOVE input since search bar is at bottom of screen
     const input = document.getElementById('search-dest');
-    const rect = input.getBoundingClientRect();
-    drop.style.left  = rect.left + 'px';
-    drop.style.top   = (rect.bottom + 6) + 'px';
-    drop.style.width = Math.max(280, rect.width) + 'px';
+    const rect  = input.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    drop.style.left   = rect.left + 'px';
+    drop.style.width  = Math.max(280, rect.width) + 'px';
+    drop.style.maxHeight = '320px';
+    drop.style.overflowY = 'auto';
+    if (spaceBelow < 220 || spaceAbove > spaceBelow) {
+      // Show above the input
+      drop.style.top    = '';
+      drop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    } else {
+      // Show below the input
+      drop.style.bottom = '';
+      drop.style.top    = (rect.bottom + 6) + 'px';
+    }
     drop.classList.add('open');
   }
 
