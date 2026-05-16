@@ -30,6 +30,7 @@ const SD = {
   social: {
     instagram: 'https://instagram.com/staydekho',
     twitter:   'https://twitter.com/staydekho',
+    youtube:   '',   // ← apna YouTube channel daalo: 'https://youtube.com/@staydekho'
   },
 
   // ── DESTINATIONS (homepage chips) ─────────────────────────────
