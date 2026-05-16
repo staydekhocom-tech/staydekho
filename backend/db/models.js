@@ -1,0 +1,210 @@
+// ╔══════════════════════════════════════════════════════╗
+// ║  StayDekho — All Mongoose Models                    ║
+// ╚══════════════════════════════════════════════════════╝
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+// _id → id, __v remove karo JSON mein
+const toJSON = {
+  virtuals: true,
+  transform: (_, ret) => { delete ret._id; delete ret.__v; return ret; },
+};
+
+// ── 1. User ────────────────────────────────────────────
+const userSchema = new Schema({
+  name:       { type: String, required: true },
+  email:      { type: String, required: true, unique: true, lowercase: true, trim: true },
+  phone:      { type: String, default: null },
+  password:   { type: String, required: true },
+  role:       { type: String, default: 'user', enum: ['user', 'admin'] },
+  avatar_url: { type: String, default: '' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 2. Property ────────────────────────────────────────
+const propertySchema = new Schema({
+  name:           { type: String, required: true },
+  location:       { type: String, required: true },
+  price:          { type: Number, required: true },
+  guests:         { type: Number, default: 10 },
+  beds:           { type: Number, default: 4 },
+  bathrooms:      { type: Number, default: 3 },
+  description:    { type: String, default: '' },
+  amenities:      { type: String, default: '' },
+  images:         { type: String, default: '[]' },
+  status:         { type: String, default: 'Active', enum: ['Active', 'Inactive'] },
+  checkin_time:   { type: String, default: '2:00 PM' },
+  checkout_time:  { type: String, default: '11:00 AM' },
+  rules:          { type: String, default: '[]' },
+  addons:         { type: String, default: '[]' },
+  map_url:        { type: String, default: '' },
+  brochure_url:   { type: String, default: '' },
+  ical_url:       { type: String, default: '' },
+  ical_uid:       { type: String, default: '' },
+  fomo_bookings:  { type: Number, default: null },
+  fomo_viewers:   { type: Number, default: null },
+  fomo_enabled:   { type: Boolean, default: true },
+  property_types: { type: String, default: '[]' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 3. Booking ─────────────────────────────────────────
+const bookingSchema = new Schema({
+  user_id:             { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  property_id:         { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  guest_name:          { type: String, required: true },
+  guest_email:         { type: String, required: true },
+  guest_phone:         { type: String, default: '' },
+  checkin:             { type: String, required: true },
+  checkout:            { type: String, required: true },
+  guests:              { type: Number, default: 1 },
+  nights:              { type: Number, default: 1 },
+  amount:              { type: Number, required: true },
+  status:              { type: String, default: 'pending', enum: ['pending', 'confirmed', 'cancelled', 'checked_in', 'checked_out'] },
+  razorpay_order_id:   { type: String, default: null },
+  razorpay_payment_id: { type: String, default: null },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 4. Payment ─────────────────────────────────────────
+const paymentSchema = new Schema({
+  booking_id:          { type: Schema.Types.ObjectId, ref: 'Booking', required: true },
+  razorpay_order_id:   { type: String, required: true },
+  razorpay_payment_id: { type: String, default: null },
+  razorpay_signature:  { type: String, default: null },
+  amount:              { type: Number, required: true },
+  currency:            { type: String, default: 'INR' },
+  status:              { type: String, default: 'created', enum: ['created', 'captured', 'failed', 'refunded'] },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 5. OTP ─────────────────────────────────────────────
+const otpSchema = new Schema({
+  phone:      { type: String, required: true },
+  otp:        { type: String, required: true },
+  expires_at: { type: Date, required: true },
+  used:       { type: Boolean, default: false },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 6. Review ──────────────────────────────────────────
+const reviewSchema = new Schema({
+  user_id:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  booking_id:  { type: Schema.Types.ObjectId, ref: 'Booking', default: null },
+  rating:      { type: Number, required: true, min: 1, max: 5 },
+  text:        { type: String, default: '' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 7. GuestReel ───────────────────────────────────────
+const guestReelSchema = new Schema({
+  name:       { type: String, required: true },
+  location:   { type: String, default: '' },
+  stay:       { type: String, required: true },
+  quote:      { type: String, default: '' },
+  stars:      { type: Number, default: 5, min: 1, max: 5 },
+  video_url:  { type: String, default: '' },
+  poster_url: { type: String, default: '' },
+  sort_order: { type: Number, default: 0 },
+  active:     { type: Boolean, default: true },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 8. Wishlist ────────────────────────────────────────
+const wishlistSchema = new Schema({
+  user_id:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+wishlistSchema.index({ user_id: 1, property_id: 1 }, { unique: true });
+
+// ── 9. Contact ─────────────────────────────────────────
+const contactSchema = new Schema({
+  name:    { type: String, required: true },
+  email:   { type: String, required: true },
+  phone:   { type: String, default: null },
+  subject: { type: String, required: true },
+  message: { type: String, required: true },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 10. SiteSetting ────────────────────────────────────
+const siteSettingSchema = new Schema({
+  key:   { type: String, required: true, unique: true },
+  value: { type: String, default: '' },
+}, { toJSON });
+
+// ── 11. IcalBlock ──────────────────────────────────────
+const icalBlockSchema = new Schema({
+  property_id:  { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  source:       { type: String, default: 'external' },
+  external_uid: { type: String },
+  summary:      { type: String, default: '' },
+  start_date:   { type: String, required: true },
+  end_date:     { type: String, required: true },
+  synced_at:    { type: Date, default: Date.now },
+}, { toJSON });
+icalBlockSchema.index({ property_id: 1, external_uid: 1 }, { unique: true, sparse: true });
+
+// ── 12. IcalSource ─────────────────────────────────────
+const icalSourceSchema = new Schema({
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  url:         { type: String, required: true },
+  label:       { type: String, default: '' },
+  last_synced: { type: Date, default: null },
+  last_error:  { type: String, default: null },
+}, { toJSON });
+
+// ── 13. TravelGuide ────────────────────────────────────
+const travelGuideSchema = new Schema({
+  slug:       { type: String, required: true, unique: true },
+  city:       { type: String, required: true },
+  title:      { type: String, required: true },
+  summary:    { type: String, default: '' },
+  body:       { type: String, default: '' },
+  hero_image: { type: String, default: '' },
+  published:  { type: Boolean, default: true },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 14. AddonRequest ───────────────────────────────────
+const addonRequestSchema = new Schema({
+  user_id:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  booking_id: { type: Schema.Types.ObjectId, ref: 'Booking', default: null },
+  addon:      { type: String, required: true },
+  note:       { type: String, default: '' },
+  status:     { type: String, default: 'pending', enum: ['pending', 'confirmed', 'rejected'] },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 15. DatePrice ──────────────────────────────────────
+const datePriceSchema = new Schema({
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  date:        { type: String, required: true },
+  price:       { type: Number, default: null },
+  blocked:     { type: Boolean, default: false },
+  note:        { type: String, default: '' },
+}, { toJSON });
+datePriceSchema.index({ property_id: 1, date: 1 }, { unique: true });
+
+// ── 16. BlogPost ───────────────────────────────────────
+const blogPostSchema = new Schema({
+  title:        { type: String, required: true },
+  slug:         { type: String, required: true, unique: true },
+  excerpt:      { type: String, default: '' },
+  body:         { type: String, default: '' },
+  category:     { type: String, default: 'General' },
+  cover_image:  { type: String, default: '' },
+  author:       { type: String, default: 'StayDekho Team' },
+  published:    { type: Boolean, default: false },
+  published_at: { type: Date, default: null },
+}, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }, toJSON });
+
+module.exports = {
+  User:         mongoose.model('User',         userSchema),
+  Property:     mongoose.model('Property',     propertySchema),
+  Booking:      mongoose.model('Booking',      bookingSchema),
+  Payment:      mongoose.model('Payment',      paymentSchema),
+  OTP:          mongoose.model('OTP',          otpSchema),
+  Review:       mongoose.model('Review',       reviewSchema),
+  GuestReel:    mongoose.model('GuestReel',    guestReelSchema),
+  Wishlist:     mongoose.model('Wishlist',     wishlistSchema),
+  Contact:      mongoose.model('Contact',      contactSchema),
+  SiteSetting:  mongoose.model('SiteSetting',  siteSettingSchema),
+  IcalBlock:    mongoose.model('IcalBlock',    icalBlockSchema),
+  IcalSource:   mongoose.model('IcalSource',   icalSourceSchema),
+  TravelGuide:  mongoose.model('TravelGuide',  travelGuideSchema),
+  AddonRequest: mongoose.model('AddonRequest', addonRequestSchema),
+  DatePrice:    mongoose.model('DatePrice',    datePriceSchema),
+  BlogPost:     mongoose.model('BlogPost',     blogPostSchema),
+};

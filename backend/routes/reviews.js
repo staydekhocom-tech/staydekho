@@ -1,75 +1,102 @@
 const router = require('express').Router();
-const db     = require('../db/database');
-const { protect, optionalAuth } = require('../middleware/auth');
+const { Review, Property, Booking } = require('../db/models');
+const { protect } = require('../middleware/auth');
 
 // GET /api/reviews?property_id=X  — public
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { property_id } = req.query;
   if (!property_id) return res.status(400).json({ error: 'property_id is required' });
 
-  const rows = db.prepare(`
-    SELECT r.*, u.name as user_name
-    FROM reviews r JOIN users u ON r.user_id = u.id
-    WHERE r.property_id = ?
-    ORDER BY r.created_at DESC
-    LIMIT 50
-  `).all(Number(property_id));
+  try {
+    const docs = await Review.find({ property_id })
+      .populate('user_id', 'name')
+      .sort({ created_at: -1 })
+      .limit(50)
+      .lean();
 
-  const avg = rows.length
-    ? (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1)
-    : null;
+    const reviews = docs.map(r => ({
+      ...r,
+      user_name: r.user_id?.name || 'Guest',
+    }));
 
-  res.json({ reviews: rows, avg_rating: avg, count: rows.length });
+    const avg = reviews.length
+      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+
+    res.json({ reviews, avg_rating: avg, count: reviews.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/reviews  — auth required
-router.post('/', protect, (req, res) => {
+router.post('/', protect, async (req, res) => {
   const { property_id, booking_id, rating, text } = req.body;
   if (!property_id || !rating || !text)
     return res.status(400).json({ error: 'property_id, rating and text are required' });
   if (rating < 1 || rating > 5)
     return res.status(400).json({ error: 'Rating must be between 1 and 5' });
 
-  // Check property exists
-  const prop = db.prepare('SELECT id FROM properties WHERE id = ?').get(Number(property_id));
-  if (!prop) return res.status(404).json({ error: 'Property not found' });
+  try {
+    // Check property exists
+    const prop = await Property.findById(property_id).lean();
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
 
-  // If booking_id provided, check ownership
-  if (booking_id) {
-    const bk = db.prepare('SELECT id FROM bookings WHERE id = ? AND user_id = ?')
-      .get(Number(booking_id), req.user.id);
-    if (!bk) return res.status(403).json({ error: 'Booking not found or not yours' });
+    // If booking_id provided, check ownership
+    if (booking_id) {
+      const bk = await Booking.findOne({ _id: booking_id, user_id: req.user.id }).lean();
+      if (!bk) return res.status(403).json({ error: 'Booking not found or not yours' });
+    }
+
+    // One review per user per property — update if exists
+    const existing = await Review.findOne({ user_id: req.user.id, property_id }).lean();
+    if (existing) {
+      await Review.findByIdAndUpdate(existing._id, {
+        rating:     Number(rating),
+        text:       String(text).trim(),
+        booking_id: booking_id || null,
+      });
+      const updated = await Review.findById(existing._id)
+        .populate('user_id', 'name')
+        .lean();
+      return res.json({
+        review: { ...updated, user_name: updated.user_id?.name || 'Guest' },
+        updated: true,
+      });
+    }
+
+    const created = await Review.create({
+      user_id:    req.user.id,
+      property_id,
+      booking_id: booking_id || null,
+      rating:     Number(rating),
+      text:       String(text).trim(),
+    });
+
+    const review = await Review.findById(created._id)
+      .populate('user_id', 'name')
+      .lean();
+
+    res.status(201).json({
+      review: { ...review, user_name: review.user_id?.name || 'Guest' },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  // One review per user per property
-  const existing = db.prepare('SELECT id FROM reviews WHERE user_id = ? AND property_id = ?')
-    .get(req.user.id, Number(property_id));
-  if (existing) {
-    // Update existing review
-    db.prepare('UPDATE reviews SET rating=?, text=?, booking_id=? WHERE id=?')
-      .run(Number(rating), String(text).trim(), booking_id || null, existing.id);
-    const updated = db.prepare('SELECT r.*, u.name as user_name FROM reviews r JOIN users u ON r.user_id=u.id WHERE r.id=?').get(existing.id);
-    return res.json({ review: updated, updated: true });
-  }
-
-  const result = db.prepare(
-    'INSERT INTO reviews (user_id, property_id, booking_id, rating, text) VALUES (?,?,?,?,?)'
-  ).run(req.user.id, Number(property_id), booking_id || null, Number(rating), String(text).trim());
-
-  const review = db.prepare('SELECT r.*, u.name as user_name FROM reviews r JOIN users u ON r.user_id=u.id WHERE r.id=?')
-    .get(result.lastInsertRowid);
-
-  res.status(201).json({ review });
 });
 
 // DELETE /api/reviews/:id  — only own review or admin
-router.delete('/:id', protect, (req, res) => {
-  const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(Number(req.params.id));
-  if (!review) return res.status(404).json({ error: 'Review not found' });
-  if (req.user.role !== 'admin' && review.user_id !== req.user.id)
-    return res.status(403).json({ error: 'Not authorized' });
-  db.prepare('DELETE FROM reviews WHERE id = ?').run(review.id);
-  res.json({ message: 'Review deleted' });
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id).lean();
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+    if (req.user.role !== 'admin' && review.user_id.toString() !== req.user.id)
+      return res.status(403).json({ error: 'Not authorized' });
+    await Review.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Review deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

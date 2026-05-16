@@ -1,7 +1,7 @@
 const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
-const db      = require('../db/database');
+const { User, OTP } = require('../db/models');
 const { protect } = require('../middleware/auth');
 const { sendOtpSMS } = require('../services/sms');
 
@@ -28,122 +28,150 @@ router.post('/send-otp', async (req, res) => {
   if (!isValidIndianMobile(ph))
     return res.status(400).json({ error: 'Enter a valid +91 Indian mobile number (10 digits, starting with 6-9)' });
 
-  const otp       = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
-
-  db.prepare('DELETE FROM otps WHERE phone = ?').run(ph);
-  db.prepare('INSERT INTO otps (phone, otp, expires_at) VALUES (?, ?, ?)').run(ph, otp, expiresAt);
-
   try {
-    await sendOtpSMS(ph, otp);
-  } catch (err) {
-    console.error('MSG91 SMS error:', err.response?.data || err.message);
-    return res.status(500).json({ error: 'SMS bhejne mein problem aayi. Thodi der baad try karo.' });
-  }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  res.json({
-    message: 'OTP sent successfully',
-    expires_in: 600,
-  });
+    await OTP.deleteMany({ phone: ph });
+    await OTP.create({
+      phone: ph,
+      otp,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000),
+      used: false,
+    });
+
+    try {
+      await sendOtpSMS(ph, otp);
+    } catch (err) {
+      console.error('MSG91 SMS error:', err.response?.data || err.message);
+      return res.status(500).json({ error: 'SMS bhejne mein problem aayi. Thodi der baad try karo.' });
+    }
+
+    res.json({ message: 'OTP sent successfully', expires_in: 600 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── OTP: Verify & Login ────────────────────────────────────
 // POST /api/auth/verify-otp  body: { phone, otp, name? }
-router.post('/verify-otp', (req, res) => {
+router.post('/verify-otp', async (req, res) => {
   const { phone, otp, name } = req.body;
   if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP are required' });
 
   const ph = cleanPhone(phone);
 
-  const record = db.prepare(
-    'SELECT * FROM otps WHERE phone = ? AND used = 0 ORDER BY id DESC LIMIT 1'
-  ).get(ph);
+  try {
+    const record = await OTP.findOne({ phone: ph, used: false }).sort({ _id: -1 });
 
-  if (!record)
-    return res.status(400).json({ error: 'OTP not found. Please request a new one.' });
+    if (!record)
+      return res.status(400).json({ error: 'OTP not found. Please request a new one.' });
 
-  if (new Date(record.expires_at) < new Date()) {
-    db.prepare('DELETE FROM otps WHERE phone = ?').run(ph);
-    return res.status(400).json({ error: 'OTP expired. Please request a new one.' });
+    if (record.expires_at < new Date()) {
+      await OTP.deleteMany({ phone: ph });
+      return res.status(400).json({ error: 'OTP expired. Please request a new one.' });
+    }
+
+    if (record.otp !== String(otp))
+      return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+
+    // Mark OTP used
+    await OTP.findByIdAndUpdate(record._id, { used: true });
+
+    // Find or auto-create user
+    let user = await User.findOne({ phone: ph }).lean();
+    const isNew = !user;
+
+    if (isNew) {
+      const userName  = (name && name.trim()) || `User${ph.slice(-4)}`;
+      const dummyEmail = `${ph}@otp.staydekho.com`;
+      const dummyPass  = bcrypt.hashSync(Math.random().toString(36) + Date.now(), 6);
+      const created = await User.create({ name: userName, email: dummyEmail, phone: ph, password: dummyPass });
+      user = created.toObject();
+      console.log(`✅ New user registered via OTP: ${userName} (+91-${ph})`);
+    }
+
+    const { password: _, ...safeUser } = user;
+    res.json({ token: signToken(user._id.toString()), user: safeUser, is_new: isNew });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  if (record.otp !== String(otp))
-    return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
-
-  // Mark OTP used
-  db.prepare('UPDATE otps SET used = 1 WHERE id = ?').run(record.id);
-
-  // Find or auto-create user
-  let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(ph);
-  const isNew = !user;
-
-  if (isNew) {
-    const userName = (name && name.trim()) || `User${ph.slice(-4)}`;
-    const dummyEmail = `${ph}@otp.staydekho.com`;
-    const dummyPass  = bcrypt.hashSync(Math.random().toString(36) + Date.now(), 6);
-    const result = db.prepare(
-      'INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)'
-    ).run(userName, dummyEmail, ph, dummyPass);
-    user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
-    console.log(`✅ New user registered via OTP: ${userName} (+91-${ph})`);
-  }
-
-  const { password: _, ...safeUser } = user;
-  res.json({ token: signToken(user.id), user: safeUser, is_new: isNew });
 });
 
 // ── Email / Password Login ─────────────────────────────────
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password are required' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
-  if (!user || !bcrypt.compareSync(password, user.password))
-    return res.status(401).json({ error: 'Invalid email or password' });
+  try {
+    const user = await User.findOne({ email: email.toLowerCase() }).lean();
+    if (!user || !bcrypt.compareSync(password, user.password))
+      return res.status(401).json({ error: 'Invalid email or password' });
 
-  const { password: _, ...safeUser } = user;
-  res.json({ token: signToken(user.id), user: safeUser });
+    const { password: _, ...safeUser } = user;
+    res.json({ token: signToken(user._id.toString()), user: safeUser });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Register ───────────────────────────────────────────────
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, phone, password } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ error: 'Name, email and password are required' });
   if (password.length < 6)
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-  const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
-  if (exists) return res.status(400).json({ error: 'Email already registered' });
+  try {
+    const exists = await User.findOne({ email: email.toLowerCase() }).lean();
+    if (exists) return res.status(400).json({ error: 'Email already registered' });
 
-  const hash   = bcrypt.hashSync(password, 10);
-  const result = db.prepare(
-    'INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)'
-  ).run(name.trim(), email.toLowerCase(), phone || null, hash);
+    const hash = bcrypt.hashSync(password, 10);
+    const created = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase(),
+      phone: phone || null,
+      password: hash,
+    });
 
-  const user = db.prepare('SELECT id, name, email, phone, role FROM users WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ token: signToken(user.id), user });
+    const { password: _, ...safeUser } = created.toObject();
+    res.status(201).json({ token: signToken(created._id.toString()), user: safeUser });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Me ────────────────────────────────────────────────────
 // GET /api/auth/me
-router.get('/me', protect, (req, res) => {
-  const full = db.prepare('SELECT id, name, email, phone, role, avatar_url FROM users WHERE id = ?').get(req.user.id);
-  res.json({ user: full || req.user });
+router.get('/me', protect, async (req, res) => {
+  try {
+    const full = await User.findById(req.user.id).select('-password').lean();
+    res.json({ user: full || req.user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PUT /api/auth/me  — update profile
-router.put('/me', protect, (req, res) => {
+router.put('/me', protect, async (req, res) => {
   const { name, phone, avatar_url } = req.body;
-  db.prepare('UPDATE users SET name = ?, phone = ?, avatar_url = ? WHERE id = ?')
-    .run(name || req.user.name, phone || req.user.phone,
-         avatar_url !== undefined ? avatar_url : (req.user.avatar_url || ''),
-         req.user.id);
-  const updated = db.prepare('SELECT id, name, email, phone, role, avatar_url FROM users WHERE id = ?').get(req.user.id);
-  res.json({ user: updated });
+  try {
+    const updated = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        name:       name       || req.user.name,
+        phone:      phone      || req.user.phone,
+        avatar_url: avatar_url !== undefined ? avatar_url : (req.user.avatar_url || ''),
+      },
+      { new: true }
+    ).select('-password').lean();
+    res.json({ user: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Google Client ID (public) ─────────────────────────
@@ -162,28 +190,36 @@ router.post('/forgot-password', async (req, res) => {
   if (!isValidIndianMobile(ph))
     return res.status(400).json({ error: 'Enter a valid +91 Indian mobile number (10 digits, starting with 6-9)' });
 
-  const user = db.prepare('SELECT id FROM users WHERE phone = ?').get(ph);
-  if (!user) return res.status(404).json({ error: 'No account found with this phone number' });
-
-  const otp       = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-  db.prepare('DELETE FROM otps WHERE phone = ?').run(ph);
-  db.prepare('INSERT INTO otps (phone, otp, expires_at) VALUES (?, ?, ?)').run(ph, otp, expiresAt);
-
   try {
-    await sendOtpSMS(ph, otp);
-  } catch (err) {
-    console.error('Forgot password SMS error:', err.message);
-    return res.status(500).json({ error: 'SMS send karne mein problem aayi.' });
-  }
+    const user = await User.findOne({ phone: ph }).lean();
+    if (!user) return res.status(404).json({ error: 'No account found with this phone number' });
 
-  res.json({ message: 'OTP sent', expires_in: 600 });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await OTP.deleteMany({ phone: ph });
+    await OTP.create({
+      phone: ph,
+      otp,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000),
+      used: false,
+    });
+
+    try {
+      await sendOtpSMS(ph, otp);
+    } catch (err) {
+      console.error('Forgot password SMS error:', err.message);
+      return res.status(500).json({ error: 'SMS send karne mein problem aayi.' });
+    }
+
+    res.json({ message: 'OTP sent', expires_in: 600 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Reset Password ────────────────────────────────────
 // POST /api/auth/reset-password   body: { phone, otp, password }
-router.post('/reset-password', (req, res) => {
+router.post('/reset-password', async (req, res) => {
   const { phone, otp, password } = req.body;
   if (!phone || !otp || !password)
     return res.status(400).json({ error: 'Phone, OTP aur new password required hain' });
@@ -191,20 +227,25 @@ router.post('/reset-password', (req, res) => {
     return res.status(400).json({ error: 'Password at least 6 characters ka hona chahiye' });
 
   const ph = cleanPhone(phone);
-  const record = db.prepare('SELECT * FROM otps WHERE phone = ? AND used = 0 ORDER BY id DESC LIMIT 1').get(ph);
 
-  if (!record) return res.status(400).json({ error: 'OTP nahi mila. Pehle forgot password request karo.' });
-  if (new Date(record.expires_at) < new Date()) {
-    db.prepare('DELETE FROM otps WHERE phone = ?').run(ph);
-    return res.status(400).json({ error: 'OTP expired. Dobara try karo.' });
+  try {
+    const record = await OTP.findOne({ phone: ph, used: false }).sort({ _id: -1 });
+
+    if (!record) return res.status(400).json({ error: 'OTP nahi mila. Pehle forgot password request karo.' });
+    if (record.expires_at < new Date()) {
+      await OTP.deleteMany({ phone: ph });
+      return res.status(400).json({ error: 'OTP expired. Dobara try karo.' });
+    }
+    if (record.otp !== String(otp)) return res.status(400).json({ error: 'Galat OTP.' });
+
+    await OTP.findByIdAndUpdate(record._id, { used: true });
+    const hash = bcrypt.hashSync(password, 10);
+    await User.findOneAndUpdate({ phone: ph }, { password: hash });
+
+    res.json({ message: 'Password successfully reset! Ab login karo.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  if (record.otp !== String(otp)) return res.status(400).json({ error: 'Galat OTP.' });
-
-  db.prepare('UPDATE otps SET used = 1 WHERE id = ?').run(record.id);
-  const hash = bcrypt.hashSync(password, 10);
-  db.prepare('UPDATE users SET password = ? WHERE phone = ?').run(hash, ph);
-
-  res.json({ message: 'Password successfully reset! Ab login karo.' });
 });
 
 // ── Google OAuth ──────────────────────────────────────
@@ -222,16 +263,15 @@ router.post('/google', async (req, res) => {
     const email = payload.email.toLowerCase();
     const name  = payload.name || email.split('@')[0];
 
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let user = await User.findOne({ email }).lean();
     if (!user) {
       const dummyPass = bcrypt.hashSync(Math.random().toString(36) + Date.now(), 6);
-      const result = db.prepare('INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)')
-        .run(name, email, null, dummyPass);
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      const created = await User.create({ name, email, phone: null, password: dummyPass });
+      user = created.toObject();
     }
 
     const { password: _, ...safeUser } = user;
-    res.json({ token: signToken(user.id), user: safeUser });
+    res.json({ token: signToken(user._id.toString()), user: safeUser });
   } catch (err) {
     console.error('Google auth error:', err.message);
     res.status(401).json({ error: 'Google verification failed' });

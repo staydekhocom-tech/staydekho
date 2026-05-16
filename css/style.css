@@ -968,6 +968,8 @@
       .footer-grid { grid-template-columns: 1fr; }
       .listings-header { flex-direction: column; align-items: flex-start !important; }
       .nav-links { display: none; }
+      /* Hide Login/Account button in navbar header on mobile — it's in the hamburger drawer */
+      .nav-login { display: none !important; }
       .host-cta-actions { flex-direction: column; width: 100%; }
 
       /* ── Mobile Hamburger ─────────────────────────── */

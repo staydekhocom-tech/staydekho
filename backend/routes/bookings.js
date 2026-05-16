@@ -1,119 +1,148 @@
 const router = require('express').Router();
-const db     = require('../db/database');
+const { Booking, Property, Payment, DatePrice } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
 
 // GET /api/bookings  — admin gets all, user gets own
-router.get('/', protect, (req, res) => {
-  let rows;
-  if (req.user.role === 'admin') {
-    rows = db.prepare(`
-      SELECT b.*, u.name as user_name, u.email as user_email,
-             p.name as property_name, p.location as property_location
-      FROM bookings b
-      JOIN users u ON b.user_id = u.id
-      JOIN properties p ON b.property_id = p.id
-      ORDER BY b.created_at DESC
-    `).all();
-  } else {
-    rows = db.prepare(`
-      SELECT b.*, p.name as property_name, p.location as property_location,
-             p.images as property_images
-      FROM bookings b
-      JOIN properties p ON b.property_id = p.id
-      WHERE b.user_id = ?
-      ORDER BY b.created_at DESC
-    `).all(req.user.id);
+router.get('/', protect, async (req, res) => {
+  try {
+    let bookings;
+    if (req.user.role === 'admin') {
+      bookings = await Booking.find()
+        .populate('user_id', 'name email')
+        .populate('property_id', 'name location')
+        .sort({ created_at: -1 })
+        .lean();
+      bookings = bookings.map(b => ({
+        ...b,
+        user_name:         b.user_id?.name,
+        user_email:        b.user_id?.email,
+        property_name:     b.property_id?.name,
+        property_location: b.property_id?.location,
+      }));
+    } else {
+      bookings = await Booking.find({ user_id: req.user.id })
+        .populate('property_id', 'name location images')
+        .sort({ created_at: -1 })
+        .lean();
+      bookings = bookings.map(b => ({
+        ...b,
+        property_name:     b.property_id?.name,
+        property_location: b.property_id?.location,
+        property_images:   b.property_id?.images,
+      }));
+    }
+    res.json({ bookings });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  res.json({ bookings: rows });
 });
 
 // GET /api/bookings/:id
-router.get('/:id', protect, (req, res) => {
-  const row = db.prepare(`
-    SELECT b.*, p.name as property_name, p.location as property_location,
-           p.price as property_price, p.images as property_images
-    FROM bookings b JOIN properties p ON b.property_id = p.id
-    WHERE b.id = ?
-  `).get(req.params.id);
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const row = await Booking.findById(req.params.id)
+      .populate('property_id', 'name location price images beds guests')
+      .lean();
 
-  if (!row) return res.status(404).json({ error: 'Booking not found' });
-  if (req.user.role !== 'admin' && row.user_id !== req.user.id)
-    return res.status(403).json({ error: 'Not authorized' });
+    if (!row) return res.status(404).json({ error: 'Booking not found' });
+    if (req.user.role !== 'admin' && row.user_id.toString() !== req.user.id)
+      return res.status(403).json({ error: 'Not authorized' });
 
-  res.json({ booking: { ...row, property_images: JSON.parse(row.property_images || '[]') } });
+    const prop = row.property_id || {};
+    res.json({
+      booking: {
+        ...row,
+        property_name:     prop.name,
+        property_location: prop.location,
+        property_price:    prop.price,
+        property_images:   JSON.parse(prop.images || '[]'),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/bookings  — create booking (returns order to pay)
-router.post('/', protect, (req, res) => {
+router.post('/', protect, async (req, res) => {
   const { property_id, checkin, checkout, guests, guest_name, guest_email, guest_phone } = req.body;
   if (!property_id || !checkin || !checkout)
     return res.status(400).json({ error: 'Property, check-in and check-out are required' });
 
-  const property = db.prepare('SELECT * FROM properties WHERE id = ? AND status = ?').get(property_id, 'Active');
-  if (!property) return res.status(404).json({ error: 'Property not found or inactive' });
+  try {
+    const property = await Property.findOne({ _id: property_id, status: 'Active' }).lean();
+    if (!property) return res.status(404).json({ error: 'Property not found or inactive' });
 
-  const cin  = new Date(checkin);
-  const cout = new Date(checkout);
-  if (cout <= cin) return res.status(400).json({ error: 'Check-out must be after check-in' });
+    const cin  = new Date(checkin);
+    const cout = new Date(checkout);
+    if (cout <= cin) return res.status(400).json({ error: 'Check-out must be after check-in' });
 
-  // Double-booking check: reject if any active booking overlaps these dates
-  const overlap = db.prepare(`
-    SELECT id FROM bookings
-    WHERE property_id = ?
-      AND status NOT IN ('cancelled', 'checked_out')
-      AND checkin < ? AND checkout > ?
-    LIMIT 1
-  `).get(property_id, checkout, checkin);
-  if (overlap) return res.status(409).json({ error: 'These dates are already booked. Please choose different dates.' });
+    // Double-booking check
+    const overlap = await Booking.findOne({
+      property_id,
+      status:   { $nin: ['cancelled', 'checked_out'] },
+      checkin:  { $lt: checkout },
+      checkout: { $gt: checkin },
+    }).lean();
+    if (overlap) return res.status(409).json({ error: 'These dates are already booked. Please choose different dates.' });
 
-  const nights = Math.ceil((cout - cin) / (1000 * 60 * 60 * 24));
+    const nights = Math.ceil((cout - cin) / (1000 * 60 * 60 * 24));
 
-  // Build per-night prices from date_prices table, fallback to property.price
-  const getDatePrice = db.prepare(
-    "SELECT price FROM date_prices WHERE property_id = ? AND date = ? AND blocked = 0 AND price IS NOT NULL"
-  );
-  let base = 0;
-  for (let i = 0; i < nights; i++) {
-    const d = new Date(cin);
-    d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
-    const dp = getDatePrice.get(property_id, dateStr);
-    base += dp ? dp.price : property.price;
+    // Build per-night prices from DatePrice, fallback to property.price
+    let base = 0;
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(cin);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dp = await DatePrice.findOne({
+        property_id,
+        date:    dateStr,
+        blocked: false,
+        price:   { $ne: null },
+      }).lean();
+      base += dp ? dp.price : property.price;
+    }
+
+    const avgNight = base / nights;
+    const gstRate  = avgNight > 7500 ? 0.18 : avgNight > 1000 ? 0.12 : 0;
+    const gst      = Math.round(base * gstRate);
+    const svc      = Math.round(base * 0.05);
+    const amount   = base + gst + svc;
+
+    const booking = await Booking.create({
+      user_id:     req.user.id,
+      property_id,
+      guest_name:  guest_name  || req.user.name,
+      guest_email: guest_email || req.user.email,
+      guest_phone: guest_phone || req.user.phone || '',
+      checkin,
+      checkout,
+      guests:      guests || 1,
+      nights,
+      amount,
+      status:      'pending',
+    });
+
+    res.status(201).json({ booking: booking.toObject(), amount, nights });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const avgNight = base / nights;
-  const gstRate  = avgNight > 7500 ? 0.18 : avgNight > 1000 ? 0.12 : 0;
-  const gst      = Math.round(base * gstRate);
-  const svc      = Math.round(base * 0.05);
-  const amount   = base + gst + svc;
-
-  const result = db.prepare(`
-    INSERT INTO bookings
-      (user_id, property_id, guest_name, guest_email, guest_phone, checkin, checkout, guests, nights, amount, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-  `).run(
-    req.user.id, property_id,
-    guest_name  || req.user.name,
-    guest_email || req.user.email,
-    guest_phone || req.user.phone || '',
-    checkin, checkout,
-    guests  || 1, nights, amount
-  );
-
-  const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ booking, amount, nights });
 });
 
 // PUT /api/bookings/:id/status  — admin update status
-router.put('/:id/status', protect, adminOnly, (req, res) => {
+router.put('/:id/status', protect, adminOnly, async (req, res) => {
   const { status } = req.body;
-  const allowed = ['pending','confirmed','cancelled','checked_in','checked_out'];
+  const allowed = ['pending', 'confirmed', 'cancelled', 'checked_in', 'checked_out'];
   if (!allowed.includes(status))
     return res.status(400).json({ error: `Status must be one of: ${allowed.join(', ')}` });
 
-  db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
-  res.json({ message: 'Status updated', status });
+  try {
+    await Booking.findByIdAndUpdate(req.params.id, { status });
+    res.json({ message: 'Status updated', status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/bookings/:id/invoice  — printable HTML tax invoice
@@ -124,61 +153,66 @@ router.get('/:id/invoice', (req, res, next) => {
     req.headers.authorization = `Bearer ${req.query.token}`;
   }
   next();
-}, protect, (req, res) => {
-  const row = db.prepare(`
-    SELECT b.*,
-           u.name  as user_name,  u.email as user_email, u.phone as user_phone,
-           p.name  as prop_name,  p.location as prop_location,
-           p.price as prop_price, p.beds as prop_beds, p.guests as prop_guests
-    FROM bookings b
-    JOIN users u    ON b.user_id    = u.id
-    JOIN properties p ON b.property_id = p.id
-    WHERE b.id = ?
-  `).get(req.params.id);
+}, protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('user_id', 'name email phone')
+      .populate('property_id', 'name location price beds guests')
+      .lean();
 
-  if (!row) return res.status(404).json({ error: 'Booking not found' });
-  if (req.user.role !== 'admin' && row.user_id !== req.user.id)
-    return res.status(403).json({ error: 'Not authorized' });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (req.user.role !== 'admin' && booking.user_id._id.toString() !== req.user.id)
+      return res.status(403).json({ error: 'Not authorized' });
 
-  // ── GST + Service Fee — derive from stored booking.amount (source of truth)
-  const nights_   = row.nights || 1;
-  const totalAmt  = row.amount || 0;
-  // Determine GST rate from avg per-night price
-  const avgPpn    = totalAmt / nights_ / 1.23; // approx reverse (1 + 0.05 + 0.18)
-  const gstRate   = avgPpn > 7500 ? 0.18 : avgPpn > 1000 ? 0.12 : 0;
-  const gstPct    = Math.round(gstRate * 100);
-  // Back-calculate base from total: total = base * (1 + 0.05 + gstRate)
-  const divisor   = 1 + 0.05 + gstRate;
-  const baseAmt   = Math.round(totalAmt / divisor);
-  const svcAmt    = Math.round(baseAmt * 0.05);
-  const gstAmt    = totalAmt - baseAmt - svcAmt;
-  const halfGst   = Math.round(gstAmt / 2);
-  const pricePn   = nights_ > 0 ? Math.round(baseAmt / nights_) : baseAmt;
+    const row = {
+      ...booking,
+      id:            booking._id.toString(),
+      user_name:     booking.user_id?.name,
+      user_email:    booking.user_id?.email,
+      user_phone:    booking.user_id?.phone,
+      prop_name:     booking.property_id?.name,
+      prop_location: booking.property_id?.location,
+      prop_price:    booking.property_id?.price,
+      prop_beds:     booking.property_id?.beds,
+      prop_guests:   booking.property_id?.guests,
+    };
 
-  // ── Payment info ──────────────────────────────────────
-  const payment = db.prepare(`
-    SELECT * FROM payments WHERE booking_id = ? AND status = 'captured'
-    ORDER BY created_at DESC LIMIT 1
-  `).get(row.id);
-  // payments.amount stored in paise → divide by 100 to get rupees
-  const amtPaid   = payment
-    ? Math.round(payment.amount / 100)
-    : (row.status === 'confirmed' || row.status === 'checked_in' || row.status === 'checked_out'
-        ? row.amount : 0);
-  const balDue    = Math.max(0, row.amount - amtPaid);
+    // ── GST + Service Fee — derive from stored booking.amount (source of truth)
+    const nights_   = row.nights || 1;
+    const totalAmt  = row.amount || 0;
+    const avgPpn    = totalAmt / nights_ / 1.23;
+    const gstRate   = avgPpn > 7500 ? 0.18 : avgPpn > 1000 ? 0.12 : 0;
+    const gstPct    = Math.round(gstRate * 100);
+    const divisor   = 1 + 0.05 + gstRate;
+    const baseAmt   = Math.round(totalAmt / divisor);
+    const svcAmt    = Math.round(baseAmt * 0.05);
+    const gstAmt    = totalAmt - baseAmt - svcAmt;
+    const halfGst   = Math.round(gstAmt / 2);
+    const pricePn   = nights_ > 0 ? Math.round(baseAmt / nights_) : baseAmt;
 
-  // ── Helpers ───────────────────────────────────────────
-  const INR  = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0 });
-  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' }); } catch { return s || '—'; } };
-  const invoiceNo   = `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).padStart(4,'0')}`;
-  const invoiceDate = fmtD(row.created_at);
-  const statusColor = { confirmed:'#16a34a', pending:'#d97706', cancelled:'#dc2626', checked_in:'#2563eb', checked_out:'#6b7280' }[row.status] || '#6b7280';
-  const statusLabel = (row.status || 'pending').replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
-  const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
-  const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
-  const gstin = process.env.BUSINESS_GSTIN || 'GSTIN: 08XXXXX0000X1ZX';  // update in .env
+    // ── Payment info ──────────────────────────────────────
+    const payment = await Payment.findOne({
+      booking_id: booking._id,
+      status:     'captured',
+    }).sort({ created_at: -1 }).lean();
 
-  const html = `<!DOCTYPE html>
+    const amtPaid = payment
+      ? Math.round(payment.amount / 100)
+      : (['confirmed', 'checked_in', 'checked_out'].includes(row.status) ? row.amount : 0);
+    const balDue = Math.max(0, row.amount - amtPaid);
+
+    // ── Helpers ───────────────────────────────────────────
+    const INR  = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0 });
+    const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
+    const invoiceNo   = `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).padStart(4, '0')}`;
+    const invoiceDate = fmtD(row.created_at);
+    const statusColor = { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', checked_in: '#2563eb', checked_out: '#6b7280' }[row.status] || '#6b7280';
+    const statusLabel = (row.status || 'pending').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
+    const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
+    const gstin = process.env.BUSINESS_GSTIN || 'GSTIN: 08XXXXX0000X1ZX';
+
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -331,11 +365,11 @@ router.get('/:id/invoice', (req, res, next) => {
     </div>
     ${gstRate > 0 ? `
     <div class="tot-row gst-row">
-      <span class="lbl">CGST @ ${gstPct/2}%</span>
+      <span class="lbl">CGST @ ${gstPct / 2}%</span>
       <span>${INR(halfGst)}</span>
     </div>
     <div class="tot-row gst-row">
-      <span class="lbl">SGST @ ${gstPct/2}%</span>
+      <span class="lbl">SGST @ ${gstPct / 2}%</span>
       <span>${INR(gstAmt - halfGst)}</span>
     </div>
     <div class="tot-row subtotal">
@@ -389,29 +423,46 @@ router.get('/:id/invoice', (req, res, next) => {
 </body>
 </html>`;
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(html);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE /api/bookings/:id  — cancel booking
-router.delete('/:id', protect, (req, res) => {
-  const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
-  if (!booking) return res.status(404).json({ error: 'Booking not found' });
-  if (req.user.role !== 'admin' && booking.user_id !== req.user.id)
-    return res.status(403).json({ error: 'Not authorized' });
-  if (booking.status === 'confirmed')
-    return res.status(400).json({ error: 'Cannot cancel a confirmed booking. Contact support.' });
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).lean();
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (req.user.role !== 'admin' && booking.user_id.toString() !== req.user.id)
+      return res.status(403).json({ error: 'Not authorized' });
+    if (booking.status === 'confirmed')
+      return res.status(400).json({ error: 'Cannot cancel a confirmed booking. Contact support.' });
 
-  db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(req.params.id);
+    await Booking.findByIdAndUpdate(req.params.id, { status: 'cancelled' });
 
-  // Send cancellation email (non-blocking)
-  const cancelled = db.prepare(`SELECT b.*, p.name as property_name FROM bookings b JOIN properties p ON b.property_id = p.id WHERE b.id = ?`).get(req.params.id);
-  if (cancelled) {
-    sendEmail(cancelled.guest_email, `Booking Cancelled — #${cancelled.id}`, bookingCancelledHtml(cancelled))
-      .catch(e => console.error('Cancel email error:', e.message));
+    // Send cancellation email (non-blocking)
+    const cancelled = await Booking.findById(req.params.id)
+      .populate('property_id', 'name')
+      .lean();
+    if (cancelled) {
+      const emailData = {
+        ...cancelled,
+        property_name: cancelled.property_id?.name,
+        id:            cancelled._id.toString(),
+      };
+      sendEmail(
+        cancelled.guest_email,
+        `Booking Cancelled — #${emailData.id}`,
+        bookingCancelledHtml(emailData)
+      ).catch(e => console.error('Cancel email error:', e.message));
+    }
+
+    res.json({ message: 'Booking cancelled' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.json({ message: 'Booking cancelled' });
 });
 
 module.exports = router;
