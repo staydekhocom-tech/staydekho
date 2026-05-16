@@ -144,6 +144,7 @@
     .upload-status{font-size:12px;color:var(--gray-400);padding:6px 0;min-height:20px;}
     .upload-status.uploading{color:var(--red);font-weight:600;}
     .upload-status.done{color:#16a34a;font-weight:600;}
+    .upload-status.error{color:#dc2626;font-weight:600;}
     .file-label{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:600;cursor:pointer;background:var(--gray-100);color:var(--gray-600);border:1.5px solid var(--gray-200);transition:all .18s;}
     .file-label:hover{border-color:var(--red);color:var(--red);}
     /* Mobile sidebar */
@@ -487,7 +488,19 @@
       <div class="form-grp"><label class="form-lbl">Eyebrow text</label><input class="form-ctrl" id="ss-hero-eyebrow"/></div>
       <div class="form-grp"><label class="form-lbl">Headline <span style="color:var(--gray-400);font-weight:400">(HTML allowed — <br/>, <em>)</span></label><textarea class="form-ctrl" id="ss-hero-headline" rows="2"></textarea></div>
       <div class="form-grp"><label class="form-lbl">Sub-headline</label><textarea class="form-ctrl" id="ss-hero-sub" rows="2"></textarea></div>
-      <div class="form-grp"><label class="form-lbl">Background photo URLs <span style="color:var(--gray-400);font-weight:400">(one per line)</span></label><textarea class="form-ctrl" id="ss-hero-slides" rows="6"></textarea></div>
+      <div class="form-grp">
+        <label class="form-lbl">Background photo URLs <span style="color:var(--gray-400);font-weight:400">(one per line)</span></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <label class="upload-btn primary" for="hero-img-file-input" style="margin:0;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload from Device
+          </label>
+          <input type="file" id="hero-img-file-input" accept="image/*" multiple style="display:none" onchange="heroUploadImages(this.files)"/>
+          <span style="color:var(--gray-400);font-size:12px">Select one or more photos — URLs are appended automatically</span>
+        </div>
+        <div id="hero-upload-status" class="upload-status"></div>
+        <textarea class="form-ctrl" id="ss-hero-slides" rows="6" placeholder="Paste image URLs here, one per line&#10;— or use Upload from Device above"></textarea>
+      </div>
     </div>
     <div class="card" style="margin-bottom:16px">
       <div class="sec-hdr"><div class="sec-title">Hero Statistics <span style="color:var(--gray-400);font-weight:400;font-size:12px">(blank = auto from DB)</span></div></div>
@@ -1202,8 +1215,40 @@ async function saveSiteSettings() {
   try {
     const slides = document.getElementById('ss-hero-slides').value.split('\n').map(s => s.trim()).filter(Boolean);
     await api.updateSiteSettings({ hero_eyebrow: document.getElementById('ss-hero-eyebrow').value, hero_headline: document.getElementById('ss-hero-headline').value, hero_sub: document.getElementById('ss-hero-sub').value, hero_slides: slides, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
-    alert('Saved!');
-  } catch (e) { alert('Save failed'); }
+    alert('Settings saved successfully!');
+  } catch (e) { alert('Save failed: ' + e.message); }
+}
+
+async function heroUploadImages(files) {
+  const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!imageFiles.length) return;
+
+  const statusEl = document.getElementById('hero-upload-status');
+  const inp      = document.getElementById('hero-img-file-input');
+
+  statusEl.textContent = `Uploading ${imageFiles.length} photo(s)…`;
+  statusEl.className   = 'upload-status uploading';
+  if (inp) inp.disabled = true;
+
+  try {
+    const fd = new FormData();
+    imageFiles.forEach(f => fd.append('images', f));
+    const result = await uploadRequest('POST', '/uploads/images', fd);
+    const urls = result.urls || [];
+
+    const ta       = document.getElementById('ss-hero-slides');
+    const existing = ta.value.trim();
+    ta.value = existing ? existing + '\n' + urls.join('\n') : urls.join('\n');
+
+    statusEl.textContent = `${urls.length} photo(s) uploaded — URLs added to the list below.`;
+    statusEl.className   = 'upload-status done';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'upload-status'; }, 5000);
+  } catch (err) {
+    statusEl.textContent = 'Upload failed: ' + err.message;
+    statusEl.className   = 'upload-status error';
+  } finally {
+    if (inp) { inp.disabled = false; inp.value = ''; }
+  }
 }
 
 // ── ICAL ──
