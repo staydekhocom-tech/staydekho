@@ -389,11 +389,11 @@
     }
     /* ── Autocomplete dropdown ── */
     .suggest-drop {
-      position:absolute; top:calc(100% + 8px); left:0;
-      min-width:280px; width:max-content; max-width:340px;
+      position:fixed;
+      min-width:280px; max-width:340px;
       background:#fff; border-radius:14px;
       box-shadow:0 12px 40px rgba(0,0,0,.18);
-      border:1px solid rgba(0,0,0,.07); z-index:9999;
+      border:1px solid rgba(0,0,0,.07); z-index:99999;
       overflow:hidden; display:none;
     }
     .suggest-drop.open { display:block; }
@@ -1928,6 +1928,12 @@
         </div>`).join('');
     }
     drop.innerHTML = html;
+    // Position fixed dropdown below the input (needed because .hero has overflow:hidden)
+    const input = document.getElementById('search-dest');
+    const rect = input.getBoundingClientRect();
+    drop.style.left  = rect.left + 'px';
+    drop.style.top   = (rect.bottom + 6) + 'px';
+    drop.style.width = Math.max(280, rect.width) + 'px';
     drop.classList.add('open');
   }
 
@@ -1935,6 +1941,14 @@
     document.getElementById('search-dest').value = val;
     document.getElementById('hero-suggestions').classList.remove('open');
   }
+
+  // Close dropdown on scroll/resize (since it's fixed-positioned)
+  window.addEventListener('scroll', () => {
+    document.getElementById('hero-suggestions')?.classList.remove('open');
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    document.getElementById('hero-suggestions')?.classList.remove('open');
+  }, { passive: true });
 
   function onHeroSuggestKey(e) {
     const drop = document.getElementById('hero-suggestions');
