@@ -738,12 +738,22 @@ async function initAdmin() {
     
     reels = reelsRes.reels || [];
 
-    // Fetch Reviews
+    // Fetch Reviews + iCal Blocks in PARALLEL (not sequential)
     const baseUrl = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
+    const token = localStorage.getItem('sd_token');
+
+    // All secondary fetches run at the same time
+    const [revResult, ...icalResults] = await Promise.allSettled([
+      fetch(`${baseUrl}/admin/reviews`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      ...properties.map(p =>
+        fetch(`${baseUrl}/ical/property/${p.id}/blocks`, { headers: { 'Authorization': `Bearer ${token}` } })
+      )
+    ]);
+
+    // Reviews
     try {
-      const revReq = await fetch(`${baseUrl}/reviews`);
-      if(revReq.ok) {
-        const revData = await revReq.json();
+      if (revResult.status === 'fulfilled' && revResult.value.ok) {
+        const revData = await revResult.value.json();
         reviews = (revData.reviews || []).map(r => ({
           id: r.id, guest: r.user_name || r.guest || '—', property: r.property_name || '—', rating: r.rating || 5, text: r.text || r.review || '',
           date: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'Recent', image_url: r.image_url || r.photo_url || ''
@@ -751,19 +761,20 @@ async function initAdmin() {
       }
     } catch(e){ console.log("Reviews load error", e); }
 
-    // Fetch iCal Blocks
-    try {
-      const token = localStorage.getItem('sd_token');
-      for (const p of properties) {
-        const res = await fetch(`${baseUrl}/ical/property/${p.id}/blocks`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.blocks) {
-            data.blocks.forEach(blk => { bookings.push({ id: 'ext-' + blk.id, guest: '🗓️ ' + (blk.summary || 'Airbnb Block'), property: p.name, checkin: blk.start_date, checkout: blk.end_date, status: 'confirmed', isExternal: true }); });
-          }
+    // iCal blocks (results match properties array order)
+    icalResults.forEach((result, idx) => {
+      try {
+        if (result.status === 'fulfilled' && result.value.ok) {
+          result.value.json().then(data => {
+            if (data && data.blocks) {
+              const p = properties[idx];
+              data.blocks.forEach(blk => { bookings.push({ id: 'ext-' + blk.id, guest: '🗓️ ' + (blk.summary || 'Airbnb Block'), property: p.name, checkin: blk.start_date, checkout: blk.end_date, status: 'confirmed', isExternal: true }); });
+              renderBookings(bookings);
+            }
+          }).catch(() => {});
         }
-      }
-    } catch(e) { console.error('Failed to load iCal blocks:', e); }
+      } catch(e) {}
+    });
 
     renderProps(properties);
     renderBookings(bookings);
@@ -1130,8 +1141,13 @@ async function deleteProp(id) {
 async function uploadBrochureFile() { alert('Brochure upload dummy'); }
 async function saveEditProperty() { alert('Saved Edit'); closeModal('edit-modal'); }
 async function updateBookingStatus(id, status) {
-  if (!confirm(`Change booking #${id} to "${status}"?`)) return;
-  try { await api.updateBookingStatus(id, status); await initAdmin(); } catch (err) { alert('Failed: ' + err.message); }
+  if (!confirm(`Change booking status to "${status}"?`)) return;
+  try {
+    await api.updateBookingStatus(id, status);
+    const d = await api.listBookings().catch(()=>({bookings:[]}));
+    bookings = (d.bookings || []).map(b => ({ id: b.id, guest: b.guest_name || b.user_name || '—', property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout, guests: b.guests || 1, amount: b.amount || 0, status: b.status || 'pending' }));
+    renderBookings(bookings);
+  } catch (err) { alert('Failed: ' + err.message); }
 }
 
 // ── REELS CRUD ──
@@ -1155,10 +1171,10 @@ async function saveReel() {
   const fd = new FormData(); fd.append('name', name); fd.append('location', document.getElementById('rl-location').value.trim()); fd.append('stay', stay); fd.append('quote', document.getElementById('rl-quote').value.trim()); fd.append('stars', document.getElementById('rl-stars').value); fd.append('sort_order', document.getElementById('rl-order').value); fd.append('video_url', document.getElementById('rl-video-url').value.trim()); fd.append('poster_url', document.getElementById('rl-poster-url').value.trim());
   const videoFile = document.getElementById('rl-video-file').files[0]; const posterFile = document.getElementById('rl-poster-file').files[0];
   if (videoFile) fd.append('video', videoFile); if (posterFile) fd.append('poster', posterFile);
-  try { if (reelEditId) { await api.updateReel(reelEditId, fd); } else { await api.createReel(fd); } closeModal('reel-add-modal'); await initAdmin(); showPage('reels'); } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.textContent = reelEditId ? 'Update Reel' : 'Save Reel'; }
+  try { if (reelEditId) { await api.updateReel(reelEditId, fd); } else { await api.createReel(fd); } closeModal('reel-add-modal'); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.textContent = reelEditId ? 'Update Reel' : 'Save Reel'; }
 }
-async function deleteReel(id) { if (!confirm('Is reel ko permanently delete karna chahte ho?')) return; try { await api.deleteReel(id); await initAdmin(); showPage('reels'); } catch (err) { alert('Delete failed: ' + err.message); } }
-async function toggleReelActive(id, active) { const fd = new FormData(); fd.append('active', active); try { await api.updateReel(id, fd); await initAdmin(); showPage('reels'); } catch (err) { alert('Update failed: ' + err.message); } }
+async function deleteReel(id) { if (!confirm('Is reel ko permanently delete karna chahte ho?')) return; try { await api.deleteReel(id); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Delete failed: ' + err.message); } }
+async function toggleReelActive(id, active) { const fd = new FormData(); fd.append('active', active); try { await api.updateReel(id, fd); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Update failed: ' + err.message); } }
 
 // ── TODAY (admin) ──
 async function loadToday() {
