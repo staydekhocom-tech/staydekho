@@ -135,6 +135,32 @@
       font-size:.75rem;font-weight:600;padding:0;transition:color .15s;
     }
     .img-del-btn:hover{color:#dc2626;}
+
+    /* ── Photo drag-reorder ─────────────────────────── */
+    .img-item { cursor: default; transition: opacity .15s, box-shadow .15s; }
+    .img-drag-handle {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 5px 0 7px; cursor: grab; color: var(--gray-400);
+      font-size: .7rem; font-weight: 600; user-select: none;
+      border-bottom: 1px solid var(--gray-100); margin-bottom: 7px;
+      letter-spacing: .03em; transition: color .15s;
+    }
+    .img-drag-handle:hover { color: var(--red); }
+    .img-drag-handle:active { cursor: grabbing; }
+    .img-item.img-dragging { opacity: .3; box-shadow: none; }
+    .img-item.img-drop-here {
+      outline: 2.5px solid var(--red);
+      outline-offset: -2px;
+      box-shadow: 0 0 0 4px rgba(139,23,23,.12);
+    }
+    .img-order-badge {
+      position: absolute; top: 6px; left: 6px; z-index: 2;
+      background: rgba(0,0,0,.55); color: #fff;
+      font-size: .65rem; font-weight: 700; border-radius: 5px;
+      padding: 2px 7px; pointer-events: none;
+    }
+    .img-item { position: relative; }
+
     .img-url-field{display:flex;gap:8px;margin-bottom:10px;}
     .img-url-field input{flex:1;}
     .img-cat-field{display:flex;gap:8px;}
@@ -686,10 +712,22 @@ function renderImages() {
   if (!el) return;
   updatePhotoCounter();
   if (!images.length) { el.innerHTML = '<p style="color:var(--gray-400);font-size:.82rem;grid-column:1/-1">No images yet.</p>'; return; }
-  el.innerHTML = images.map((img,i) => `
-    <div class="img-item">
-      <img src="${esc(img.url)}" alt="${esc(img.cat)}" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=60'"/>
+  el.innerHTML = images.map((img, i) => `
+    <div class="img-item" draggable="true"
+         ondragstart="onImgDragStart(event,${i})"
+         ondragover="onImgDragOver(event,${i})"
+         ondragleave="onImgDragLeave(event)"
+         ondrop="onImgDrop(event,${i})"
+         ondragend="onImgDragEnd()">
+      <span class="img-order-badge">${i + 1}</span>
+      <img src="${esc(img.url)}" alt="${esc(img.cat)}"
+           draggable="false"
+           onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=60'"/>
       <div class="img-item-body">
+        <div class="img-drag-handle" title="Drag to reorder">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+          drag to reorder
+        </div>
         <input class="img-cat-input" type="text" value="${esc(img.cat||'')}"
           placeholder="Category" oninput="images[${i}].cat=this.value"/>
         <button class="img-del-btn" onclick="removeImage(${i})">
@@ -699,7 +737,47 @@ function renderImages() {
       </div>
     </div>`).join('');
 }
-function removeImage(i) { images.splice(i,1); renderImages(); }
+function removeImage(i) { images.splice(i, 1); renderImages(); }
+
+/* ── Photo drag-reorder handlers ───────────────── */
+let _dragIdx = null;
+
+function onImgDragStart(e, i) {
+  _dragIdx = i;
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    const items = document.querySelectorAll('.img-item');
+    if (items[i]) items[i].classList.add('img-dragging');
+  }, 0);
+}
+function onImgDragOver(e, i) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.img-item').forEach(el => el.classList.remove('img-drop-here'));
+  if (i !== _dragIdx) {
+    const items = document.querySelectorAll('.img-item');
+    if (items[i]) items[i].classList.add('img-drop-here');
+  }
+}
+function onImgDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget))
+    e.currentTarget.classList.remove('img-drop-here');
+}
+function onImgDrop(e, i) {
+  e.preventDefault();
+  document.querySelectorAll('.img-item').forEach(el => el.classList.remove('img-drop-here'));
+  if (_dragIdx === null || _dragIdx === i) return;
+  const moved = images.splice(_dragIdx, 1)[0];
+  images.splice(i, 0, moved);
+  renderImages();
+  toast('Photo order updated — click Save to keep changes', 'success');
+}
+function onImgDragEnd() {
+  document.querySelectorAll('.img-item').forEach(el => {
+    el.classList.remove('img-dragging', 'img-drop-here');
+  });
+  _dragIdx = null;
+}
 
 /* ── Property type checkboxes ───────────────────── */
 function onPropTypeChange() {
