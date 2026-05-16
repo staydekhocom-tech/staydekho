@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const db     = require('../db/database');
+const jwt    = require('jsonwebtoken');
+const { BlogPost, User } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 
 function slugify(str) {
@@ -9,118 +10,141 @@ function slugify(str) {
     .replace(/-+/g, '-');
 }
 
-// GET /api/blog  — list published posts (admin sees all)
-router.get('/', (req, res) => {
+// GET /api/blog  — list posts (admin sees all, public sees published only)
+router.get('/', async (req, res) => {
   const { category } = req.query;
-  let sql  = 'SELECT * FROM blog_posts WHERE 1=1';
-  const args = [];
+  try {
+    // Check if admin via JWT header
+    let isAdmin = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const token   = authHeader.split(' ')[1];
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        const u = await User.findById(payload.id).select('role').lean();
+        isAdmin = u?.role === 'admin';
+      } catch { /* not admin */ }
+    }
 
-  // Non-admin only see published
-  const isAdmin = req.headers.authorization
-    ? (() => { try { const jwt = require('jsonwebtoken'); const t = req.headers.authorization.split(' ')[1]; const p = jwt.verify(t, process.env.JWT_SECRET); const u = db.prepare('SELECT role FROM users WHERE id = ?').get(p.id); return u?.role === 'admin'; } catch { return false; } })()
-    : false;
+    const filter = {};
+    if (!isAdmin) filter.published = true;
+    if (category && category !== 'all') filter.category = category;
 
-  if (!isAdmin) { sql += ' AND published = 1'; }
-  if (category && category !== 'all') { sql += ' AND category = ?'; args.push(category); }
-  sql += ' ORDER BY published_at DESC, created_at DESC';
+    const posts = await BlogPost.find(filter)
+      .sort({ published_at: -1, created_at: -1 })
+      .lean();
 
-  const posts = db.prepare(sql).all(...args);
-  res.json({ posts });
+    res.json({ posts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/blog/:slug
-router.get('/:slug', (req, res) => {
-  const post = db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(req.params.slug);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
-  if (!post.published) {
-    // check if admin
-    const auth = req.headers.authorization;
-    if (!auth) return res.status(404).json({ error: 'Post not found' });
-    try {
-      const jwt = require('jsonwebtoken');
-      const payload = jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET);
-      const user = db.prepare('SELECT role FROM users WHERE id = ?').get(payload.id);
-      if (user?.role !== 'admin') return res.status(404).json({ error: 'Post not found' });
-    } catch { return res.status(404).json({ error: 'Post not found' }); }
+router.get('/:slug', async (req, res) => {
+  try {
+    const post = await BlogPost.findOne({ slug: req.params.slug }).lean();
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    if (!post.published) {
+      // Only admin can see unpublished posts
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(404).json({ error: 'Post not found' });
+      try {
+        const payload = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+        const u = await User.findById(payload.id).select('role').lean();
+        if (u?.role !== 'admin') return res.status(404).json({ error: 'Post not found' });
+      } catch {
+        return res.status(404).json({ error: 'Post not found' });
+      }
+    }
+
+    res.json({ post });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  res.json({ post });
 });
 
 // POST /api/blog  — admin: create post
-router.post('/', protect, adminOnly, (req, res) => {
+router.post('/', protect, adminOnly, async (req, res) => {
   const { title, excerpt, body, category, cover_image, author, published } = req.body;
   if (!title || !body) return res.status(400).json({ error: 'title and body are required' });
 
-  let slug = slugify(title);
-  // ensure unique slug
-  const existing = db.prepare('SELECT id FROM blog_posts WHERE slug = ?').get(slug);
-  if (existing) slug = slug + '-' + Date.now();
+  try {
+    let slug = slugify(title);
+    // Ensure unique slug
+    const existing = await BlogPost.findOne({ slug }).lean();
+    if (existing) slug = slug + '-' + Date.now();
 
-  const pub = published === true || published === 1 ? 1 : 0;
-  const result = db.prepare(`
-    INSERT INTO blog_posts (title, slug, excerpt, body, category, cover_image, author, published, published_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    title.trim(),
-    slug,
-    excerpt || '',
-    body,
-    category || 'General',
-    cover_image || '',
-    author || 'StayDekho Team',
-    pub,
-    pub ? new Date().toISOString() : null
-  );
+    const pub = published === true || published === 1 ? true : false;
 
-  const post = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ post });
+    const post = await BlogPost.create({
+      title:        title.trim(),
+      slug,
+      excerpt:      excerpt     || '',
+      body,
+      category:     category    || 'General',
+      cover_image:  cover_image || '',
+      author:       author      || 'StayDekho Team',
+      published:    pub,
+      published_at: pub ? new Date() : null,
+    });
+
+    res.status(201).json({ post: post.toObject() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PUT /api/blog/:id  — admin: update post
-router.put('/:id', protect, adminOnly, (req, res) => {
-  const existing = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Post not found' });
+router.put('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const existing = await BlogPost.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ error: 'Post not found' });
 
-  const { title, excerpt, body, category, cover_image, author, published } = req.body;
-  const pub = published === true || published === 1 ? 1 : 0;
-  const publishedAt = pub && !existing.published_at ? new Date().toISOString() : existing.published_at;
+    const { title, excerpt, body, category, cover_image, author, published } = req.body;
+    const pub = published === true || published === 1 ? true : false;
+    const publishedAt = pub && !existing.published_at ? new Date() : existing.published_at;
 
-  let slug = existing.slug;
-  if (title && title.trim() !== existing.title) {
-    slug = slugify(title);
-    const conflict = db.prepare('SELECT id FROM blog_posts WHERE slug = ? AND id != ?').get(slug, req.params.id);
-    if (conflict) slug = slug + '-' + Date.now();
+    let slug = existing.slug;
+    if (title && title.trim() !== existing.title) {
+      slug = slugify(title);
+      const conflict = await BlogPost.findOne({ slug, _id: { $ne: req.params.id } }).lean();
+      if (conflict) slug = slug + '-' + Date.now();
+    }
+
+    const post = await BlogPost.findByIdAndUpdate(
+      req.params.id,
+      {
+        title:        title       ?? existing.title,
+        slug,
+        excerpt:      excerpt     ?? existing.excerpt,
+        body:         body        ?? existing.body,
+        category:     category    ?? existing.category,
+        cover_image:  cover_image ?? existing.cover_image,
+        author:       author      ?? existing.author,
+        published:    pub,
+        published_at: publishedAt,
+      },
+      { new: true }
+    ).lean();
+
+    res.json({ post });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  db.prepare(`
-    UPDATE blog_posts SET
-      title = ?, slug = ?, excerpt = ?, body = ?, category = ?,
-      cover_image = ?, author = ?, published = ?, published_at = ?,
-      updated_at = datetime('now')
-    WHERE id = ?
-  `).run(
-    title       ?? existing.title,
-    slug,
-    excerpt     ?? existing.excerpt,
-    body        ?? existing.body,
-    category    ?? existing.category,
-    cover_image ?? existing.cover_image,
-    author      ?? existing.author,
-    pub,
-    publishedAt,
-    req.params.id
-  );
-
-  const updated = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(req.params.id);
-  res.json({ post: updated });
 });
 
 // DELETE /api/blog/:id  — admin
-router.delete('/:id', protect, adminOnly, (req, res) => {
-  const existing = db.prepare('SELECT id FROM blog_posts WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Post not found' });
-  db.prepare('DELETE FROM blog_posts WHERE id = ?').run(req.params.id);
-  res.json({ message: 'Post deleted' });
+router.delete('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const existing = await BlogPost.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ error: 'Post not found' });
+    await BlogPost.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Post deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
