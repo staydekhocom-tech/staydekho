@@ -1668,20 +1668,6 @@
   </div>
 </section>
 
-<!-- ── TRAVEL GUIDES ─────────────────────────────────────── -->
-<section class="section" id="guides-section" style="display:none">
-  <div class="container">
-    <div class="section-header reveal">
-      <div>
-        <div class="eyebrow">Local Expertise</div>
-        <h2>Travel Guides</h2>
-      </div>
-      <a href="guides.html" class="btn btn-outline">View All Guides →</a>
-    </div>
-    <div class="guides-grid" id="guides-grid"></div>
-  </div>
-</section>
-
 <!-- ── CTA ───────────────────────────────────────────────── -->
 <section class="section-sm">
   <div class="container">
@@ -1730,8 +1716,8 @@
         <h4>Company</h4>
         <ul>
           <li><a href="about.html">About Us</a></li>
-                   <li><a href="careers.html">Careers</a></li>
-          
+          <li><a href="careers.html">Careers</a></li>
+          <li><a href="guides.html">Travel Guides</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1785,31 +1771,6 @@
     if (tw && cfg.social?.twitter)   tw.href = cfg.social.twitter;
     if (yt && cfg.social?.youtube)   yt.href = cfg.social.youtube;
     if (wa && cfg.whatsapp_link)     wa.href = cfg.whatsapp_link;
-  })();
-
-  /* ── Travel Guides (homepage) ── */
-  (async function loadHomepageGuides() {
-    try {
-      const data  = await api.listGuides();
-      const guides = (data.guides || []).slice(0, 3);
-      if (!guides.length) return;
-      const section = document.getElementById('guides-section');
-      const grid    = document.getElementById('guides-grid');
-      if (!section || !grid) return;
-      grid.innerHTML = guides.map(g => `
-        <a class="guide-card reveal" href="guide-detail.html?slug=${encodeURIComponent(g.slug||g._id||g.id||'')}">
-          ${g.cover_image
-            ? `<img class="guide-card-img" src="${g.cover_image}" alt="${g.title||''}" loading="lazy">`
-            : `<div class="guide-card-img-placeholder">🗺️</div>`}
-          <div class="guide-card-body">
-            <div class="guide-card-dest">${g.destination||g.category||''}</div>
-            <div class="guide-card-title">${g.title||''}</div>
-            ${g.summary ? `<div class="guide-card-summary">${g.summary}</div>` : ''}
-            <span class="guide-card-cta">Read Guide →</span>
-          </div>
-        </a>`).join('');
-      section.style.display = '';
-    } catch(e) { /* silently hide if API fails */ }
   })();
 
   /* ── Navbar scroll behaviour (components.js already handles it; keep as safety net) ── */
