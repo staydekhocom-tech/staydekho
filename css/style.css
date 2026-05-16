@@ -117,9 +117,10 @@
     #navbar.nav-scrolled .logo-o svg line.handle { stroke: var(--red); }
 
     /* Nav links */
-    /* Hamburger hidden on desktop */
+    /* Hamburger + mobile drawer — force hidden on desktop */
     .nav-hamburger { display: none !important; }
-    .mobile-nav-drawer { display: none !important; }
+    .mobile-nav-drawer,
+    .mobile-nav-drawer.open { display: none !important; }
     .mobile-nav-close { display: none !important; }
 
     .nav-links {

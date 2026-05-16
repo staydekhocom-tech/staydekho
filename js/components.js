@@ -226,6 +226,14 @@ function injectFloatingCTA() {
 
   document.querySelectorAll('.reveal, .reveal-left, .stagger').forEach(el => io.observe(el));
 
+  // Auto-close mobile drawer when window is resized to desktop width
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      const drawer = document.getElementById('mobile-nav-drawer');
+      if (drawer) drawer.classList.remove('open');
+    }
+  }, { passive: true });
+
   // Make body visible (some pages hide it on load)
   document.body.classList.add('loaded');
   document.body.style.opacity = '1';
