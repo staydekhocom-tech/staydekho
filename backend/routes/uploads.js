@@ -2,7 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const path   = require('path');
 const fs     = require('fs');
-const db     = require('../db/database');
+const { Property, User } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 
 // ── Cloudinary (for multi-image property upload) ─────
@@ -89,10 +89,8 @@ router.post('/images', protect, adminOnly, memUpload.array('images', 40), async 
   try {
     let urls;
     if (cloudinary) {
-      // Upload to Cloudinary
       urls = await Promise.all(req.files.map(f => uploadToCloudinary(f.buffer)));
     } else {
-      // Fallback: save to local disk and return URL
       urls = req.files.map(file => {
         const ext  = path.extname(file.originalname).toLowerCase();
         const name = `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}${ext}`;
@@ -108,21 +106,29 @@ router.post('/images', protect, adminOnly, memUpload.array('images', 40), async 
 });
 
 // POST /api/uploads/brochure/:propertyId  — admin, attaches PDF to property
-router.post('/brochure/:propertyId', protect, adminOnly, brochureUpload.single('brochure'), (req, res) => {
+router.post('/brochure/:propertyId', protect, adminOnly, brochureUpload.single('brochure'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No PDF uploaded' });
-  const url = publicUrl(req, 'brochures', req.file.filename);
-  const prop = db.prepare('SELECT id FROM properties WHERE id = ?').get(req.params.propertyId);
-  if (!prop) return res.status(404).json({ error: 'Property not found' });
-  db.prepare('UPDATE properties SET brochure_url = ? WHERE id = ?').run(url, prop.id);
-  res.json({ url });
+  try {
+    const prop = await Property.findById(req.params.propertyId).lean();
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
+    const url = publicUrl(req, 'brochures', req.file.filename);
+    await Property.findByIdAndUpdate(req.params.propertyId, { brochure_url: url });
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/uploads/avatar  — current user updates own profile picture
-router.post('/avatar', protect, avatarUpload.single('avatar'), (req, res) => {
+router.post('/avatar', protect, avatarUpload.single('avatar'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = publicUrl(req, 'avatars', req.file.filename);
-  db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(url, req.user.id);
-  res.json({ url });
+  try {
+    const url = publicUrl(req, 'avatars', req.file.filename);
+    await User.findByIdAndUpdate(req.user.id, { avatar_url: url });
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
