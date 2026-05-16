@@ -58,7 +58,7 @@ function buildNav() {
       <div class="nav-inner">
         ${LOGO_HTML}
         <ul class="nav-links">${navLinksHTML}</ul>
-        ${authHTML}
+        <div class="nav-auth-desktop">${authHTML}</div>
         <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu" onclick="document.getElementById('mobile-nav-drawer').classList.add('open')">
           <span></span><span></span><span></span>
         </button>
