@@ -1423,6 +1423,45 @@ body { opacity: 1 !important; }
   .modal { padding: 24px 18px; }
 }
 
+/* ── FLOATING ACTION BUTTONS (WhatsApp + Call + ScrollTop) ── */
+#sd-float-cta {
+  position: fixed;
+  right: 20px;
+  bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 9998;
+}
+.sd-fab {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  transition: transform .2s, box-shadow .2s;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+.sd-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.sd-fab.wa  { background: #25D366; color: #fff; }
+.sd-fab.call{ background: #8B1717; color: #fff; }
+#scroll-top {
+  position: fixed;
+  bottom: 28px; right: 20px;
+  width: 48px; height: 48px;
+  background: #8B1717; color: #fff;
+  border-radius: 50%;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  z-index: 9997;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity .3s, transform .3s;
+}
+#scroll-top.visible { opacity: 1; transform: translateY(0); }
+#scroll-top:hover { background: #6b1010; }
+
 /* ── GLOBAL MOBILE FIXES (all pages) ─────────────────── */
 @media (max-width: 768px) {
   /* Container padding fix */

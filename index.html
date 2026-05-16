@@ -385,7 +385,33 @@
       border-radius: 100px;
       transition: background .2s;
       min-width: 0;
+      position: relative;
     }
+    /* ── Autocomplete dropdown ── */
+    .suggest-drop {
+      position:absolute; top:calc(100% + 8px); left:0;
+      min-width:280px; width:max-content; max-width:340px;
+      background:#fff; border-radius:14px;
+      box-shadow:0 12px 40px rgba(0,0,0,.18);
+      border:1px solid rgba(0,0,0,.07); z-index:9999;
+      overflow:hidden; display:none;
+    }
+    .suggest-drop.open { display:block; }
+    .suggest-section {
+      padding:8px 14px 4px; font-size:.62rem; font-weight:800;
+      text-transform:uppercase; letter-spacing:.1em; color:#9a9590;
+    }
+    .suggest-item {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 16px; cursor:pointer;
+      transition:background .12s; border-bottom:1px solid #f5f2ef;
+    }
+    .suggest-item:last-child { border-bottom:none; }
+    .suggest-item:hover,.suggest-item.si-focused { background:#faf8f5; }
+    .si-icon { font-size:1rem; flex-shrink:0; line-height:1; }
+    .si-name { font-size:.88rem; font-weight:600; color:#1a0a0a; }
+    .si-sub  { font-size:.72rem; color:#9a9590; margin-top:1px; }
+    .si-badge{ font-size:.65rem; font-weight:700; color:#8B1717; background:#fff0f0; padding:2px 6px; border-radius:8px; margin-left:6px; }
     .search-field:hover { background: rgba(0,0,0,.04); }
     .search-field label {
       font-size: .62rem;
@@ -1334,7 +1360,12 @@
     <div class="search-box">
       <div class="search-field" style="flex:2;min-width:0">
         <label>City / Villa / Location</label>
-        <input type="text" placeholder="Goa, Udaipur, Manali…" id="search-dest" autocomplete="off" onkeydown="if(event.key==='Enter')doSearch()"/>
+        <input type="text" placeholder="Goa, Udaipur, Manali…" id="search-dest" autocomplete="off"
+          oninput="showHeroSuggestions(this.value)"
+          onfocus="showHeroSuggestions(this.value)"
+          onblur="setTimeout(()=>document.getElementById('hero-suggestions').classList.remove('open'),180)"
+          onkeydown="onHeroSuggestKey(event)"/>
+        <div id="hero-suggestions" class="suggest-drop"></div>
       </div>
       <div class="search-divider"></div>
       <div class="search-field">
@@ -1594,9 +1625,10 @@
         <h4>Discover</h4>
         <ul>
           <li><a href="listings.html">All Stays</a></li>
-          <li><a href="listings.html">Pool Villas</a></li>
-          <li><a href="listings.html">Heritage Stays</a></li>
-          <li><a href="listings.html">Group Homes</a></li>
+          <li><a href="listings.html?type=pool">Pool Villa</a></li>
+          <li><a href="listings.html?type=family">Family Stay</a></li>
+          <li><a href="listings.html?type=bachelor">Bachelor Party</a></li>
+          <li><a href="listings.html?type=party">Party Villa</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1803,6 +1835,101 @@
   }
   syncGuestSuffix(); // init state
 
+  /* ── Destination Autocomplete ── */
+  const HERO_DEST = [
+    { name:'Udaipur',   sub:'Rajasthan',           icon:'🏰' },
+    { name:'Goa',       sub:'Beach & Party Hub',   icon:'🏖️' },
+    { name:'Jaipur',    sub:'Rajasthan',           icon:'🏯' },
+    { name:'Manali',    sub:'Himachal Pradesh',    icon:'🏔️' },
+    { name:'Coorg',     sub:'Karnataka',           icon:'🌿' },
+    { name:'Lonavala',  sub:'Maharashtra',         icon:'⛰️' },
+    { name:'Rishikesh', sub:'Uttarakhand',         icon:'🏞️' },
+    { name:'Mussoorie', sub:'Uttarakhand',         icon:'🌫️' },
+    { name:'Shimla',    sub:'Himachal Pradesh',    icon:'❄️' },
+    { name:'Ooty',      sub:'Tamil Nadu',          icon:'🌄' },
+    { name:'Kerala',    sub:'Backwaters & Beaches',icon:'🌴' },
+    { name:'Kasol',     sub:'Himachal Pradesh',    icon:'🌲' },
+  ];
+  let _heroProps = [];
+
+  function showHeroSuggestions(query) {
+    const drop = document.getElementById('hero-suggestions');
+    if (!drop) return;
+    const q = (query || '').trim().toLowerCase();
+
+    // Match from actual properties
+    const seenLocs = new Set();
+    const dbItems = [];
+    _heroProps.forEach(p => {
+      const loc = (p.location || '').trim();
+      if (!loc) return;
+      const key = loc.toLowerCase();
+      if (!seenLocs.has(key) && (q === '' || key.includes(q) || (p.title||'').toLowerCase().includes(q))) {
+        seenLocs.add(key);
+        const cnt = _heroProps.filter(x => (x.location||'').toLowerCase() === key).length;
+        dbItems.push({ name: loc, sub: cnt > 1 ? cnt + ' properties' : (p.title||''), icon: '📍', badge: cnt > 1 ? cnt + ' stays' : null });
+      }
+    });
+    // Also match by villa name
+    _heroProps.forEach(p => {
+      if (q && p.title && p.title.toLowerCase().includes(q) && !dbItems.find(d => d.name === p.title)) {
+        dbItems.push({ name: p.title, sub: p.location || '', icon: '🏠', badge: null });
+      }
+    });
+
+    const seen2 = new Set(dbItems.map(r => r.name.toLowerCase()));
+    const popular = HERO_DEST.filter(d =>
+      (q === '' || d.name.toLowerCase().includes(q)) && !seen2.has(d.name.toLowerCase())
+    );
+
+    const fromDb  = dbItems.slice(0, 5);
+    const fromPop = popular.slice(0, q ? 5 : 6);
+    if (!fromDb.length && !fromPop.length) { drop.classList.remove('open'); return; }
+
+    let html = '';
+    if (fromDb.length) {
+      html += `<div class="suggest-section">Our Properties</div>`;
+      html += fromDb.map(item => `
+        <div class="suggest-item" data-val="${item.name.replace(/"/g,'&quot;')}" onmousedown="selectHeroSugg(this.dataset.val)">
+          <span class="si-icon">${item.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div class="si-name">${item.name}${item.badge ? `<span class="si-badge">${item.badge}</span>` : ''}</div>
+            <div class="si-sub">${item.sub}</div>
+          </div>
+        </div>`).join('');
+    }
+    if (fromPop.length) {
+      html += `<div class="suggest-section" style="margin-top:${fromDb.length ? '4px' : '0'}">Popular Destinations</div>`;
+      html += fromPop.map(item => `
+        <div class="suggest-item" data-val="${item.name}" onmousedown="selectHeroSugg(this.dataset.val)">
+          <span class="si-icon">${item.icon}</span>
+          <div><div class="si-name">${item.name}</div><div class="si-sub">${item.sub}</div></div>
+        </div>`).join('');
+    }
+    drop.innerHTML = html;
+    drop.classList.add('open');
+  }
+
+  function selectHeroSugg(val) {
+    document.getElementById('search-dest').value = val;
+    document.getElementById('hero-suggestions').classList.remove('open');
+  }
+
+  function onHeroSuggestKey(e) {
+    const drop = document.getElementById('hero-suggestions');
+    if (!drop?.classList.contains('open')) {
+      if (e.key === 'Enter') { doSearch(); return; }
+      return;
+    }
+    const items = [...drop.querySelectorAll('.suggest-item')];
+    const cur = drop.querySelector('.si-focused');
+    let idx = items.indexOf(cur);
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (cur) cur.classList.remove('si-focused'); items[Math.min(idx + 1, items.length - 1)].classList.add('si-focused'); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); if (cur) cur.classList.remove('si-focused'); if (idx > 0) items[idx - 1].classList.add('si-focused'); }
+    else if (e.key === 'Enter')  { const f = drop.querySelector('.si-focused'); if (f) { e.preventDefault(); selectHeroSugg(f.dataset.val); doSearch(); } else { drop.classList.remove('open'); doSearch(); } }
+    else if (e.key === 'Escape') { drop.classList.remove('open'); }
+  }
+
   /* ── Search handler ── */
   function doSearch() {
     const dest    = document.getElementById('search-dest').value.trim();
@@ -1864,6 +1991,7 @@
       if (typeof api !== 'undefined') {
         const r = await api.listProperties({});
         const all = (r.properties || []).slice(0, 6);
+        _heroProps = r.properties || [];   // feed autocomplete
         if (all.length) { grid.innerHTML = renderCards(all); return; }
       }
       throw new Error('no api');
