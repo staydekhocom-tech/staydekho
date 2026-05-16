@@ -2007,27 +2007,26 @@
         </div>
       </a>`).join('');
 
-    /* Attempt to load from API; fall back to sample cards (8s timeout) */
-    const _apiTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
-    try {
-      if (typeof api !== 'undefined') {
-        const r = await _apiTimeout(api.listProperties({}), 8000);
+    /* ── Sample cards shown IMMEDIATELY, then replaced by real API data ── */
+    const samples = [
+      { id:1, title:'Aravalli Pool Villa', location:'Udaipur, Rajasthan', beds:4, baths:3, guests:'10 guests', price:28000, rating:'4.9', badge:'Bestseller', main_image:'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=600&q=75' },
+      { id:2, title:'Heritage Haveli Suite', location:'Old City, Udaipur', beds:3, baths:2, guests:'8 guests', price:18500, rating:'4.8', badge:'Heritage', main_image:'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=600&q=75' },
+      { id:3, title:'Monsoon Forest Retreat', location:'Aravalli Hills, Udaipur', beds:5, baths:4, guests:'12 guests', price:35000, rating:'5.0', badge:'New', main_image:'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=75' },
+      { id:4, title:'Lake View Cottage', location:'Fateh Sagar, Udaipur', beds:2, baths:2, guests:'6 guests', price:12000, rating:'4.7', badge:null, main_image:'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=75' },
+      { id:5, title:'Royal Palace Annexe', location:'City Palace Area, Udaipur', beds:6, baths:5, guests:'15 guests', price:55000, rating:'4.9', badge:'Luxury', main_image:'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=600&q=75' },
+      { id:6, title:'Hillside Garden Villa', location:'Badi Lake, Udaipur', beds:3, baths:2, guests:'8 guests', price:22000, rating:'4.8', badge:null, main_image:'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=600&q=75' }
+    ];
+    grid.innerHTML = renderCards(samples); // show instantly
+
+    /* Then silently try to replace with real DB data */
+    if (typeof api !== 'undefined') {
+      try {
+        const _t = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+        const r = await _t(api.listProperties({}), 10000);
         const all = (r.properties || []).slice(0, 6).map(p => ({ ...p, id: p.id || p._id }));
         _heroProps = (r.properties || []).map(p => ({ ...p, id: p.id || p._id }));
-        if (all.length) { grid.innerHTML = renderCards(all); return; }
-      }
-      throw new Error('no api');
-    } catch {
-      /* Sample cards for offline / demo mode */
-      const samples = [
-        { id:1, title:'Aravalli Pool Villa', location:'Udaipur, Rajasthan', beds:4, baths:3, guests:'10 guests', price:28000, rating:'4.9', badge:'Bestseller', main_image:'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=600&q=75' },
-        { id:2, title:'Heritage Haveli Suite', location:'Old City, Udaipur', beds:3, baths:2, guests:'8 guests', price:18500, rating:'4.8', badge:'Heritage', main_image:'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=600&q=75' },
-        { id:3, title:'Monsoon Forest Retreat', location:'Aravalli Hills, Udaipur', beds:5, baths:4, guests:'12 guests', price:35000, rating:'5.0', badge:'New', main_image:'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=75' },
-        { id:4, title:'Lake View Cottage', location:'Fateh Sagar, Udaipur', beds:2, baths:2, guests:'6 guests', price:12000, rating:'4.7', badge:null, main_image:'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=75' },
-        { id:5, title:'Royal Palace Annexe', location:'City Palace Area, Udaipur', beds:6, baths:5, guests:'15 guests', price:55000, rating:'4.9', badge:'Luxury', main_image:'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=600&q=75' },
-        { id:6, title:'Hillside Garden Villa', location:'Badi Lake, Udaipur', beds:3, baths:2, guests:'8 guests', price:22000, rating:'4.8', badge:null, main_image:'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=600&q=75' }
-      ];
-      grid.innerHTML = renderCards(samples);
+        if (all.length) grid.innerHTML = renderCards(all);
+      } catch { /* keep sample cards */ }
     }
   })();
 
