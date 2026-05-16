@@ -234,7 +234,7 @@ function init() {
       contact_email:               'info@staydekho.com',
       contact_phone:               '+91 87699 05983',
       contact_safety_email:        'safety@staydekho.com',
-      social_instagram:            'https://instagram.com/staydekho',
+      social_instagram:            'https://www.instagram.com/stay_dekho/',
       social_twitter:              'https://twitter.com/staydekho',
       social_whatsapp:             'https://wa.me/918769905983',
     };

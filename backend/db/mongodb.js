@@ -59,7 +59,7 @@ async function seedIfEmpty() {
       hero_slides:    JSON.stringify(['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=80','https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=1800&q=80','https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1800&q=80']),
       contact_email:  'info@staydekho.com',
       contact_phone:  '+91 87699 05983',
-      social_instagram: 'https://instagram.com/staydekho',
+      social_instagram: 'https://www.instagram.com/stay_dekho/',
       social_whatsapp:  'https://wa.me/918769905983',
     };
     await SiteSetting.insertMany(Object.entries(defaults).map(([key, value]) => ({ key, value })));

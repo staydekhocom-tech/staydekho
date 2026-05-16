@@ -28,7 +28,7 @@ const SD = {
 
   // ── SOCIAL LINKS ──────────────────────────────────────────────
   social: {
-    instagram: 'https://instagram.com/staydekho',
+    instagram: 'https://www.instagram.com/stay_dekho/',
     twitter:   'https://twitter.com/staydekho',
     youtube:   '',   // ← apna YouTube channel daalo: 'https://youtube.com/@staydekho'
   },
