@@ -1938,16 +1938,11 @@
     // Position dropdown relative to viewport (fixed, outside overflow:hidden hero)
     const inp  = document.getElementById('search-dest');
     const r    = inp.getBoundingClientRect();
-    drop.style.left  = r.left + 'px';
-    drop.style.width = Math.max(280, r.width) + 'px';
-    // Search bar is at bottom of screen — show suggestions ABOVE the input
-    if ((window.innerHeight - r.bottom) < 220) {
-      drop.style.top    = '';
-      drop.style.bottom = (window.innerHeight - r.top + 6) + 'px';
-    } else {
-      drop.style.bottom = '';
-      drop.style.top    = (r.bottom + 6) + 'px';
-    }
+    drop.style.left      = r.left + 'px';
+    drop.style.width     = Math.max(280, r.width) + 'px';
+    drop.style.bottom    = '';
+    drop.style.top       = (r.bottom + 6) + 'px';
+    drop.style.maxHeight = Math.max(180, window.innerHeight - r.bottom - 16) + 'px';
     drop.classList.add('open');
   }
 
