@@ -1245,10 +1245,14 @@
       .stay-types-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
     }
     @media (max-width: 700px) {
-      .hero-content { padding: 80px 20px 220px; }
+      /* Mobile hero — shorter so image shows better above search card */
+      .hero { height: 100svh; min-height: 580px; }
+      /* Show upper portion of landscape images (roofline/exterior) instead of center-crop */
+      .slide img { object-position: center 25%; }
+      .hero-content { padding: 80px 20px 260px; }
       .hero-headline { font-size: 2.2rem; }
       .hero-sub { font-size: .9rem; }
-      .hero-search-wrap { bottom: 24px; }
+      .hero-search-wrap { bottom: 16px; }
       .search-box {
         border-radius: 16px; flex-direction: column; gap: 0;
         background: rgba(255,255,255,.15);
