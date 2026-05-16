@@ -118,8 +118,9 @@
 
     /* Nav links */
     /* Hamburger hidden on desktop */
-    .nav-hamburger { display: none; }
-    .mobile-nav-drawer { display: none; }
+    .nav-hamburger { display: none !important; }
+    .mobile-nav-drawer { display: none !important; }
+    .mobile-nav-close { display: none !important; }
 
     .nav-links {
       display: flex;
@@ -998,7 +999,8 @@
         animation: drawerIn .25s ease;
       }
       @keyframes drawerIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-      .mobile-nav-drawer.open { display: flex; }
+      .mobile-nav-drawer.open { display: flex !important; }
+      .mobile-nav-close { display: block !important; }
       .mobile-nav-drawer a {
         font-size: 1.5rem; font-weight: 700; color: rgba(255,255,255,.85);
         padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.1);
