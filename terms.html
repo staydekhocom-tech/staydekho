@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Terms of Service — StayDekho</title>
+  <meta name="description" content="StayDekho Terms of Service — Read our terms before booking a villa or group stay."/>
+  <link rel="icon" type="image/png" href="images/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .page-hero {
+      background: linear-gradient(135deg, #8B1717 0%, #6b1010 60%, #3d0808 100%);
+      min-height: 260px;
+      display: flex; align-items: center;
+      padding: 90px 0 60px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .page-hero .container { position: relative; z-index: 1; }
+    .page-hero .eyebrow { color: rgba(255,255,255,.65); font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; }
+    .page-hero h1 { color: #fff; font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; margin: 0 0 12px; }
+    .page-hero p { color: rgba(255,255,255,.75); font-size: 1rem; max-width: 500px; margin: 0 auto; }
+
+    /* Tab switcher */
+    .tab-bar {
+      display: flex; gap: 0;
+      background: #fff; border-bottom: 2px solid #f0e8e8;
+      position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .tab-btn {
+      flex: 1; padding: 18px 20px;
+      font-size: .95rem; font-weight: 600;
+      border: none; background: transparent; cursor: pointer;
+      color: #666; border-bottom: 3px solid transparent;
+      transition: all .2s; font-family: 'Inter', sans-serif;
+    }
+    .tab-btn.active { color: #8B1717; border-bottom-color: #8B1717; background: #fff5f5; }
+    .tab-btn:hover:not(.active) { background: #fafafa; color: #333; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Legal content styles */
+    .legal-wrap { max-width: 800px; margin: 0 auto; padding: 56px 24px 80px; }
+    .legal-wrap h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem; color: #1a0a0a;
+      margin: 48px 0 16px; padding-bottom: 10px;
+      border-bottom: 2px solid #f0e8e8;
+    }
+    .legal-wrap h2:first-child { margin-top: 0; }
+    .legal-wrap h3 { font-size: 1.05rem; font-weight: 700; color: #2a0a0a; margin: 24px 0 10px; }
+    .legal-wrap p { color: #444; line-height: 1.85; font-size: .97rem; margin: 0 0 14px; }
+    .legal-wrap ul { padding-left: 20px; margin: 0 0 16px; }
+    .legal-wrap ul li { color: #444; line-height: 1.8; font-size: .97rem; margin-bottom: 6px; }
+    .legal-wrap a { color: #8B1717; }
+
+    .highlight-box {
+      background: #fff5f5; border: 1px solid #fecaca;
+      border-radius: 12px; padding: 20px 24px;
+      margin: 24px 0; font-size: .95rem; color: #7f1d1d; line-height: 1.7;
+    }
+    .highlight-box strong { display: block; margin-bottom: 4px; font-size: 1rem; }
+
+    .info-box {
+      background: #f0f9ff; border: 1px solid #bae6fd;
+      border-radius: 12px; padding: 20px 24px;
+      margin: 24px 0; font-size: .95rem; color: #0c4a6e; line-height: 1.7;
+    }
+
+    .last-updated {
+      font-size: .8rem; color: #999; margin-bottom: 32px;
+      padding: 10px 16px; background: #fafafa;
+      border-radius: 8px; display: inline-block;
+    }
+
+    @media (max-width: 600px) {
+      .tab-btn { font-size: .82rem; padding: 14px 10px; }
+      .legal-wrap { padding: 32px 16px 60px; }
+      .legal-wrap h2 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- HERO -->
+<section class="page-hero">
+  <div class="container">
+    <div class="eyebrow">Legal</div>
+    <h1>Terms & Privacy</h1>
+    <p>Please read these carefully before booking with us</p>
+  </div>
+</section>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('terms', this)">📋 Terms of Service</button>
+  <button class="tab-btn"       onclick="switchTab('privacy', this)">🔒 Privacy Policy</button>
+</div>
+
+<!-- ── TERMS OF SERVICE ── -->
+<div class="tab-content active" id="tab-terms">
+  <div class="legal-wrap">
+    <span class="last-updated">Last updated: May 2026</span>
+
+    <div class="highlight-box">
+      <strong>⚠️ Please Read Before Booking</strong>
+      By using StayDekho and making a booking, you agree to these terms. If you have any questions, contact us at <a href="mailto:info@staydekho.com">info@staydekho.com</a> before proceeding.
+    </div>
+
+    <h2>1. About StayDekho</h2>
+    <p>StayDekho ("we", "us", "our") is a property booking platform based in Udaipur, Rajasthan, India. We own, manage, and directly supervise every property listed on our platform — there are no third-party hosts or middlemen.</p>
+    <p>By accessing <a href="https://www.staydekho.com">www.staydekho.com</a> or making a booking, you ("Guest", "User") agree to be bound by these Terms of Service.</p>
+
+    <h2>2. Booking & Payments</h2>
+    <h3>2.1 Booking Confirmation</h3>
+    <p>A booking is confirmed only after full or partial payment is received and you receive a confirmation email/message from us. We reserve the right to refuse or cancel any booking at our discretion.</p>
+
+    <h3>2.2 Pricing</h3>
+    <p>All prices displayed on our website are in Indian Rupees (INR) and include applicable taxes unless stated otherwise. Prices may vary by season, dates, and number of guests.</p>
+
+    <h3>2.3 Payment</h3>
+    <p>Payments are processed securely via Razorpay. We accept UPI, credit/debit cards, and net banking. StayDekho does not store your payment card details.</p>
+
+    <h3>2.4 GST</h3>
+    <p>GST is applicable as per Government of India regulations. Our GSTIN is <strong>08AFWFS7035Q1ZS</strong>. GST invoices are provided upon request.</p>
+
+    <h2>3. Cancellation & Refund Policy</h2>
+    <h3>3.1 Cancellation by Guest</h3>
+    <ul>
+      <li><strong>More than 30 days before check-in:</strong> Full refund minus payment gateway charges</li>
+      <li><strong>15–30 days before check-in:</strong> 50% refund</li>
+      <li><strong>Less than 15 days before check-in:</strong> No refund</li>
+      <li><strong>No-show:</strong> No refund</li>
+    </ul>
+
+    <h3>3.2 Cancellation by StayDekho</h3>
+    <p>In rare cases (force majeure, property damage, unavoidable circumstances), we may cancel your booking. In such cases, a full refund will be issued within 7 working days.</p>
+
+    <h3>3.3 Refund Processing</h3>
+    <p>Approved refunds are credited to the original payment method within 5–10 working days. To request a cancellation, contact us at <a href="mailto:info@staydekho.com">info@staydekho.com</a>.</p>
+
+    <h2>4. Check-In & Check-Out</h2>
+    <ul>
+      <li><strong>Check-in time:</strong> 2:00 PM onwards (early check-in subject to availability)</li>
+      <li><strong>Check-out time:</strong> 11:00 AM (late check-out subject to availability and extra charges)</li>
+      <li>Valid government-issued photo ID is mandatory for all guests at check-in</li>
+      <li>The number of guests must not exceed the capacity specified at the time of booking</li>
+    </ul>
+
+    <h2>5. House Rules</h2>
+    <p>All guests must follow the house rules of the respective property. Common rules include:</p>
+    <ul>
+      <li>No smoking inside the property (smoking permitted in designated outdoor areas only)</li>
+      <li>No loud music or parties after 10:00 PM</li>
+      <li>Pets are not allowed unless explicitly mentioned in the property listing</li>
+      <li>Guests are responsible for any damage caused to the property during their stay</li>
+      <li>Illegal activities of any kind are strictly prohibited</li>
+      <li>Please treat the property and staff with respect</li>
+    </ul>
+
+    <h2>6. Security Deposit</h2>
+    <p>A refundable security deposit may be collected at check-in (amount mentioned in the property listing). This will be returned within 48 hours of check-out, after inspection of the property. Any damages will be deducted from this deposit.</p>
+
+    <h2>7. Liability</h2>
+    <p>StayDekho shall not be liable for any loss, damage, injury, or illness that occurs during your stay. Guests stay at their own risk. We recommend guests purchase travel insurance for their trips.</p>
+    <p>We are not responsible for theft or loss of personal belongings. Please keep valuables secured.</p>
+
+    <h2>8. User Accounts</h2>
+    <p>You are responsible for maintaining the security of your account and password. You agree not to share your account credentials with others. StayDekho reserves the right to terminate accounts that violate these terms.</p>
+
+    <h2>9. Intellectual Property</h2>
+    <p>All content on StayDekho — including logos, images, text, and software — is the property of StayDekho and protected by applicable intellectual property laws. You may not copy, reproduce, or distribute our content without written permission.</p>
+
+    <h2>10. Changes to Terms</h2>
+    <p>We reserve the right to update these terms at any time. Continued use of our platform after changes constitutes acceptance of the new terms. We will notify users of significant changes via email.</p>
+
+    <h2>11. Governing Law</h2>
+    <p>These terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts in Udaipur, Rajasthan.</p>
+
+    <h2>12. Contact Us</h2>
+    <p>For any questions about these Terms, please contact us:</p>
+    <ul>
+      <li>📧 Email: <a href="mailto:info@staydekho.com">info@staydekho.com</a></li>
+      <li>📞 Phone: <a href="tel:918769905983">+91 87699 05983</a></li>
+      <li>📍 Address: Udaipur, Rajasthan, India</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ── PRIVACY POLICY ── -->
+<div class="tab-content" id="tab-privacy">
+  <div class="legal-wrap">
+    <span class="last-updated">Last updated: May 2026</span>
+
+    <div class="info-box">
+      <strong style="display:block;margin-bottom:4px;font-weight:700">🔒 Your Privacy Matters</strong>
+      StayDekho collects only the data necessary to provide our services. We do not sell your personal data to third parties.
+    </div>
+
+    <h2>1. Information We Collect</h2>
+    <h3>1.1 Information You Provide</h3>
+    <ul>
+      <li><strong>Account information:</strong> Name, email address, phone number, password</li>
+      <li><strong>Booking information:</strong> Check-in/check-out dates, number of guests, special requests</li>
+      <li><strong>Payment information:</strong> Processed securely by Razorpay — we do not store card details</li>
+      <li><strong>Communication:</strong> Messages sent via contact form, WhatsApp, or email</li>
+      <li><strong>ID verification:</strong> Government ID collected at check-in (physical copy only, not stored digitally)</li>
+    </ul>
+
+    <h3>1.2 Information Collected Automatically</h3>
+    <ul>
+      <li>IP address and browser type</li>
+      <li>Pages visited and time spent on our website</li>
+      <li>Device type (mobile/desktop)</li>
+      <li>Referring website</li>
+    </ul>
+
+    <h2>2. How We Use Your Information</h2>
+    <ul>
+      <li>To process and confirm your bookings</li>
+      <li>To send booking confirmations, invoices, and important updates</li>
+      <li>To send OTP for login/registration (via SMS)</li>
+      <li>To respond to your inquiries and support requests</li>
+      <li>To improve our website and services</li>
+      <li>To comply with legal obligations</li>
+      <li>To send occasional promotional offers (you can opt out anytime)</li>
+    </ul>
+
+    <h2>3. How We Share Your Information</h2>
+    <p>We do <strong>not sell</strong> your personal data. We share your information only with:</p>
+    <ul>
+      <li><strong>Razorpay:</strong> Payment processing (their <a href="https://razorpay.com/privacy/" target="_blank">Privacy Policy</a>)</li>
+      <li><strong>MSG91:</strong> OTP SMS delivery</li>
+      <li><strong>Google:</strong> If you use "Sign in with Google" (their <a href="https://policies.google.com/privacy" target="_blank">Privacy Policy</a>)</li>
+      <li><strong>Cloudinary:</strong> Image storage for property photos</li>
+      <li><strong>Law enforcement:</strong> If required by law or court order</li>
+    </ul>
+
+    <h2>4. Cookies</h2>
+    <p>We use minimal cookies to keep you logged in and remember your preferences. We do not use advertising or tracking cookies. You can disable cookies in your browser settings, but some features may not work properly.</p>
+
+    <h2>5. Data Security</h2>
+    <p>We take security seriously. Your data is protected using:</p>
+    <ul>
+      <li>HTTPS encryption on all pages</li>
+      <li>JWT tokens for secure authentication</li>
+      <li>Passwords stored using bcrypt hashing (never stored in plain text)</li>
+      <li>Secure, cloud-hosted database (MongoDB Atlas)</li>
+    </ul>
+    <p>However, no method of transmission over the internet is 100% secure. We cannot guarantee absolute security.</p>
+
+    <h2>6. Data Retention</h2>
+    <ul>
+      <li><strong>Account data:</strong> Retained as long as your account is active</li>
+      <li><strong>Booking records:</strong> Retained for 7 years (as required by Indian tax laws)</li>
+      <li><strong>Contact form submissions:</strong> Retained for 1 year</li>
+      <li>You may request deletion of your account by contacting us at <a href="mailto:info@staydekho.com">info@staydekho.com</a></li>
+    </ul>
+
+    <h2>7. Your Rights</h2>
+    <p>You have the right to:</p>
+    <ul>
+      <li>Access the personal data we hold about you</li>
+      <li>Request correction of inaccurate data</li>
+      <li>Request deletion of your data (subject to legal retention requirements)</li>
+      <li>Opt out of promotional emails at any time</li>
+      <li>Lodge a complaint with the relevant data protection authority</li>
+    </ul>
+    <p>To exercise any of these rights, email us at <a href="mailto:info@staydekho.com">info@staydekho.com</a>.</p>
+
+    <h2>8. Children's Privacy</h2>
+    <p>StayDekho is not intended for use by individuals under 18 years of age. We do not knowingly collect personal data from children. If we discover that a child has provided personal data, we will delete it immediately.</p>
+
+    <h2>9. Third-Party Links</h2>
+    <p>Our website may contain links to third-party websites. We are not responsible for the privacy practices of those sites. We encourage you to review their privacy policies.</p>
+
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. We will notify you of significant changes via email or a notice on our website. Your continued use of our services after changes constitutes acceptance.</p>
+
+    <h2>11. Contact Us</h2>
+    <p>For any privacy-related questions or requests:</p>
+    <ul>
+      <li>📧 Email: <a href="mailto:info@staydekho.com">info@staydekho.com</a></li>
+      <li>📧 Safety/Data concerns: <a href="mailto:safety@staydekho.com">safety@staydekho.com</a></li>
+      <li>📞 Phone: <a href="tel:918769905983">+91 87699 05983</a></li>
+      <li>📍 Address: Udaipur, Rajasthan, India — 313001</li>
+    </ul>
+  </div>
+</div>
+
+<div id="footer-placeholder"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/components.js"></script>
+<script>
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (btn) btn.classList.add('active');
+    else document.querySelectorAll('.tab-btn')[tab === 'privacy' ? 1 : 0].classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  // URL se tab open karo: terms.html?tab=privacy
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  if (urlTab === 'privacy') switchTab('privacy', null);
+</script>
+</body>
+</html>
