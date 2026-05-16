@@ -501,6 +501,29 @@
         <div id="hero-upload-status" class="upload-status"></div>
         <textarea class="form-ctrl" id="ss-hero-slides" rows="6" placeholder="Paste image URLs here, one per line&#10;— or use Upload from Device above"></textarea>
       </div>
+
+      <!-- ── MOBILE HERO PHOTOS ── -->
+      <div class="form-grp" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--gray-200)">
+        <label class="form-lbl" style="display:flex;align-items:center;gap:8px">
+          📱 Mobile Hero Photos
+          <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">Mobile Only</span>
+          <span style="color:var(--gray-400);font-weight:400;font-size:12px">— portrait-friendly images for phones (one per line)</span>
+        </label>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e;line-height:1.5">
+          ✅ Upload <strong>portrait photos</strong> (tall, 9:16 ratio — like phone photos) — these will ONLY show on mobile screens<br>
+          ✅ If left empty, mobile will use the desktop photos above
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <label class="upload-btn primary" for="hero-mobile-img-input" style="margin:0;cursor:pointer;background:#92400e;border-color:#92400e;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Mobile Photos
+          </label>
+          <input type="file" id="hero-mobile-img-input" accept="image/*" multiple style="display:none" onchange="heroUploadMobileImages(this.files)"/>
+          <span style="color:var(--gray-400);font-size:12px">Best size: 1080×1920px</span>
+        </div>
+        <div id="hero-mobile-upload-status" class="upload-status"></div>
+        <textarea class="form-ctrl" id="ss-hero-slides-mobile" rows="4" placeholder="Mobile photo URLs (one per line)&#10;— or use Upload Mobile Photos above&#10;— leave empty to use desktop photos on mobile too"></textarea>
+      </div>
     </div>
     <div class="card" style="margin-bottom:16px">
       <div class="sec-hdr"><div class="sec-title">Hero Statistics <span style="color:var(--gray-400);font-weight:400;font-size:12px">(blank = auto from DB)</span></div></div>
@@ -1205,7 +1228,8 @@ async function loadToday() {
 async function loadSiteSettings() {
   try {
     const { settings } = await api.getSiteSettings();
-    document.getElementById('ss-hero-eyebrow').value  = settings.hero_eyebrow  || ''; document.getElementById('ss-hero-headline').value = settings.hero_headline || ''; document.getElementById('ss-hero-sub').value      = settings.hero_sub      || ''; document.getElementById('ss-hero-slides').value   = (settings.hero_slides || []).join('\n');
+    document.getElementById('ss-hero-eyebrow').value        = settings.hero_eyebrow  || ''; document.getElementById('ss-hero-headline').value       = settings.hero_headline || ''; document.getElementById('ss-hero-sub').value            = settings.hero_sub      || ''; document.getElementById('ss-hero-slides').value         = (settings.hero_slides || []).join('\n');
+    document.getElementById('ss-hero-slides-mobile').value = (settings.hero_slides_mobile || []).join('\n');
     document.getElementById('ss-stats-villas').value  = settings.stats_villas_override        || ''; document.getElementById('ss-stats-dest').value    = settings.stats_destinations_override || ''; document.getElementById('ss-stats-guests').value  = settings.stats_guests_override        || ''; document.getElementById('ss-stats-rating').value  = settings.stats_rating_override        || '';
     document.getElementById('ss-email').value         = settings.contact_email        || ''; document.getElementById('ss-phone').value         = settings.contact_phone        || ''; document.getElementById('ss-safety-email').value  = settings.contact_safety_email || '';
     document.getElementById('ss-ig').value            = settings.social_instagram || ''; document.getElementById('ss-tw').value            = settings.social_twitter   || ''; document.getElementById('ss-wa').value            = settings.social_whatsapp  || '';
@@ -1213,8 +1237,9 @@ async function loadSiteSettings() {
 }
 async function saveSiteSettings() {
   try {
-    const slides = document.getElementById('ss-hero-slides').value.split('\n').map(s => s.trim()).filter(Boolean);
-    await api.updateSiteSettings({ hero_eyebrow: document.getElementById('ss-hero-eyebrow').value, hero_headline: document.getElementById('ss-hero-headline').value, hero_sub: document.getElementById('ss-hero-sub').value, hero_slides: slides, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
+    const slides       = document.getElementById('ss-hero-slides').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const slidesMobile = document.getElementById('ss-hero-slides-mobile').value.split('\n').map(s => s.trim()).filter(Boolean);
+    await api.updateSiteSettings({ hero_eyebrow: document.getElementById('ss-hero-eyebrow').value, hero_headline: document.getElementById('ss-hero-headline').value, hero_sub: document.getElementById('ss-hero-sub').value, hero_slides: slides, hero_slides_mobile: slidesMobile, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
     alert('Settings saved successfully!');
   } catch (e) { alert('Save failed: ' + e.message); }
 }
@@ -1241,6 +1266,38 @@ async function heroUploadImages(files) {
     ta.value = existing ? existing + '\n' + urls.join('\n') : urls.join('\n');
 
     statusEl.textContent = `${urls.length} photo(s) uploaded — URLs added to the list below.`;
+    statusEl.className   = 'upload-status done';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'upload-status'; }, 5000);
+  } catch (err) {
+    statusEl.textContent = 'Upload failed: ' + err.message;
+    statusEl.className   = 'upload-status error';
+  } finally {
+    if (inp) { inp.disabled = false; inp.value = ''; }
+  }
+}
+
+async function heroUploadMobileImages(files) {
+  const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!imageFiles.length) return;
+
+  const statusEl = document.getElementById('hero-mobile-upload-status');
+  const inp      = document.getElementById('hero-mobile-img-input');
+
+  statusEl.textContent = `Uploading ${imageFiles.length} mobile photo(s)…`;
+  statusEl.className   = 'upload-status uploading';
+  if (inp) inp.disabled = true;
+
+  try {
+    const fd = new FormData();
+    imageFiles.forEach(f => fd.append('images', f));
+    const result = await uploadRequest('POST', '/uploads/images', fd);
+    const urls = result.urls || [];
+
+    const ta       = document.getElementById('ss-hero-slides-mobile');
+    const existing = ta.value.trim();
+    ta.value = existing ? existing + '\n' + urls.join('\n') : urls.join('\n');
+
+    statusEl.textContent = `${urls.length} mobile photo(s) uploaded ✅`;
     statusEl.className   = 'upload-status done';
     setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'upload-status'; }, 5000);
   } catch (err) {

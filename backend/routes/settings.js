@@ -9,6 +9,9 @@ async function getAllSettings() {
   // hero_slides is stored as JSON
   try { out.hero_slides = JSON.parse(out.hero_slides || '[]'); }
   catch { out.hero_slides = []; }
+  // hero_slides_mobile is stored as JSON
+  try { out.hero_slides_mobile = JSON.parse(out.hero_slides_mobile || '[]'); }
+  catch { out.hero_slides_mobile = []; }
   return out;
 }
 
