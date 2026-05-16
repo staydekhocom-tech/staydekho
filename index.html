@@ -1843,10 +1843,14 @@
     syncGuestSuffix();
   }
   function syncGuestSuffix() {
-    const v = parseInt(document.getElementById('search-guests').value) || 1;
-    document.getElementById('guest-suffix').textContent = v === 1 ? 'Guest' : 'Guests';
-    document.getElementById('gctr-minus').disabled = v <= 1;
-    document.getElementById('gctr-plus').disabled  = v >= 50;
+    const inp = document.getElementById('search-guests');
+    const v = parseInt(inp?.value) || 1;
+    const suffix = document.getElementById('guest-suffix');
+    if (suffix) suffix.textContent = v === 1 ? 'Guest' : 'Guests';
+    const minus = document.getElementById('gctr-minus');
+    const plus  = document.getElementById('gctr-plus');
+    if (minus) minus.disabled = v <= 1;
+    if (plus)  plus.disabled  = v >= 50;
   }
   function clampGuests() {
     const inp = document.getElementById('search-guests');
