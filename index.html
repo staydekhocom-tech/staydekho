@@ -387,14 +387,15 @@
       min-width: 0;
       position: relative;
     }
-    /* ── Autocomplete dropdown ── */
+    /* ── Autocomplete dropdown (fixed to viewport, outside .hero overflow) ── */
     .suggest-drop {
       position:fixed;
-      min-width:280px; max-width:340px;
+      min-width:280px; max-width:360px;
+      max-height:320px; overflow-y:auto;
       background:#fff; border-radius:14px;
-      box-shadow:0 12px 40px rgba(0,0,0,.18);
-      border:1px solid rgba(0,0,0,.07); z-index:99999;
-      overflow:hidden; display:none;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+      border:1px solid rgba(0,0,0,.08);
+      z-index:99999; display:none;
     }
     .suggest-drop.open { display:block; }
     .suggest-section {
@@ -1365,7 +1366,6 @@
           onfocus="showHeroSuggestions(this.value)"
           onblur="setTimeout(()=>document.getElementById('hero-suggestions').classList.remove('open'),180)"
           onkeydown="onHeroSuggestKey(event)"/>
-        <div id="hero-suggestions" class="suggest-drop"></div>
       </div>
       <div class="search-divider"></div>
       <div class="search-field">
@@ -1928,23 +1928,18 @@
         </div>`).join('');
     }
     drop.innerHTML = html;
-    // Position fixed dropdown — show ABOVE input since search bar is at bottom of screen
-    const input = document.getElementById('search-dest');
-    const rect  = input.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    drop.style.left   = rect.left + 'px';
-    drop.style.width  = Math.max(280, rect.width) + 'px';
-    drop.style.maxHeight = '320px';
-    drop.style.overflowY = 'auto';
-    if (spaceBelow < 220 || spaceAbove > spaceBelow) {
-      // Show above the input
+    // Position dropdown relative to viewport (fixed, outside overflow:hidden hero)
+    const inp  = document.getElementById('search-dest');
+    const r    = inp.getBoundingClientRect();
+    drop.style.left  = r.left + 'px';
+    drop.style.width = Math.max(280, r.width) + 'px';
+    // Search bar is at bottom of screen — show suggestions ABOVE the input
+    if ((window.innerHeight - r.bottom) < 220) {
       drop.style.top    = '';
-      drop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+      drop.style.bottom = (window.innerHeight - r.top + 6) + 'px';
     } else {
-      // Show below the input
       drop.style.bottom = '';
-      drop.style.top    = (rect.bottom + 6) + 'px';
+      drop.style.top    = (r.bottom + 6) + 'px';
     }
     drop.classList.add('open');
   }
@@ -2214,6 +2209,9 @@
   }
   window.reelClick = reelClick;
 </script>
+
+<!-- Search suggestions dropdown — outside hero so overflow:hidden doesn't clip it -->
+<div id="hero-suggestions" class="suggest-drop"></div>
 
 </body>
 </html>
