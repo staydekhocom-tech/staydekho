@@ -601,6 +601,8 @@
   .cal-cell.cal-range{background:var(--red-light);color:var(--red);border-radius:0;}
   .cal-cell.cal-ci{border-radius:8px 0 0 8px!important;}
   .cal-cell.cal-co{border-radius:0 8px 8px 0!important;}
+  .cal-cell.cal-hover-range{background:var(--red-light);color:var(--red);border-radius:0;}
+  .cal-cell.cal-hover-co{background:rgba(139,23,23,.18);color:var(--red);border-radius:0 8px 8px 0;font-weight:700;}
   .cal-legend{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;}
   .cal-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:.71rem;color:var(--gray-500);}
   .cal-leg-dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
@@ -1359,7 +1361,7 @@ function render(p, host, reviews) {
         <div class="prop-section">
           <h3 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             Availability
-            <span style="font-size:.74rem;font-weight:500;color:var(--gray-400)">Click date to set check-in</span>
+            <span id="avail-cal-hint" style="font-size:.74rem;font-weight:500;color:var(--gray-400)">Select check-in date</span>
           </h3>
           <div class="cal-nav">
             <button class="cal-nav-btn" onclick="calPrev()">‹</button>
@@ -2180,8 +2182,8 @@ function buildCalMonthHtml(year, month) {
     if(dtStr===ci) cls+=' cal-ci';
     if(dtStr===co) cls+=' cal-co';
     if(ci&&co&&dtStr>ci&&dtStr<co) cls+=' cal-range';
-    const ev=(!isPast&&!isBooked)?` onclick="calPickDate('${dtStr}')"`:'' ;
-    cells+=`<div class="${cls}"${ev}>${d}</div>`;
+    const ev=(!isPast&&!isBooked)?` onclick="calPickDate('${dtStr}')" onmouseenter="calHoverDate('${dtStr}')"`:'' ;
+    cells+=`<div class="${cls}" data-date="${dtStr}"${ev}>${d}</div>`;
   }
   return `<div class="cal-month-block">
     <div class="cal-month-title">${MONTH_NAMES[month]} ${year}</div>
@@ -2195,31 +2197,67 @@ function renderAvailCalendar(){
   if(!el) return;
   const ny=CAL_MONTH===11?CAL_YEAR+1:CAL_YEAR, nm2=CAL_MONTH===11?0:CAL_MONTH+1;
   if(nm) nm.textContent=`${MONTH_NAMES[CAL_MONTH].slice(0,3)} – ${MONTH_NAMES[nm2].slice(0,3)} ${ny}`;
-  el.innerHTML=`<div class="cal-two-col">${buildCalMonthHtml(CAL_YEAR,CAL_MONTH)}${buildCalMonthHtml(ny,nm2)}</div>`;
+  el.innerHTML=`<div class="cal-two-col" onmouseleave="calHoverDate(null)">${buildCalMonthHtml(CAL_YEAR,CAL_MONTH)}${buildCalMonthHtml(ny,nm2)}</div>`;
+  updateAvailCalHint();
 }
 function calPrev(){CAL_MONTH--;if(CAL_MONTH<0){CAL_MONTH=11;CAL_YEAR--;}renderAvailCalendar();}
 function calNext(){CAL_MONTH++;if(CAL_MONTH>11){CAL_MONTH=0;CAL_YEAR++;}renderAvailCalendar();}
-let CAL_PICK='start';
+let CAL_PICK='start', CAL_HOVER=null;
 function calPickDate(dateStr){
   const ci=document.getElementById('bk-checkin');
   const co=document.getElementById('bk-checkout');
   if(!ci||!co) return;
   if(CAL_PICK==='start'||(ci.value&&co.value)){
-    ci.value=dateStr;
-    const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+1);
-    co.value=d.toISOString().split('T')[0];
-    CAL_PICK='end';
+    // First click — set CI only, wait for CO
+    ci.value=dateStr; co.value=''; CAL_PICK='end'; CAL_HOVER=null;
   } else {
     if(dateStr<=ci.value){
-      ci.value=dateStr;
-      const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+1);
-      co.value=d.toISOString().split('T')[0];
-    } else { co.value=dateStr; CAL_PICK='start'; }
+      // Clicked same/earlier — restart: new CI, clear CO
+      ci.value=dateStr; co.value=''; CAL_HOVER=null;
+    } else {
+      // Second click after CI — lock in CO
+      co.value=dateStr; CAL_PICK='start'; CAL_HOVER=null;
+    }
   }
   updateBreakdown(); updateCalDisplay(); updateMobStickyBar(); renderAvailCalendar();
 }
+function calHoverDate(dateStr){
+  if(CAL_PICK!=='end') return; // only show preview while picking checkout
+  CAL_HOVER=dateStr;
+  const ci=document.getElementById('bk-checkin')?.value||'';
+  const el=document.getElementById('avail-calendar');
+  if(!el) return;
+  // Clear previous hover highlights without re-rendering
+  el.querySelectorAll('.cal-hover-range,.cal-hover-co').forEach(c=>{
+    c.classList.remove('cal-hover-range','cal-hover-co');
+  });
+  if(!dateStr||dateStr<=ci) return;
+  // Paint hover range preview
+  el.querySelectorAll('.cal-cell[data-date]').forEach(cell=>{
+    const d=cell.dataset.date;
+    if(d>ci&&d<dateStr) cell.classList.add('cal-hover-range');
+    if(d===dateStr) cell.classList.add('cal-hover-co');
+  });
+}
+function updateAvailCalHint(){
+  const hint=document.getElementById('avail-cal-hint');
+  if(!hint) return;
+  const ci=document.getElementById('bk-checkin')?.value||'';
+  const co=document.getElementById('bk-checkout')?.value||'';
+  const fmt=s=>s?new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'';
+  if(ci&&co){
+    hint.textContent=`${fmt(ci)} → ${fmt(co)}`;
+    hint.style.color='var(--red)'; hint.style.fontWeight='600';
+  } else if(ci){
+    hint.textContent='Now select check-out date ↓';
+    hint.style.color='#8B1717'; hint.style.fontWeight='700';
+  } else {
+    hint.textContent='Select check-in date';
+    hint.style.color='var(--gray-400)'; hint.style.fontWeight='500';
+  }
+}
 function initCalendar(){
-  const t=new Date(); CAL_YEAR=t.getFullYear(); CAL_MONTH=t.getMonth(); CAL_PICK='start';
+  const t=new Date(); CAL_YEAR=t.getFullYear(); CAL_MONTH=t.getMonth(); CAL_PICK='start'; CAL_HOVER=null;
   renderAvailCalendar();
 }
 
