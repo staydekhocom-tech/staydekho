@@ -1,35 +1,87 @@
-const _h = window.location.hostname;
-const API = (!_h || _h === 'localhost' || _h === '127.0.0.1')
-  ? 'http://localhost:5000/api'
-  : 'https://api.staydekho.com/api';
+/* ═══════════════════════════════════════════════════════
+   StayDekho API — auto-fallback, session cache, retry
+   Primary  : api.staydekho.com   (custom domain ✅)
+   Fallback : staydekho-production.up.railway.app
+   If primary network-errors → auto-switches to fallback
+   Working URL is remembered for the whole browser session
+═══════════════════════════════════════════════════════ */
+const _h     = window.location.hostname;
+const _local = !_h || _h === 'localhost' || _h === '127.0.0.1';
+
+const _URLS = _local
+  ? ['http://localhost:5000/api']
+  : [
+      'https://api.staydekho.com/api',
+      'https://staydekho-production.up.railway.app/api',
+    ];
+
+// Use last known working URL from this session, else primary
+let API = (_local ? null : sessionStorage.getItem('_sd_api')) || _URLS[0];
 
 function getToken()   { return localStorage.getItem('sd_token'); }
 function getUser()    { return JSON.parse(localStorage.getItem('sd_user') || 'null'); }
 function isAdmin()    { return getUser()?.role === 'admin'; }
 function isLoggedIn() { return !!getToken(); }
 
-async function request(method, path, body) {
+// Internal: try a request on a specific URL index, auto-fallback on network error
+async function _doRequest(method, path, body, urlIdx) {
+  const url = _URLS[urlIdx] || _URLS[0];
   const headers = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${url}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (_netErr) {
+    // Network / DNS error — try next URL in list
+    if (!_local && urlIdx + 1 < _URLS.length) {
+      API = _URLS[urlIdx + 1];
+      sessionStorage.setItem('_sd_api', API);
+      return _doRequest(method, path, body, urlIdx + 1);
+    }
+    throw new Error('Cannot reach server. Please check your internet connection.');
+  }
+
+  // Cache the URL that just worked
+  if (!_local && url !== sessionStorage.getItem('_sd_api')) {
+    API = url;
+    sessionStorage.setItem('_sd_api', url);
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }
 
+async function request(method, path, body) {
+  return _doRequest(method, path, body, _URLS.indexOf(API) >= 0 ? _URLS.indexOf(API) : 0);
+}
+
 async function uploadRequest(method, path, formData) {
+  const url = API;
   const headers = {};
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, { method, headers, body: formData });
+  let res;
+  try {
+    res = await fetch(`${url}${path}`, { method, headers, body: formData });
+  } catch (_netErr) {
+    // Fallback for uploads too
+    const fallback = _URLS.find(u => u !== url);
+    if (!_local && fallback) {
+      API = fallback;
+      sessionStorage.setItem('_sd_api', API);
+      return uploadRequest(method, path, formData);
+    }
+    throw new Error('Cannot reach server. Please check your internet connection.');
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;

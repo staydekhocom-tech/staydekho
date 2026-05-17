@@ -617,7 +617,17 @@
     <div class="form-grp"><label class="form-lbl">Guest Name *</label><input class="form-ctrl" id="rev-guest" placeholder="e.g. Rahul Verma"/></div>
     <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="rev-property"><option value="">Select Property...</option></select></div>
     <div class="form-row"><div class="form-grp"><label class="form-lbl">Rating (1-5)</label><input class="form-ctrl" type="number" id="rev-rating" min="1" max="5" value="5"/></div><div class="form-grp"><label class="form-lbl">Date (Optional)</label><input class="form-ctrl" type="date" id="rev-date"/></div></div>
-    <div class="form-grp"><label class="form-lbl">Guest Photo (Image URL) *</label><input class="form-ctrl" id="rev-image-url" placeholder="e.g. guest1.jpg or https://..."/><div style="font-size: 11.5px; color: var(--gray-400); margin-top: 4px;">This photo appears as the card background on the homepage review section.</div></div>
+    <div class="form-grp">
+      <label class="form-lbl">Guest Photo</label>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <button type="button" class="btn btn-outline" id="rev-img-btn" onclick="document.getElementById('rev-img-file').click()" style="padding:7px 16px;font-size:.82rem">📁 Choose Photo</button>
+        <span id="rev-img-status" style="font-size:.8rem;color:#6b7280">No file chosen</span>
+        <input type="file" id="rev-img-file" accept="image/*" style="display:none" onchange="uploadRevImage(this)"/>
+      </div>
+      <input type="hidden" id="rev-image-url"/>
+      <img id="rev-img-preview" src="" alt="" style="display:none;width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid #e5e7eb;margin-bottom:6px"/>
+      <div style="font-size:11.5px;color:var(--gray-400)">This photo appears as the card background on the homepage review section.</div>
+    </div>
     <div class="form-grp"><label class="form-lbl">Review Text *</label><textarea class="form-ctrl" id="rev-text" rows="4" placeholder="Guest ka experience yahan likhiye..."></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-outline" onclick="closeModal('review-add-modal')">Cancel</button><button class="btn btn-primary" id="rev-save-btn" onclick="saveAdminReview()">Save Review</button></div>
   </div>
@@ -1088,22 +1098,67 @@ function renderReviews() {
 }
 
 function openAddReviewModal() {
-  document.getElementById('rev-guest').value = ''; document.getElementById('rev-rating').value = 5; document.getElementById('rev-text').value = ''; document.getElementById('rev-image-url').value = ''; document.getElementById('rev-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('rev-guest').value = '';
+  document.getElementById('rev-rating').value = 5;
+  document.getElementById('rev-text').value = '';
+  document.getElementById('rev-image-url').value = '';
+  document.getElementById('rev-date').value = new Date().toISOString().split('T')[0];
+  // Reset image upload UI
+  document.getElementById('rev-img-file').value = '';
+  document.getElementById('rev-img-status').textContent = 'No file chosen';
+  const prev = document.getElementById('rev-img-preview');
+  prev.src = ''; prev.style.display = 'none';
   const propSelect = document.getElementById('rev-property');
   propSelect.innerHTML = '<option value="">Select Property...</option>' + properties.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
   showModal('review-add-modal');
 }
 
 async function saveAdminReview() {
-  const guest = document.getElementById('rev-guest').value.trim(); const property = document.getElementById('rev-property').value; const rating = document.getElementById('rev-rating').value; const text = document.getElementById('rev-text').value.trim(); const imageUrl = document.getElementById('rev-image-url').value.trim();
-  if (!guest || !property || !text) { alert('Please fill required fields!'); return; }
-  const btn = document.getElementById('rev-save-btn'); btn.textContent = 'Saving...'; btn.disabled = true;
+  const guest    = document.getElementById('rev-guest').value.trim();
+  const property = document.getElementById('rev-property').value;
+  const rating   = parseFloat(document.getElementById('rev-rating').value) || 5;
+  const text     = document.getElementById('rev-text').value.trim();
+  const imageUrl = document.getElementById('rev-image-url').value.trim();
+  const date     = document.getElementById('rev-date').value;
+  if (!guest || !property || !text) { alert('Please fill all required fields (Name, Property, Review Text)!'); return; }
+  const btn = document.getElementById('rev-save-btn');
+  btn.textContent = 'Saving...'; btn.disabled = true;
   try {
-    const token = localStorage.getItem('sd_token') || ''; const baseUrl = typeof API !== 'undefined' ? API : 'http://localhost:5000/api';
-    const res = await fetch(`${baseUrl}/reviews`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ user_name: guest, property_name: property, rating: parseInt(rating), text: text, image_url: imageUrl }) });
-    if (!res.ok) throw new Error('Failed to save on backend.');
-    closeModal('review-add-modal'); await initAdmin(); alert("Review saved!");
-  } catch (err) { alert('Error: ' + err.message); } finally { btn.textContent = 'Save Review'; btn.disabled = false; }
+    await api.createReview({
+      user_name:     guest,
+      property_name: property,
+      rating:        Math.min(5, Math.max(1, rating)),
+      text:          text,
+      image_url:     imageUrl || '',
+      date:          date || undefined,
+    });
+    closeModal('review-add-modal');
+    await initAdmin();
+    showToast('Review saved successfully!', 'success');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.textContent = 'Save Review'; btn.disabled = false;
+  }
+}
+
+async function uploadRevImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const btn    = document.getElementById('rev-img-btn');
+  const status = document.getElementById('rev-img-status');
+  btn.disabled = true; status.textContent = 'Uploading...';
+  try {
+    const data = await api.uploadImage(file);
+    const url  = data.url || data.secure_url || data.image_url || '';
+    document.getElementById('rev-image-url').value = url;
+    const prev = document.getElementById('rev-img-preview');
+    if (url) { prev.src = url; prev.style.display = 'block'; }
+    status.textContent = file.name;
+  } catch(e) {
+    alert('Image upload failed: ' + e.message);
+    status.textContent = 'Upload failed';
+  } finally { btn.disabled = false; }
 }
 
 async function deleteReview(id) {
