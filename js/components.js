@@ -64,7 +64,7 @@ function buildNav() {
         </button>
       </div>
     </nav>
-    <div class="mobile-nav-drawer" id="mobile-nav-drawer">
+    <div class="mobile-nav-drawer" id="mobile-nav-drawer" style="display:none">
       <button class="mobile-nav-close" onclick="document.getElementById('mobile-nav-drawer').classList.remove('open')" aria-label="Close">✕</button>
       ${drawerLinksHTML}
       ${drawerAuthHTML}

@@ -1847,13 +1847,21 @@ async function initiateBooking() {
     const booking = bookingRes.booking;
     let orderRes = null;
     try { orderRes = await api.createOrder(booking.id); } catch(payErr) {
-      // Razorpay not configured — booking saved, admin will confirm
-      showToast('Booking request sent! Our team will contact you shortly.','success');
+      console.error('[StayDekho] createOrder failed:', payErr);
+      // Razorpay not configured on backend — booking saved, admin confirms manually
+      showToast('Booking received! Our team will contact you to confirm.','success');
       setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${booking.id}`;},1500);
       return;
     }
 
+    // Validate we got everything Razorpay needs
     if (orderRes?.order_id && orderRes?.key_id) {
+      if (typeof window.Razorpay === 'undefined') {
+        // Razorpay script blocked (ad-blocker etc.) — fall back gracefully
+        showToast('Payment gateway unavailable. Try disabling ad-blocker or use a different browser.','error');
+        if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+        return;
+      }
       api.openRazorpay({
         order_id:orderRes.order_id, amount:orderRes.amount,
         currency:orderRes.currency||'INR', key_id:orderRes.key_id,
@@ -1862,7 +1870,8 @@ async function initiateBooking() {
         onError:(err)=>{ showToast(err.message||'Payment cancelled','error'); if(btn){btn.disabled=false;btn.textContent='Reserve Now';} }
       });
     } else {
-      showToast('Booking request sent! Redirecting…','success');
+      // Backend returned a response but without Razorpay order — treat as manual booking
+      showToast('Booking received! Our team will contact you to confirm.','success');
       setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${booking.id}`;},1200);
     }
   } catch(err) {
@@ -2153,10 +2162,15 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 
 function getBookedSet() {
   const s = new Set();
+  // 1. Confirmed bookings
   (BOOKED_RANGES||[]).forEach(r => {
     const ci = new Date(r.checkin+'T00:00:00');
     const co = new Date(r.checkout+'T00:00:00');
     for (let d=new Date(ci); d<co; d.setDate(d.getDate()+1)) s.add(d.toISOString().split('T')[0]);
+  });
+  // 2. Manually blocked dates set by admin in date-price manager
+  Object.entries(DATE_PRICES||{}).forEach(([date, dp]) => {
+    if (dp && dp.blocked) s.add(date);
   });
   return s;
 }
