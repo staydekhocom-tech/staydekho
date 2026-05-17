@@ -2149,15 +2149,33 @@
     ];
     grid.innerHTML = renderCards(samples); // show instantly
 
-    /* Then silently try to replace with real DB data */
+    /* Then silently try to replace with real DB data — with Railway wake-up retry */
     if (typeof api !== 'undefined') {
-      try {
-        const _t = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
-        const r = await _t(api.listProperties({}), 10000);
+      const _t = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+
+      const tryLoad = async () => {
+        const r = await _t(api.listProperties({}), 12000);
         const all = (r.properties || []).slice(0, 6).map(p => ({ ...p, id: p.id || p._id }));
         _heroProps = (r.properties || []).map(p => ({ ...p, id: p.id || p._id }));
         if (all.length) grid.innerHTML = renderCards(all);
-      } catch { /* keep sample cards */ }
+      };
+
+      try {
+        await tryLoad();
+      } catch {
+        // Railway cold start — show banner, retry after 30s
+        const banner = document.getElementById('_wake_banner');
+        if (banner) { banner.style.display = 'flex'; }
+        setTimeout(async () => {
+          try {
+            await tryLoad();
+          } catch { /* keep sample cards */ }
+          finally {
+            const b = document.getElementById('_wake_banner');
+            if (b) b.style.display = 'none';
+          }
+        }, 30000);
+      }
     }
   })();
 
@@ -2322,10 +2340,23 @@
   // Safety fallback — ensure page is always visible even if components.js fails to load
   document.body.classList.add('loaded');
   document.body.style.opacity = '1';
+
+  // Railway wake-up ping — hit a lightweight endpoint immediately so backend wakes up
+  // before the real data requests fire
+  if (typeof api !== 'undefined' && api.getPublicStats) {
+    api.getPublicStats().catch(() => {}); // fire-and-forget, just to wake Railway
+  }
 </script>
 
 <!-- Search suggestions dropdown — outside hero so overflow:hidden doesn't clip it -->
 <div id="hero-suggestions" class="suggest-drop"></div>
+
+<!-- Railway wake-up banner -->
+<div id="_wake_banner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9997;background:#1a0a0a;color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3);white-space:nowrap">
+  <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;animation:_pulse 1s infinite"></span>
+  Server warming up — properties loading in ~30s…
+</div>
+<style>@keyframes _pulse{0%,100%{opacity:1}50%{opacity:.4}}</style>
 
 <!-- Scroll to top button -->
 <button id="scroll-top" aria-label="Scroll to top">↑</button>
