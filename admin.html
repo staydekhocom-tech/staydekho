@@ -559,6 +559,16 @@
       <div class="form-row"><div class="form-grp"><label class="form-lbl">Safety Email</label><input class="form-ctrl" id="ss-safety-email"/></div><div class="form-grp"><label class="form-lbl">Instagram URL</label><input class="form-ctrl" id="ss-ig"/></div></div>
       <div class="form-row"><div class="form-grp"><label class="form-lbl">Twitter / X URL</label><input class="form-ctrl" id="ss-tw"/></div><div class="form-grp"><label class="form-lbl">WhatsApp URL</label><input class="form-ctrl" id="ss-wa"/></div></div>
     </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="sec-hdr"><div class="sec-title">📍 Marquee Destinations</div></div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">Cities shown in the scrolling strip on homepage. Click × to remove, or add a new city below.</p>
+      <div id="dest-tags" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;min-height:36px"></div>
+      <div style="display:flex;gap:8px">
+        <input class="form-ctrl" id="dest-new-input" placeholder="Add city — e.g. Coorg" style="flex:1"
+               onkeydown="if(event.key==='Enter'){addMarqueeDest();event.preventDefault()}"/>
+        <button class="btn btn-primary" onclick="addMarqueeDest()">+ Add</button>
+      </div>
+    </div>
   </div>
 
   <div class="page-view" id="page-ical">
@@ -1256,16 +1266,33 @@ async function loadSiteSettings() {
     document.getElementById('ss-stats-villas').value  = settings.stats_villas_override        || ''; document.getElementById('ss-stats-dest').value    = settings.stats_destinations_override || ''; document.getElementById('ss-stats-guests').value  = settings.stats_guests_override        || ''; document.getElementById('ss-stats-rating').value  = settings.stats_rating_override        || '';
     document.getElementById('ss-email').value         = settings.contact_email        || ''; document.getElementById('ss-phone').value         = settings.contact_phone        || ''; document.getElementById('ss-safety-email').value  = settings.contact_safety_email || '';
     document.getElementById('ss-ig').value            = settings.social_instagram || ''; document.getElementById('ss-tw').value            = settings.social_twitter   || ''; document.getElementById('ss-wa').value            = settings.social_whatsapp  || '';
+    if (settings.marquee_destinations && settings.marquee_destinations.length) { marqueeDestinations = settings.marquee_destinations; } renderDestTags();
   } catch (e) { console.log(e); }
 }
 async function saveSiteSettings() {
   try {
     const slides       = document.getElementById('ss-hero-slides').value.split('\n').map(s => s.trim()).filter(Boolean);
     const slidesMobile = document.getElementById('ss-hero-slides-mobile').value.split('\n').map(s => s.trim()).filter(Boolean);
-    await api.updateSiteSettings({ hero_headline: document.getElementById('ss-hero-headline').value, hero_headline_size: parseFloat(document.getElementById('ss-headline-size').value) || 5, hero_sub: document.getElementById('ss-hero-sub').value, hero_sub_size: parseFloat(document.getElementById('ss-sub-size').value) || 1.1, hero_slides: slides, hero_slides_mobile: slidesMobile, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
+    await api.updateSiteSettings({ hero_headline: document.getElementById('ss-hero-headline').value, hero_headline_size: parseFloat(document.getElementById('ss-headline-size').value) || 5, hero_sub: document.getElementById('ss-hero-sub').value, hero_sub_size: parseFloat(document.getElementById('ss-sub-size').value) || 1.1, hero_slides: slides, hero_slides_mobile: slidesMobile, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value, marquee_destinations: marqueeDestinations });
     alert('Settings saved successfully!');
   } catch (e) { alert('Save failed: ' + e.message); }
 }
+
+// ── MARQUEE DESTINATIONS ──
+let marqueeDestinations = ['Udaipur','Mount Abu','Jawai','Ranthambore','Jodhpur','Jaisalmer','Jaipur','Ajmer','Pushkar','Goa','Manali','Shimla','Lonavala','Mussoorie'];
+function renderDestTags() {
+  const el = document.getElementById('dest-tags'); if (!el) return;
+  el.innerHTML = marqueeDestinations.length
+    ? marqueeDestinations.map((d, i) => `<span style="display:inline-flex;align-items:center;gap:6px;background:#fff1f1;color:#8B1717;border:1px solid #fecaca;border-radius:100px;padding:5px 14px;font-size:13px;font-weight:600">📍 ${d}<button onclick="removeMarqueeDest(${i})" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-size:16px;line-height:1;padding:0;margin-left:2px" title="Remove">×</button></span>`).join('')
+    : `<span style="color:var(--gray-400);font-size:13px">No destinations yet — add one below.</span>`;
+}
+function addMarqueeDest() {
+  const inp = document.getElementById('dest-new-input'); const val = (inp.value || '').trim();
+  if (!val) return;
+  if (marqueeDestinations.map(d=>d.toLowerCase()).includes(val.toLowerCase())) { showAdminToast('Already in the list!','error'); return; }
+  marqueeDestinations.push(val); renderDestTags(); inp.value = ''; showAdminToast(`"${val}" added!`,'success');
+}
+function removeMarqueeDest(i) { const name = marqueeDestinations[i]; marqueeDestinations.splice(i, 1); renderDestTags(); showAdminToast(`"${name}" removed`,'success'); }
 
 async function heroUploadImages(files) {
   const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
