@@ -1816,6 +1816,10 @@
       if (settings.hero_headline) {
         document.getElementById('hero-headline').innerHTML = settings.hero_headline;
       }
+      if (settings.hero_headline_size) {
+        const sz = parseFloat(settings.hero_headline_size);
+        document.getElementById('hero-headline').style.fontSize = `clamp(2rem, ${(sz * 1.2).toFixed(1)}vw, ${sz}rem)`;
+      }
       if (settings.hero_sub) {
         document.getElementById('hero-sub').innerHTML = settings.hero_sub;
       }
