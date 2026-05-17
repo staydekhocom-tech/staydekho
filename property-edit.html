@@ -97,25 +97,14 @@
     .add-row{display:flex;gap:10px;}
     .add-row input{flex:1;}
 
-    .rule-item{
-      display:flex;align-items:center;gap:10px;
-      padding:10px 14px;border:1.5px solid var(--gray-200);
-      border-radius:10px;margin-bottom:10px;background:#fafafa;
+    .rules-textarea{
+      width:100%;min-height:160px;resize:vertical;
+      border:1.5px solid var(--gray-200);border-radius:10px;
+      padding:12px 14px;font-family:inherit;font-size:.88rem;
+      color:var(--gray-800);line-height:1.85;outline:none;
+      background:#fafafa;transition:border-color .2s;
     }
-    .rule-item:hover{background:#fff;border-color:var(--gray-300);}
-    .rule-drag{cursor:grab;color:var(--gray-400);font-size:1.1rem;flex-shrink:0;}
-    .rule-text-input{
-      flex:1;border:1.5px solid var(--gray-200);border-radius:8px;
-      background:#fff;font-family:inherit;
-      font-size:.88rem;color:var(--gray-800);outline:none;
-      padding:7px 12px;transition:border-color .2s;
-    }
-    .rule-text-input:focus{border-color:var(--red);}
-    .rule-del{
-      background:none;border:none;cursor:pointer;color:var(--gray-400);
-      font-size:1.1rem;padding:4px;transition:color .15s;flex-shrink:0;
-    }
-    .rule-del:hover{color:#dc2626;}
+    .rules-textarea:focus{border-color:var(--red);background:#fff;}
 
     .images-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
     .img-item{border:1.5px solid var(--gray-200);border-radius:12px;overflow:hidden;background:#fafafa;}
@@ -413,9 +402,14 @@ function buildForm() {
         <span class="section-title">House Rules</span>
       </div>
       <div class="section-body">
-        <div id="rules-list"></div>
-        <button class="btn btn-outline btn-sm" onclick="addRule()" style="margin-top:4px">+ Add Rule</button>
-        <p class="hint" style="margin-top:8px">Use <code>{checkin}</code> and <code>{checkout}</code> as placeholders for check-in/out times.</p>
+        <textarea id="rules-textarea" class="rules-textarea"
+          placeholder="Har rule ek nayi line mein likhein, jaise:
+✅ Check-in after {checkin} · Check-out before {checkout}
+🚫 No smoking inside the property
+🎉 Parties allowed with prior permission
+🐾 No pets allowed
+🔇 Quiet hours after 11 PM">${(rules||[]).map(r => typeof r === 'string' ? r : (r.text||'')).filter(Boolean).join('\n')}</textarea>
+        <p class="hint" style="margin-top:8px">Ek line = ek rule · <code>{checkin}</code> aur <code>{checkout}</code> automatically replace ho jaate hain</p>
       </div>
     </div>
 
@@ -559,7 +553,6 @@ function buildForm() {
   `;
 
   renderAmenityTags();
-  renderRules();
   renderImages();
   setTimeout(initTypeCheckboxStyles, 0);
 }
@@ -588,28 +581,22 @@ function addAmenity() {
 }
 function removeAmenity(i) { amenities.splice(i,1); renderAmenityTags(); }
 
-function renderRules() {
-  const el = document.getElementById('rules-list');
-  if (!el) return;
-  if (!rules.length) { el.innerHTML = '<p style="color:var(--gray-400);font-size:.82rem">No rules yet.</p>'; return; }
-  el.innerHTML = rules.map((r,i) => `
-    <div class="rule-item" id="rule-${i}">
-      <span class="rule-drag" title="Drag to reorder">⠿</span>
-      <input class="rule-text-input" type="text" value="${esc(r.text||'')}"
-        placeholder="Type a rule — e.g. 🚭 No smoking inside the property"
-        oninput="rules[${i}].text=this.value"/>
-      <button class="rule-del" onclick="removeRule(${i})" title="Delete">×</button>
-    </div>`).join('');
+function getRulesFromTextarea() {
+  const val = document.getElementById('rules-textarea')?.value || '';
+  return val.split('\n').map(s => s.trim()).filter(Boolean).map(text => {
+    // Auto-detect icon from keywords
+    const t = text.toLowerCase();
+    let icon = 'info';
+    if (t.includes('check-in')||t.includes('check in')||t.includes('checkout')||t.includes('check out')||t.includes('{checkin}')||t.includes('{checkout}')) icon = 'clock';
+    else if (t.includes('smok')) icon = 'nosmoking';
+    else if (t.includes('party')||t.includes('event')||t.includes('dj')||t.includes('music')) icon = 'party';
+    else if (t.includes('pet')||t.includes('dog')||t.includes('cat')||t.includes('animal')) icon = 'pet';
+    else if (t.includes('quiet')||t.includes('noise')||t.includes('silent')) icon = 'quiet';
+    else if (t.includes('cancel')||t.includes('refund')) icon = 'cancel';
+    else if (t.includes('key')||t.includes('lock')||t.includes('access')) icon = 'key';
+    return { icon, text };
+  });
 }
-function addRule() {
-  rules.push({ icon: 'info', text: '' });
-  renderRules();
-  setTimeout(() => {
-    const inputs = document.querySelectorAll('.rule-text-input');
-    if (inputs.length) inputs[inputs.length-1].focus();
-  }, 50);
-}
-function removeRule(i) { rules.splice(i,1); renderRules(); }
 
 const MAX_PHOTOS = 40;
 
@@ -883,7 +870,7 @@ async function saveAll() {
     checkout_time: document.getElementById('f-checkout').value.trim(),
     status:        currentStatus,
     amenities:     amenities.join(','),
-    rules,
+    rules:         getRulesFromTextarea(),
     images,
     ...(mapEl   ? { map_url: mapEl.value.trim() } : {}),
     ...(addonEl ? { addons:  parseAddonsTextarea(addonEl.value) } : {}),
