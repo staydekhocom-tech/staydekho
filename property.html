@@ -456,6 +456,50 @@
   .mob-sheet-total { font-size: .85rem; color: var(--gray-500); margin-bottom: 18px; text-align: center; }
   .mob-sheet-total strong { color: var(--dark); }
 
+  /* ── Calendar Picker ── */
+  .cal-overlay { position:fixed;inset:0;z-index:10090;background:rgba(0,0,0,.45); }
+  .cal-popup {
+    position:fixed;z-index:10091;background:#fff;border-radius:20px;
+    box-shadow:0 12px 48px rgba(0,0,0,.28);padding:22px 20px 16px;
+    width:340px;left:50%;top:50%;transform:translate(-50%,-50%);
+    user-select:none;
+  }
+  .cal-nav { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
+  .cal-nav-btn {
+    background:none;border:1.5px solid #e5e7eb;border-radius:8px;
+    width:34px;height:34px;cursor:pointer;font-size:17px;display:flex;
+    align-items:center;justify-content:center;color:#374151;transition:background .15s;
+  }
+  .cal-nav-btn:hover { background:#f3f4f6; }
+  .cal-month-title { font-weight:800;font-size:1rem;color:#111; }
+  .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px; }
+  .cal-dow { text-align:center;font-size:.6rem;font-weight:700;color:#9ca3af;padding:4px 0;text-transform:uppercase; }
+  .cal-day {
+    aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    border-radius:50%;font-size:.82rem;cursor:pointer;transition:background .1s;
+    font-weight:500;color:#111;position:relative;
+  }
+  .cal-day.other-m { visibility:hidden;pointer-events:none; }
+  .cal-day.disabled { opacity:.3;cursor:not-allowed;pointer-events:none; }
+  .cal-day.booked-d { background:#fee2e2;color:#b91c1c;cursor:not-allowed;pointer-events:none;text-decoration:line-through;opacity:.6; }
+  .cal-day:not(.disabled):not(.booked-d):not(.other-m):not(.sel-ci):not(.sel-co):hover { background:#f3f4f6; }
+  .cal-day.in-range { background:#fff1f1;border-radius:0; }
+  .cal-day.range-edge-l { border-radius:50% 0 0 50% !important; }
+  .cal-day.range-edge-r { border-radius:0 50% 50% 0 !important; }
+  .cal-day.sel-ci,.cal-day.sel-co { background:#8B1717 !important;color:#fff !important;border-radius:50% !important;font-weight:700; }
+  .cal-day.today-d:not(.sel-ci):not(.sel-co) { font-weight:800;color:#8B1717; }
+  .cal-hint { text-align:center;font-size:.75rem;color:#9ca3af;margin-bottom:12px;min-height:18px; }
+  .cal-actions { display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #f3f4f6; }
+  .cal-clear-btn { background:none;border:none;cursor:pointer;font-family:inherit;font-size:.8rem;color:#6b7280;text-decoration:underline; }
+  .cal-done-btn { background:#8B1717;color:#fff;border:none;border-radius:10px;padding:9px 24px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit; }
+  /* date display boxes */
+  .bk-date-display { font-size:.88rem;color:#374151;font-weight:500;min-height:20px; }
+  .bk-date-display.empty { color:#9ca3af; }
+  .bk-date-field.cal-active { background:#fff9f9;outline:2px solid #8B1717;outline-offset:-2px;border-radius:inherit; }
+  .mob-date-display { font-size:.88rem;color:#374151;font-weight:500; }
+  .mob-date-display.empty { color:#9ca3af; }
+  @media(max-width:480px){ .cal-popup{width:calc(100vw - 32px);} }
+
   /* ═══════════════════════════════════════════
      RULES LIST + BREADCRUMB
   ═══════════════════════════════════════════ */
@@ -616,13 +660,15 @@
   <span class="mob-sheet-handle"></span>
   <div class="mob-sheet-title">Select Dates &amp; Guests</div>
   <div class="mob-sheet-dates">
-    <div class="mob-date-field">
-      <label for="mob-checkin">Check-in</label>
-      <input type="date" id="mob-checkin" onchange="onMobDateChange()"/>
+    <div class="mob-date-field" onclick="openCalPopup('ci','mobile')" style="cursor:pointer">
+      <label style="cursor:pointer">Check-in</label>
+      <input type="date" id="mob-checkin" style="display:none"/>
+      <div class="mob-date-display empty" id="mob-cal-ci-display">Select date</div>
     </div>
-    <div class="mob-date-field">
-      <label for="mob-checkout">Check-out</label>
-      <input type="date" id="mob-checkout" onchange="onMobDateChange()"/>
+    <div class="mob-date-field" onclick="openCalPopup('co','mobile')" style="cursor:pointer">
+      <label style="cursor:pointer">Check-out</label>
+      <input type="date" id="mob-checkout" style="display:none"/>
+      <div class="mob-date-display empty" id="mob-cal-co-display">Select date</div>
     </div>
   </div>
   <div class="mob-guests-row">
@@ -638,6 +684,22 @@
   </div>
   <div class="mob-sheet-total" id="mob-sheet-total"></div>
   <button class="btn btn-primary btn-full btn-lg" id="mob-reserve-btn" onclick="confirmMobBooking()">Reserve Now</button>
+</div>
+
+<!-- ── Calendar Picker Popup ─────────────────────── -->
+<div class="cal-overlay" id="cal-overlay" onclick="closeCalPopup()" style="display:none"></div>
+<div class="cal-popup" id="cal-popup" style="display:none">
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="calPopupPrev();event.stopPropagation()">‹</button>
+    <span class="cal-month-title" id="cal-popup-title">—</span>
+    <button class="cal-nav-btn" onclick="calPopupNext();event.stopPropagation()">›</button>
+  </div>
+  <div class="cal-grid" id="cal-popup-grid"></div>
+  <div class="cal-hint" id="cal-popup-hint">Select check-in date</div>
+  <div class="cal-actions">
+    <button class="cal-clear-btn" onclick="clearCalDates()">Clear dates</button>
+    <button class="cal-done-btn" onclick="applyCalDates()">Done</button>
+  </div>
 </div>
 
 <!-- ── Toast ────────────────────────────────────── -->
@@ -707,6 +769,15 @@ let REVIEW_RATING = 5;
 let BOOKED_RANGES = [];   // [{checkin, checkout}]
 let DATE_PRICES   = {};   // { 'YYYY-MM-DD': { price, blocked } } — loaded from API
 let CG_ACTIVE_CAT = 'All';
+
+/* ── Visual Calendar Picker state ─────────────────── */
+let CPOP_YEAR  = new Date().getFullYear();
+let CPOP_MONTH = new Date().getMonth();
+let CPOP_CI    = null;   // 'YYYY-MM-DD'
+let CPOP_CO    = null;   // 'YYYY-MM-DD'
+let CPOP_HOVER = null;   // date string while hovering
+let CPOP_STAGE = 'ci';   // 'ci' | 'co'
+let CPOP_SRC   = 'desktop'; // 'desktop' | 'mobile'
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80';
 
@@ -784,6 +855,215 @@ function amenityIcon(name) {
   if (n.includes('bath')||n.includes('jacuzzi')) return AMENITY_ICONS.jacuzzi;
   if (n.includes('ev')||n.includes('electric')) return AMENITY_ICONS.ev;
   return AMENITY_ICONS.default;
+}
+
+/* ═══════════════════════════════════════════════════
+   VISUAL CALENDAR POPUP
+═══════════════════════════════════════════════════ */
+function openCalPopup(stage, src) {
+  CPOP_SRC   = src   || 'desktop';
+  CPOP_HOVER = null;
+  // Read current values from the right source
+  const ciId = CPOP_SRC === 'mobile' ? 'mob-checkin' : 'bk-checkin';
+  const coId = CPOP_SRC === 'mobile' ? 'mob-checkout' : 'bk-checkout';
+  CPOP_CI = document.getElementById(ciId)?.value || null;
+  CPOP_CO = document.getElementById(coId)?.value || null;
+
+  if (stage === 'co' && CPOP_CI) {
+    CPOP_STAGE = 'co';
+    CPOP_CO    = null; // user wants to re-pick checkout
+  } else {
+    CPOP_STAGE = 'ci';
+    CPOP_CO    = null;
+  }
+
+  // Navigate to the month that contains CI (or today)
+  const d = CPOP_CI ? new Date(CPOP_CI + 'T00:00:00') : new Date();
+  CPOP_YEAR  = d.getFullYear();
+  CPOP_MONTH = d.getMonth();
+
+  renderCalPopup();
+  document.getElementById('cal-overlay').style.display = '';
+  document.getElementById('cal-popup').style.display   = '';
+  // Don't fight the mob-sheet's own overflow lock
+  if (CPOP_SRC !== 'mobile') document.body.style.overflow = 'hidden';
+}
+
+function closeCalPopup() {
+  document.getElementById('cal-overlay').style.display = 'none';
+  document.getElementById('cal-popup').style.display   = 'none';
+  if (CPOP_SRC !== 'mobile') document.body.style.overflow = '';
+  CPOP_HOVER = null;
+  // Remove active highlight
+  document.getElementById('bk-ci-field')?.classList.remove('cal-active');
+  document.getElementById('bk-co-field')?.classList.remove('cal-active');
+}
+
+function calPopupPrev() {
+  CPOP_MONTH--;
+  if (CPOP_MONTH < 0) { CPOP_MONTH = 11; CPOP_YEAR--; }
+  renderCalPopup();
+}
+function calPopupNext() {
+  CPOP_MONTH++;
+  if (CPOP_MONTH > 11) { CPOP_MONTH = 0; CPOP_YEAR++; }
+  renderCalPopup();
+}
+
+function renderCalPopup() {
+  const titleEl = document.getElementById('cal-popup-title');
+  const gridEl  = document.getElementById('cal-popup-grid');
+  const hintEl  = document.getElementById('cal-popup-hint');
+  if (!titleEl || !gridEl) return;
+
+  titleEl.textContent = `${MONTH_NAMES[CPOP_MONTH]} ${CPOP_YEAR}`;
+
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().split('T')[0];
+  const booked   = getBookedSet();
+  const startDow = new Date(CPOP_YEAR, CPOP_MONTH, 1).getDay();
+  const lastDate = new Date(CPOP_YEAR, CPOP_MONTH + 1, 0).getDate();
+
+  // The "end" of range to highlight — either confirmed CO or hovered date
+  const rangeEnd = (CPOP_STAGE === 'co' && CPOP_HOVER && CPOP_CI && CPOP_HOVER > CPOP_CI)
+    ? CPOP_HOVER
+    : CPOP_CO;
+
+  let html = '';
+  // Day-of-week headers
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
+    html += `<div class="cal-dow">${d}</div>`;
+  });
+  // Empty offset cells
+  for (let i = 0; i < startDow; i++) html += `<div class="cal-day other-m"></div>`;
+  // Day cells
+  for (let d = 1; d <= lastDate; d++) {
+    const ds  = `${CPOP_YEAR}-${String(CPOP_MONTH+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt  = new Date(ds + 'T00:00:00');
+    const past   = dt < today;
+    const book   = booked.has(ds);
+    const isCI   = ds === CPOP_CI;
+    const isCO   = ds === (CPOP_CO || (CPOP_STAGE==='co'&&CPOP_HOVER===ds?CPOP_HOVER:null));
+    const inRange= CPOP_CI && rangeEnd && ds > CPOP_CI && ds < rangeEnd;
+    const edgeL  = isCI && rangeEnd && CPOP_CI < rangeEnd;
+    const edgeR  = rangeEnd && ds === rangeEnd && CPOP_CI && CPOP_CI < rangeEnd;
+
+    let cls = 'cal-day';
+    if (past)  cls += ' disabled';
+    else if (book) cls += ' booked-d';
+    if (ds === todayStr && !isCI && !isCO) cls += ' today-d';
+    if (isCI)    cls += ' sel-ci';
+    if (isCO && ds !== CPOP_CI)    cls += ' sel-co';
+    if (inRange) cls += ' in-range';
+    if (edgeL)   cls += ' range-edge-l';
+    if (edgeR && !isCO)   cls += ' range-edge-r';
+
+    const ev = (!past && !book)
+      ? ` onclick="onCalDayClick('${ds}')" onmouseenter="onCalDayHover('${ds}')" onmouseleave="onCalDayHover(null)"`
+      : '';
+    html += `<div class="${cls}"${ev}>${d}</div>`;
+  }
+  gridEl.innerHTML = html;
+
+  // Hint text
+  if (hintEl) {
+    if (!CPOP_CI)                          hintEl.textContent = 'Select check-in date';
+    else if (CPOP_STAGE === 'co' && !CPOP_CO) hintEl.textContent = 'Now select check-out date';
+    else if (CPOP_CI && CPOP_CO) {
+      const n = calcNights(CPOP_CI, CPOP_CO);
+      hintEl.textContent = n > 0 ? `${n} night${n>1?'s':''} selected` : 'Select check-out date';
+    } else hintEl.textContent = '';
+  }
+
+  // Active-field highlight on booking widget
+  document.getElementById('bk-ci-field')?.classList.toggle('cal-active', CPOP_STAGE === 'ci');
+  document.getElementById('bk-co-field')?.classList.toggle('cal-active', CPOP_STAGE === 'co');
+}
+
+function onCalDayClick(ds) {
+  if (CPOP_STAGE === 'ci' || (CPOP_CI && CPOP_CO)) {
+    // Start fresh — set CI, wait for CO
+    CPOP_CI    = ds;
+    CPOP_CO    = null;
+    CPOP_STAGE = 'co';
+    CPOP_HOVER = null;
+  } else {
+    // Picking CO
+    if (ds <= CPOP_CI) {
+      // Clicked ≤ CI: restart from this date
+      CPOP_CI    = ds;
+      CPOP_CO    = null;
+      CPOP_STAGE = 'co';
+    } else {
+      CPOP_CO    = ds;
+      CPOP_STAGE = 'ci'; // selection complete
+    }
+  }
+  renderCalPopup();
+  // Auto-apply once both dates are chosen
+  if (CPOP_CI && CPOP_CO) setTimeout(applyCalDates, 180);
+}
+
+function onCalDayHover(ds) {
+  CPOP_HOVER = ds;
+  if (CPOP_STAGE === 'co' && CPOP_CI) renderCalPopup();
+}
+
+function applyCalDates() {
+  if (!CPOP_CI) { closeCalPopup(); return; }
+  if (!CPOP_CO) {
+    // Only CI picked — auto set CO = CI + 1 night
+    const d = new Date(CPOP_CI + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    CPOP_CO = d.toISOString().split('T')[0];
+  }
+  // Write to ALL date inputs (desktop + mobile)
+  ['bk-checkin','mob-checkin'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = CPOP_CI;
+  });
+  ['bk-checkout','mob-checkout'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = CPOP_CO;
+  });
+  updateCalDisplay();
+  closeCalPopup();
+  updateBreakdown();
+  updateMobTotal();
+  updateMobStickyBar();
+  renderAvailCalendar(); // keep availability calendar in sync
+}
+
+function clearCalDates() {
+  CPOP_CI = CPOP_CO = null;
+  CPOP_STAGE = 'ci';
+  CPOP_HOVER = null;
+  ['bk-checkin','mob-checkin','bk-checkout','mob-checkout'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  updateCalDisplay();
+  renderCalPopup();
+  updateBreakdown();
+  renderAvailCalendar();
+}
+
+function updateCalDisplay() {
+  const fmtDate = s => {
+    if (!s) return null;
+    return new Date(s + 'T00:00:00').toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+  };
+  // Desktop fields
+  const ciV = document.getElementById('bk-checkin')?.value;
+  const coV = document.getElementById('bk-checkout')?.value;
+  const ciD = document.getElementById('cal-ci-display');
+  const coD = document.getElementById('cal-co-display');
+  if (ciD) { ciD.textContent = ciV ? fmtDate(ciV) : 'Select date'; ciD.classList.toggle('empty',!ciV); }
+  if (coD) { coD.textContent = coV ? fmtDate(coV) : 'Select date'; coD.classList.toggle('empty',!coV); }
+  // Mobile fields
+  const mciV = document.getElementById('mob-checkin')?.value;
+  const mcoV = document.getElementById('mob-checkout')?.value;
+  const mciD = document.getElementById('mob-cal-ci-display');
+  const mcoD = document.getElementById('mob-cal-co-display');
+  if (mciD) { mciD.textContent = mciV ? fmtDate(mciV) : 'Select date'; mciD.classList.toggle('empty',!mciV); }
+  if (mcoD) { mcoD.textContent = mcoV ? fmtDate(mcoV) : 'Select date'; mcoD.classList.toggle('empty',!mcoV); }
 }
 
 /* ── Toast ───────────────────────────────────────── */
@@ -1110,13 +1390,15 @@ function render(p, host, reviews) {
             ${p.badge?`<span style="color:var(--gray-300)">·</span><span style="color:var(--red);font-weight:700">${esc(p.badge)}</span>`:''}
           </div>
           <div class="bk-dates">
-            <div class="bk-date-field">
-              <label for="bk-checkin">Check-in</label>
-              <input type="date" id="bk-checkin" onchange="updateBreakdown()"/>
+            <div class="bk-date-field" id="bk-ci-field" onclick="openCalPopup('ci','desktop')" style="cursor:pointer">
+              <label style="cursor:pointer">Check-in</label>
+              <input type="date" id="bk-checkin" style="display:none"/>
+              <div class="bk-date-display empty" id="cal-ci-display">Select date</div>
             </div>
-            <div class="bk-date-field">
-              <label for="bk-checkout">Check-out</label>
-              <input type="date" id="bk-checkout" onchange="updateBreakdown()"/>
+            <div class="bk-date-field" id="bk-co-field" onclick="openCalPopup('co','desktop')" style="cursor:pointer">
+              <label style="cursor:pointer">Check-out</label>
+              <input type="date" id="bk-checkout" style="display:none"/>
+              <div class="bk-date-display empty" id="cal-co-display">Select date</div>
             </div>
           </div>
           <div class="bk-guests">
@@ -1304,9 +1586,11 @@ function initDates() {
     if (co && co.value <= ci.value) {
       co.value = minCoStr; // auto-set to minimum (1 night)
     }
+    updateCalDisplay();
     updateBreakdown();
   });
 
+  updateCalDisplay();
   updateBreakdown();
   updateMobTotal();
 }
@@ -1404,6 +1688,7 @@ function openMobSheet() {
   const co=document.getElementById('bk-checkout')?.value;
   const mci=document.getElementById('mob-checkin'), mco=document.getElementById('mob-checkout');
   if(mci&&ci) mci.value=ci; if(mco&&co) mco.value=co;
+  updateCalDisplay();
   const mgd=document.getElementById('mob-guest-display'), mgn=document.getElementById('mob-guest-num');
   MOB_GUESTS=GUESTS;
   if(mgd) mgd.textContent=`${MOB_GUESTS} guest${MOB_GUESTS!==1?'s':''}`;
@@ -1854,7 +2139,7 @@ function calPickDate(dateStr){
       co.value=d.toISOString().split('T')[0];
     } else { co.value=dateStr; CAL_PICK='start'; }
   }
-  updateBreakdown(); updateMobStickyBar(); renderAvailCalendar();
+  updateBreakdown(); updateCalDisplay(); updateMobStickyBar(); renderAvailCalendar();
 }
 function initCalendar(){
   const t=new Date(); CAL_YEAR=t.getFullYear(); CAL_MONTH=t.getMonth(); CAL_PICK='start';
