@@ -456,27 +456,40 @@
   .mob-sheet-total { font-size: .85rem; color: var(--gray-500); margin-bottom: 18px; text-align: center; }
   .mob-sheet-total strong { color: var(--dark); }
 
-  /* ── Calendar Picker ── */
+  /* ── Calendar Picker — Airbnb-style two-month range ── */
   .cal-overlay { position:fixed;inset:0;z-index:10090;background:rgba(0,0,0,.45); }
   .cal-popup {
     position:fixed;z-index:10091;background:#fff;border-radius:20px;
-    box-shadow:0 12px 48px rgba(0,0,0,.28);padding:22px 20px 16px;
-    width:340px;left:50%;top:50%;transform:translate(-50%,-50%);
-    user-select:none;
+    box-shadow:0 12px 48px rgba(0,0,0,.28);padding:0;
+    width:min(680px,calc(100vw - 20px));
+    left:50%;top:50%;transform:translate(-50%,-50%);
+    user-select:none;overflow:hidden;max-height:92vh;overflow-y:auto;
   }
-  .cal-nav { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
-  .cal-nav-btn {
-    background:none;border:1.5px solid #e5e7eb;border-radius:8px;
-    width:34px;height:34px;cursor:pointer;font-size:17px;display:flex;
-    align-items:center;justify-content:center;color:#374151;transition:background .15s;
+  /* Step pills — show which date is being picked */
+  .cal-step-hdr { display:flex;gap:10px;padding:16px 20px 14px;border-bottom:1.5px solid #f3f4f6; }
+  .cal-step-pill {
+    flex:1;border:2px solid #e5e7eb;border-radius:12px;padding:10px 14px;
+    cursor:pointer;background:#fff;transition:border-color .15s,background .15s;
   }
+  .cal-step-pill.active { border-color:#8B1717;background:#fff9f9; }
+  .cal-step-pill > label { display:block;font-size:.6rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;cursor:inherit; }
+  .cal-pill-val { font-size:.88rem;font-weight:600;color:#111; }
+  .cal-pill-val.empty { color:#9ca3af;font-weight:400; }
+  /* Month nav */
+  .cal-nav { display:flex;align-items:center;justify-content:space-between;padding:12px 20px 4px; }
+  .cal-nav-btn { background:none;border:1.5px solid #e5e7eb;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;color:#374151;transition:background .15s;flex-shrink:0; }
   .cal-nav-btn:hover { background:#f3f4f6; }
-  .cal-month-title { font-weight:800;font-size:1rem;color:#111; }
-  .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px; }
-  .cal-dow { text-align:center;font-size:.6rem;font-weight:700;color:#9ca3af;padding:4px 0;text-transform:uppercase; }
+  /* Two months side by side */
+  .cal-months-row { display:flex;gap:0;padding:0 16px 12px; }
+  .cpop-month-col { flex:1;min-width:0;padding:0 6px; }
+  .cpop-month-lbl { font-weight:800;font-size:.82rem;color:#111;text-align:center;padding:6px 0 10px; }
+  .cpop-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:2px; }
+  .cpop-dow { text-align:center;font-size:.56rem;font-weight:700;color:#9ca3af;padding:3px 0;text-transform:uppercase; }
+  .cal-months-sep { width:1px;background:#f3f4f6;flex-shrink:0;margin:0 4px; }
+  /* Day cells */
   .cal-day {
     aspect-ratio:1;display:flex;align-items:center;justify-content:center;
-    border-radius:50%;font-size:.82rem;cursor:pointer;transition:background .1s;
+    border-radius:50%;font-size:.76rem;cursor:pointer;transition:background .08s;
     font-weight:500;color:#111;position:relative;
   }
   .cal-day.other-m { visibility:hidden;pointer-events:none; }
@@ -488,17 +501,22 @@
   .cal-day.range-edge-r { border-radius:0 50% 50% 0 !important; }
   .cal-day.sel-ci,.cal-day.sel-co { background:#8B1717 !important;color:#fff !important;border-radius:50% !important;font-weight:700; }
   .cal-day.today-d:not(.sel-ci):not(.sel-co) { font-weight:800;color:#8B1717; }
-  .cal-hint { text-align:center;font-size:.75rem;color:#9ca3af;margin-bottom:12px;min-height:18px; }
-  .cal-actions { display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #f3f4f6; }
-  .cal-clear-btn { background:none;border:none;cursor:pointer;font-family:inherit;font-size:.8rem;color:#6b7280;text-decoration:underline; }
+  /* Hint & actions */
+  .cal-hint { text-align:center;font-size:.75rem;color:#6b7280;padding:4px 20px 10px;min-height:20px;font-weight:500; }
+  .cal-actions { display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid #f3f4f6; }
+  .cal-clear-btn { background:none;border:none;cursor:pointer;font-family:inherit;font-size:.8rem;color:#6b7280;text-decoration:underline;padding:4px; }
   .cal-done-btn { background:#8B1717;color:#fff;border:none;border-radius:10px;padding:9px 24px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit; }
-  /* date display boxes */
+  /* Date display in booking widget */
   .bk-date-display { font-size:.88rem;color:#374151;font-weight:500;min-height:20px; }
   .bk-date-display.empty { color:#9ca3af; }
   .bk-date-field.cal-active { background:#fff9f9;outline:2px solid #8B1717;outline-offset:-2px;border-radius:inherit; }
   .mob-date-display { font-size:.88rem;color:#374151;font-weight:500; }
   .mob-date-display.empty { color:#9ca3af; }
-  @media(max-width:480px){ .cal-popup{width:calc(100vw - 32px);} }
+  /* Mobile: single month only */
+  @media(max-width:560px){
+    .cal-popup { width:calc(100vw - 16px); }
+    .cpop-month-col:last-child,.cal-months-sep { display:none; }
+  }
 
   /* ═══════════════════════════════════════════
      RULES LIST + BREADCRUMB
@@ -689,12 +707,35 @@
 <!-- ── Calendar Picker Popup ─────────────────────── -->
 <div class="cal-overlay" id="cal-overlay" onclick="closeCalPopup()" style="display:none"></div>
 <div class="cal-popup" id="cal-popup" style="display:none">
+  <!-- Step pills: shows which date you're picking & current selection -->
+  <div class="cal-step-hdr">
+    <div class="cal-step-pill active" id="cal-pill-ci" onclick="switchCalStage('ci')">
+      <label>Check-in</label>
+      <div class="cal-pill-val empty" id="cal-pill-ci-val">Select date</div>
+    </div>
+    <div class="cal-step-pill" id="cal-pill-co" onclick="switchCalStage('co')">
+      <label>Check-out</label>
+      <div class="cal-pill-val empty" id="cal-pill-co-val">Select date</div>
+    </div>
+  </div>
+  <!-- Month navigation -->
   <div class="cal-nav">
     <button class="cal-nav-btn" onclick="calPopupPrev();event.stopPropagation()">‹</button>
-    <span class="cal-month-title" id="cal-popup-title">—</span>
+    <span></span>
     <button class="cal-nav-btn" onclick="calPopupNext();event.stopPropagation()">›</button>
   </div>
-  <div class="cal-grid" id="cal-popup-grid"></div>
+  <!-- Two month grids side by side -->
+  <div class="cal-months-row">
+    <div class="cpop-month-col">
+      <div class="cpop-month-lbl" id="cal-popup-title-1">—</div>
+      <div class="cpop-grid" id="cal-popup-grid-1"></div>
+    </div>
+    <div class="cal-months-sep"></div>
+    <div class="cpop-month-col">
+      <div class="cpop-month-lbl" id="cal-popup-title-2">—</div>
+      <div class="cpop-grid" id="cal-popup-grid-2"></div>
+    </div>
+  </div>
   <div class="cal-hint" id="cal-popup-hint">Select check-in date</div>
   <div class="cal-actions">
     <button class="cal-clear-btn" onclick="clearCalDates()">Clear dates</button>
@@ -858,26 +899,30 @@ function amenityIcon(name) {
 }
 
 /* ═══════════════════════════════════════════════════
-   VISUAL CALENDAR POPUP
+   VISUAL CALENDAR POPUP — Airbnb-style two-month range
 ═══════════════════════════════════════════════════ */
 function openCalPopup(stage, src) {
-  CPOP_SRC   = src   || 'desktop';
+  CPOP_SRC   = src || 'desktop';
   CPOP_HOVER = null;
-  // Read current values from the right source
+  // Read values from inputs (CI is written immediately on first date click)
   const ciId = CPOP_SRC === 'mobile' ? 'mob-checkin' : 'bk-checkin';
   const coId = CPOP_SRC === 'mobile' ? 'mob-checkout' : 'bk-checkout';
-  CPOP_CI = document.getElementById(ciId)?.value || null;
-  CPOP_CO = document.getElementById(coId)?.value || null;
+  const ciFromInput = document.getElementById(ciId)?.value || null;
+  const coFromInput = document.getElementById(coId)?.value || null;
 
-  if (stage === 'co' && CPOP_CI) {
-    CPOP_STAGE = 'co';
-    CPOP_CO    = null; // user wants to re-pick checkout
-  } else {
-    CPOP_STAGE = 'ci';
+  if (stage === 'co' && (ciFromInput || CPOP_CI)) {
+    // Re-picking checkout — keep CI from input or memory
+    CPOP_CI    = ciFromInput || CPOP_CI;
     CPOP_CO    = null;
+    CPOP_STAGE = 'co';
+  } else {
+    // Fresh start
+    CPOP_CI    = null;
+    CPOP_CO    = null;
+    CPOP_STAGE = 'ci';
   }
 
-  // Navigate to the month that contains CI (or today)
+  // Navigate to the month containing CI (or today)
   const d = CPOP_CI ? new Date(CPOP_CI + 'T00:00:00') : new Date();
   CPOP_YEAR  = d.getFullYear();
   CPOP_MONTH = d.getMonth();
@@ -885,7 +930,6 @@ function openCalPopup(stage, src) {
   renderCalPopup();
   document.getElementById('cal-overlay').style.display = '';
   document.getElementById('cal-popup').style.display   = '';
-  // Don't fight the mob-sheet's own overflow lock
   if (CPOP_SRC !== 'mobile') document.body.style.overflow = 'hidden';
 }
 
@@ -894,7 +938,6 @@ function closeCalPopup() {
   document.getElementById('cal-popup').style.display   = 'none';
   if (CPOP_SRC !== 'mobile') document.body.style.overflow = '';
   CPOP_HOVER = null;
-  // Remove active highlight
   document.getElementById('bk-ci-field')?.classList.remove('cal-active');
   document.getElementById('bk-co-field')?.classList.remove('cal-active');
 }
@@ -910,35 +953,29 @@ function calPopupNext() {
   renderCalPopup();
 }
 
-function renderCalPopup() {
-  const titleEl = document.getElementById('cal-popup-title');
-  const gridEl  = document.getElementById('cal-popup-grid');
-  const hintEl  = document.getElementById('cal-popup-hint');
-  if (!titleEl || !gridEl) return;
+/* Switch which date you're picking by clicking a step pill */
+function switchCalStage(stage) {
+  if (stage === 'co' && !CPOP_CI) return; // need CI first
+  CPOP_STAGE = stage;
+  if (stage === 'ci') { CPOP_CI = null; CPOP_CO = null; }
+  renderCalPopup();
+}
 
-  titleEl.textContent = `${MONTH_NAMES[CPOP_MONTH]} ${CPOP_YEAR}`;
-
+/* Build one month's grid HTML for the popup */
+function buildCalPopupMonthHtml(year, month) {
   const today    = new Date(); today.setHours(0,0,0,0);
   const todayStr = today.toISOString().split('T')[0];
   const booked   = getBookedSet();
-  const startDow = new Date(CPOP_YEAR, CPOP_MONTH, 1).getDay();
-  const lastDate = new Date(CPOP_YEAR, CPOP_MONTH + 1, 0).getDate();
-
-  // The "end" of range to highlight — either confirmed CO or hovered date
+  const startDow = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
   const rangeEnd = (CPOP_STAGE === 'co' && CPOP_HOVER && CPOP_CI && CPOP_HOVER > CPOP_CI)
-    ? CPOP_HOVER
-    : CPOP_CO;
+    ? CPOP_HOVER : CPOP_CO;
 
-  let html = '';
-  // Day-of-week headers
-  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
-    html += `<div class="cal-dow">${d}</div>`;
-  });
-  // Empty offset cells
+  let html = ['S','M','T','W','T','F','S'].map(d => `<div class="cpop-dow">${d}</div>`).join('');
   for (let i = 0; i < startDow; i++) html += `<div class="cal-day other-m"></div>`;
-  // Day cells
+
   for (let d = 1; d <= lastDate; d++) {
-    const ds  = `${CPOP_YEAR}-${String(CPOP_MONTH+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ds  = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dt  = new Date(ds + 'T00:00:00');
     const past   = dt < today;
     const book   = booked.has(ds);
@@ -949,59 +986,99 @@ function renderCalPopup() {
     const edgeR  = rangeEnd && ds === rangeEnd && CPOP_CI && CPOP_CI < rangeEnd;
 
     let cls = 'cal-day';
-    if (past)  cls += ' disabled';
-    else if (book) cls += ' booked-d';
+    if (past)       cls += ' disabled';
+    else if (book)  cls += ' booked-d';
     if (ds === todayStr && !isCI && !isCO) cls += ' today-d';
-    if (isCI)    cls += ' sel-ci';
-    if (isCO && ds !== CPOP_CI)    cls += ' sel-co';
-    if (inRange) cls += ' in-range';
-    if (edgeL)   cls += ' range-edge-l';
-    if (edgeR && !isCO)   cls += ' range-edge-r';
+    if (isCI)           cls += ' sel-ci';
+    if (isCO && !isCI)  cls += ' sel-co';
+    if (inRange)        cls += ' in-range';
+    if (edgeL)          cls += ' range-edge-l';
+    if (edgeR)          cls += ' range-edge-r';
 
     const ev = (!past && !book)
       ? ` onclick="onCalDayClick('${ds}')" onmouseenter="onCalDayHover('${ds}')" onmouseleave="onCalDayHover(null)"`
       : '';
     html += `<div class="${cls}"${ev}>${d}</div>`;
   }
-  gridEl.innerHTML = html;
+  return html;
+}
+
+function renderCalPopup() {
+  const g1 = document.getElementById('cal-popup-grid-1');
+  const g2 = document.getElementById('cal-popup-grid-2');
+  if (!g1) return;
+
+  // Compute month 2
+  let yr2 = CPOP_YEAR, mo2 = CPOP_MONTH + 1;
+  if (mo2 > 11) { mo2 = 0; yr2++; }
+
+  // Month labels
+  const t1 = document.getElementById('cal-popup-title-1');
+  const t2 = document.getElementById('cal-popup-title-2');
+  if (t1) t1.textContent = `${MONTH_NAMES[CPOP_MONTH]} ${CPOP_YEAR}`;
+  if (t2) t2.textContent = `${MONTH_NAMES[mo2]} ${yr2}`;
+
+  // Render both grids
+  g1.innerHTML = buildCalPopupMonthHtml(CPOP_YEAR, CPOP_MONTH);
+  if (g2) g2.innerHTML = buildCalPopupMonthHtml(yr2, mo2);
+
+  // Step pills — show current selection + which is active
+  const fmt  = s => s ? new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : null;
+  const pciv = document.getElementById('cal-pill-ci-val');
+  const pcov = document.getElementById('cal-pill-co-val');
+  const pci  = document.getElementById('cal-pill-ci');
+  const pco  = document.getElementById('cal-pill-co');
+  if (pciv) { pciv.textContent = CPOP_CI ? fmt(CPOP_CI) : 'Select date'; pciv.classList.toggle('empty',!CPOP_CI); }
+  if (pcov) { pcov.textContent = CPOP_CO ? fmt(CPOP_CO) : 'Select date'; pcov.classList.toggle('empty',!CPOP_CO); }
+  if (pci)  pci.classList.toggle('active', CPOP_STAGE === 'ci');
+  if (pco)  pco.classList.toggle('active', CPOP_STAGE === 'co');
 
   // Hint text
+  const hintEl = document.getElementById('cal-popup-hint');
   if (hintEl) {
-    if (!CPOP_CI)                          hintEl.textContent = 'Select check-in date';
+    if (!CPOP_CI)                              hintEl.textContent = 'Select check-in date';
     else if (CPOP_STAGE === 'co' && !CPOP_CO) hintEl.textContent = 'Now select check-out date';
     else if (CPOP_CI && CPOP_CO) {
       const n = calcNights(CPOP_CI, CPOP_CO);
-      hintEl.textContent = n > 0 ? `${n} night${n>1?'s':''} selected` : 'Select check-out date';
+      hintEl.textContent = n > 0 ? `${n} night${n>1?'s':''} selected ✓` : 'Select check-out date';
     } else hintEl.textContent = '';
   }
 
-  // Active-field highlight on booking widget
+  // Active field highlight on booking widget
   document.getElementById('bk-ci-field')?.classList.toggle('cal-active', CPOP_STAGE === 'ci');
   document.getElementById('bk-co-field')?.classList.toggle('cal-active', CPOP_STAGE === 'co');
 }
 
 function onCalDayClick(ds) {
   if (CPOP_STAGE === 'ci' || (CPOP_CI && CPOP_CO)) {
-    // Start fresh — set CI, wait for CO
+    // Start: set CI, move to CO stage
     CPOP_CI    = ds;
     CPOP_CO    = null;
     CPOP_STAGE = 'co';
     CPOP_HOVER = null;
+    // Write CI to inputs immediately — fixes re-open from checkout field
+    ['bk-checkin','mob-checkin'].forEach(id => { const el=document.getElementById(id); if(el) el.value=CPOP_CI; });
+    ['bk-checkout','mob-checkout'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    updateCalDisplay();
   } else {
     // Picking CO
     if (ds <= CPOP_CI) {
-      // Clicked ≤ CI: restart from this date
+      // Clicked on/before CI → restart CI from this date
       CPOP_CI    = ds;
       CPOP_CO    = null;
       CPOP_STAGE = 'co';
+      ['bk-checkin','mob-checkin'].forEach(id => { const el=document.getElementById(id); if(el) el.value=CPOP_CI; });
+      ['bk-checkout','mob-checkout'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      updateCalDisplay();
     } else {
+      // Valid CO picked — both dates set
       CPOP_CO    = ds;
-      CPOP_STAGE = 'ci'; // selection complete
+      CPOP_STAGE = 'ci';
     }
   }
   renderCalPopup();
-  // Auto-apply once both dates are chosen
-  if (CPOP_CI && CPOP_CO) setTimeout(applyCalDates, 180);
+  // Auto-apply after brief pause so user sees range highlight
+  if (CPOP_CI && CPOP_CO) setTimeout(applyCalDates, 280);
 }
 
 function onCalDayHover(ds) {
