@@ -1278,7 +1278,7 @@ async function loadSimilarProperties(p) {
 function initDates() {
   const today = new Date();
   const defCI = new Date(today); defCI.setDate(today.getDate()+1);
-  const defCO = new Date(today); defCO.setDate(today.getDate()+4);
+  const defCO = new Date(today); defCO.setDate(today.getDate()+2); // default 1 night
   const ciStr = qs('checkin')  || defCI.toISOString().split('T')[0];
   const coStr = qs('checkout') || defCO.toISOString().split('T')[0];
 
@@ -1297,11 +1297,13 @@ function initDates() {
   if (mco) mco.value = coStr;
 
   if (ci) ci.addEventListener('change', () => {
+    // Minimum checkout = checkin + 1 day (1 night minimum)
+    const minCoDate = new Date(ci.value); minCoDate.setDate(minCoDate.getDate() + 1);
+    const minCoStr = minCoDate.toISOString().split('T')[0];
+    if (co) co.min = minCoStr;
     if (co && co.value <= ci.value) {
-      const d = new Date(ci.value); d.setDate(d.getDate()+3);
-      co.value = d.toISOString().split('T')[0];
+      co.value = minCoStr; // auto-set to minimum (1 night)
     }
-    if (co) co.min = ci.value;
     updateBreakdown();
   });
 
@@ -1418,11 +1420,12 @@ function closeMobSheet() {
 }
 function onMobDateChange() {
   const mci=document.getElementById('mob-checkin'), mco=document.getElementById('mob-checkout');
-  if(mci&&mco&&mco.value&&mco.value<=mci.value) {
-    const d=new Date(mci.value); d.setDate(d.getDate()+3);
-    mco.value=d.toISOString().split('T')[0];
+  if(mci&&mco) {
+    const minD=new Date(mci.value); minD.setDate(minD.getDate()+1);
+    const minStr=minD.toISOString().split('T')[0];
+    mco.min=minStr;
+    if(mco.value<=mci.value) mco.value=minStr; // auto-set to 1 night minimum
   }
-  if(mci&&mco) mco.min=mci.value;
   updateMobTotal();
 }
 function changeMobGuests(delta) {
