@@ -84,7 +84,9 @@
     }
     /* transparent state (top of page, over hero) */
     #navbar.nav-top .nav-inner {
-      background: transparent;
+      background: transparent !important;
+      border-bottom: none !important;
+      box-shadow: none !important;
     }
     /* scrolled state */
     #navbar.nav-scrolled .nav-inner {
@@ -1382,31 +1384,7 @@
 <!-- ── HERO SLIDER ───────────────────────────────────────── -->
 <section class="hero" id="hero">
 
-  <!-- SLIDES -->
-  <div class="slide active">
-    <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=80" alt="Luxury Pool Villa Udaipur" loading="eager"/>
-    <div class="slide-overlay"></div>
-  </div>
-
-  <div class="slide">
-    <img src="https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=1800&q=80" alt="Heritage Haveli Stay" loading="lazy"/>
-    <div class="slide-overlay"></div>
-  </div>
-
-  <div class="slide">
-    <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1800&q=80" alt="Mountain Retreat Villa" loading="lazy"/>
-    <div class="slide-overlay"></div>
-  </div>
-
-  <div class="slide">
-    <img src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1800&q=80" alt="Luxury Group Villa" loading="lazy"/>
-    <div class="slide-overlay"></div>
-  </div>
-
-  <div class="slide">
-    <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1800&q=80" alt="Premium Villa Stay" loading="lazy"/>
-    <div class="slide-overlay"></div>
-  </div>
+  <!-- SLIDES: populated from site-settings API (no placeholder images so no flash of wrong photos) -->
 
   <!-- CENTERED HEADLINE TEXT (server-driven via /api/site-settings) -->
   <div class="hero-content">
@@ -1847,13 +1825,13 @@
                       || (Array.isArray(settings.hero_slides) ? settings.hero_slides.filter(Boolean) : []);
       if (slidesArr.length) {
         const hero = document.getElementById('hero');
-        // Remove existing slides
+        // Remove any existing slides
         hero.querySelectorAll('.slide').forEach(s => s.remove());
-        // Insert new ones at the top of the section, before the hero-content
+        // Insert new slides — all start at opacity:0 (no 'active' class yet)
         const contentEl = hero.querySelector('.hero-content');
         slidesArr.forEach((src, i) => {
           const d = document.createElement('div');
-          d.className = 'slide' + (i === 0 ? ' active' : '');
+          d.className = 'slide'; // no 'active' — will fade in below
           d.innerHTML = `<img src="${src}" alt="Hero ${i+1}" loading="${i === 0 ? 'eager' : 'lazy'}"/><div class="slide-overlay"></div>`;
           hero.insertBefore(d, contentEl);
         });
@@ -1862,6 +1840,12 @@
         dotsWrap.innerHTML = slidesArr.map((_, i) =>
           `<button class="slider-dot${i === 0 ? ' active' : ''}" data-index="${i}"></button>`
         ).join('');
+        // Two rAF frames: let browser paint slides at opacity:0, THEN add 'active'
+        // This triggers the CSS opacity transition → smooth fade-in from dark background
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const firstSlide = hero.querySelector('.slide');
+          if (firstSlide) firstSlide.classList.add('active');
+        }));
       }
     } catch (e) { /* keep static fallback */ }
     // Re-init slider against current DOM (replaces the older "live NodeList" references)

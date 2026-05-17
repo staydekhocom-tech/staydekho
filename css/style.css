@@ -59,7 +59,9 @@
     }
     /* transparent state (top of page, over hero) */
     #navbar.nav-top .nav-inner {
-      background: transparent;
+      background: transparent !important;
+      border-bottom: none !important;
+      box-shadow: none !important;
     }
     /* scrolled state */
     #navbar.nav-scrolled .nav-inner {
