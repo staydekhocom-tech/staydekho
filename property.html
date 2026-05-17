@@ -1000,7 +1000,7 @@ function buildCalPopupMonthHtml(year, month) {
     const ev = (!past && !book)
       ? ` onclick="onCalDayClick('${ds}')" onmouseenter="onCalDayHover('${ds}')" onmouseleave="onCalDayHover(null)"`
       : '';
-    html += `<div class="${cls}"${ev}>${d}</div>`;
+    html += `<div class="${cls}" data-date="${ds}"${ev}>${d}</div>`;
   }
   return html;
 }
@@ -1084,8 +1084,21 @@ function onCalDayClick(ds) {
 }
 
 function onCalDayHover(ds) {
+  if (CPOP_STAGE !== 'co' || !CPOP_CI) return;
   CPOP_HOVER = ds;
-  if (CPOP_STAGE === 'co' && CPOP_CI) renderCalPopup();
+  // Paint hover range via classList — do NOT re-render the whole grid (that kills click events)
+  const popEl = document.getElementById('cal-popup');
+  if (!popEl) return;
+  popEl.querySelectorAll('.cal-day.in-range, .cal-day.range-edge-r').forEach(c => {
+    c.classList.remove('in-range','range-edge-r');
+  });
+  if (!ds || ds <= CPOP_CI) return;
+  popEl.querySelectorAll('.cal-day[data-date]').forEach(cell => {
+    const d = cell.dataset.date;
+    if (!d) return;
+    if (d > CPOP_CI && d < ds) cell.classList.add('in-range');
+    if (d === ds)               cell.classList.add('range-edge-r');
+  });
 }
 
 function applyCalDates() {
@@ -1852,8 +1865,13 @@ async function initiateBooking() {
       console.log('[Pay] orderRes:', JSON.stringify(orderRes));
     } catch(payErr) {
       console.error('[Pay] createOrder error:', payErr.message, payErr);
-      // Show exact backend error so admin can debug
-      showToast('Payment error: ' + (payErr.message || 'createOrder failed') + ' — booking saved, team will contact you.', 'error');
+      const errMsg = payErr.message || 'createOrder failed';
+      // Common Razorpay misconfig hints
+      let hint = '';
+      if (errMsg.includes('key')) hint = ' (Check RAZORPAY_KEY_ID in Railway)';
+      else if (errMsg.includes('auth') || errMsg.includes('401')) hint = ' (Razorpay keys invalid — check Railway env vars)';
+      else if (errMsg.includes('amount')) hint = ' (Amount too small — Razorpay min is ₹1)';
+      showToast('Payment failed: ' + errMsg + hint, 'error');
       if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
       return;
     }
