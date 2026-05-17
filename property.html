@@ -1879,8 +1879,16 @@ async function initiateBooking() {
       if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
     }
   } catch(err) {
-    showToast(err.message||'Booking failed. Please try again.','error');
+    const msg = err.message || 'Booking failed. Please try again.';
+    showToast(msg, 'error');
     if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+    // If dates are booked, refresh availability so calendar shows correct state
+    if (msg.toLowerCase().includes('booked') || msg.toLowerCase().includes('unavailable')) {
+      api.getAvailability(PROP.id).then(r => {
+        BOOKED_RANGES = r.booked || [];
+        renderAvailCalendar();
+      }).catch(()=>{});
+    }
   }
 }
 
