@@ -1266,7 +1266,10 @@ async function loadSiteSettings() {
     document.getElementById('ss-stats-villas').value  = settings.stats_villas_override        || ''; document.getElementById('ss-stats-dest').value    = settings.stats_destinations_override || ''; document.getElementById('ss-stats-guests').value  = settings.stats_guests_override        || ''; document.getElementById('ss-stats-rating').value  = settings.stats_rating_override        || '';
     document.getElementById('ss-email').value         = settings.contact_email        || ''; document.getElementById('ss-phone').value         = settings.contact_phone        || ''; document.getElementById('ss-safety-email').value  = settings.contact_safety_email || '';
     document.getElementById('ss-ig').value            = settings.social_instagram || ''; document.getElementById('ss-tw').value            = settings.social_twitter   || ''; document.getElementById('ss-wa').value            = settings.social_whatsapp  || '';
-    if (settings.marquee_destinations && settings.marquee_destinations.length) { marqueeDestinations = settings.marquee_destinations; } renderDestTags();
+    let _md = settings.marquee_destinations;
+    if (typeof _md === 'string') { try { _md = JSON.parse(_md); } catch(e) { _md = []; } }
+    if (Array.isArray(_md) && _md.length) { marqueeDestinations = _md; }
+    renderDestTags();
   } catch (e) { console.log(e); }
 }
 async function saveSiteSettings() {
