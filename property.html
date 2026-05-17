@@ -1845,9 +1845,10 @@ async function initiateBooking() {
   try {
     const bookingRes = await api.createBooking({ property_id:PROP.id, checkin:ci, checkout:co, guests:GUESTS });
     const booking = bookingRes.booking;
+    const bookingId = booking.id || booking._id;   // MongoDB uses _id
     let orderRes = null;
     try {
-      orderRes = await api.createOrder(booking.id);
+      orderRes = await api.createOrder(bookingId);
       console.log('[Pay] orderRes:', JSON.stringify(orderRes));
     } catch(payErr) {
       console.error('[Pay] createOrder error:', payErr.message, payErr);
@@ -1868,13 +1869,13 @@ async function initiateBooking() {
         order_id:orderRes.order_id, amount:orderRes.amount,
         currency:orderRes.currency||'INR', key_id:orderRes.key_id,
         booking:orderRes.booking||booking,
-        onSuccess:()=>{ showToast('Payment successful! Redirecting…','success'); setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${booking.id}`;},1200); },
+        onSuccess:()=>{ showToast('Payment successful! Redirecting…','success'); setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${bookingId}`;},1200); },
         onError:(err)=>{ showToast(err.message||'Payment cancelled','error'); if(btn){btn.disabled=false;btn.textContent='Reserve Now';} }
       });
     } else {
-      // Got response but missing order_id / key_id — log what we got
+      // Got response but missing order_id / key_id
       console.warn('[Pay] incomplete orderRes:', JSON.stringify(orderRes));
-      showToast('Payment setup incomplete — backend returned: ' + JSON.stringify(orderRes), 'error');
+      showToast('Payment setup issue — please contact support.','error');
       if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
     }
   } catch(err) {
