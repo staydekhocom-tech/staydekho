@@ -1374,6 +1374,41 @@
       .stay-type-name { font-size: 1rem; }
       .stay-type-desc { font-size: .7rem; }
     }
+    /* ── Skeleton loading cards ── */
+    @keyframes skel-shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .prop-skel {
+      background: #fff;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--gray-100);
+      overflow: hidden;
+      pointer-events: none;
+      flex: 0 0 calc(33.33% - 14px);
+      min-width: 260px;
+    }
+    .skel-img {
+      aspect-ratio: 4/3;
+      background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+      background-size: 1200px 100%;
+      animation: skel-shimmer 1.5s infinite linear;
+    }
+    .skel-body { padding: 14px 16px 18px; }
+    .skel-line {
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+      background-size: 1200px 100%;
+      animation: skel-shimmer 1.5s infinite linear;
+    }
+    .skel-loc   { width: 52%; height: 10px; }
+    .skel-title { width: 82%; height: 15px; margin-top: 6px; margin-bottom: 12px; }
+    .skel-meta  { width: 95%; height: 10px; }
+    .skel-price { width: 44%; height: 13px; margin-top: 14px; margin-bottom: 0; }
+    @media(max-width:768px){
+      .prop-skel { flex: 0 0 78%; min-width: 260px; }
+    }
   </style>
 </head>
 <body>
@@ -1476,9 +1511,13 @@
       Swipe to explore
     </div>
     <div class="properties-grid swipe-wrap" id="featured-grid">
-      <div id="featured-loading" style="text-align:center;padding:48px;color:var(--gray-400);font-size:.95rem;flex:0 0 100%">
-        Loading our stays…
-      </div>
+      <!-- Skeleton cards — replaced by real data via JS; shown before API responds so no fake photos flash -->
+      <div class="prop-skel"><div class="skel-img"></div><div class="skel-body"><div class="skel-line skel-loc"></div><div class="skel-line skel-title"></div><div class="skel-line skel-meta"></div><div class="skel-line skel-price"></div></div></div>
+      <div class="prop-skel"><div class="skel-img"></div><div class="skel-body"><div class="skel-line skel-loc"></div><div class="skel-line skel-title"></div><div class="skel-line skel-meta"></div><div class="skel-line skel-price"></div></div></div>
+      <div class="prop-skel"><div class="skel-img"></div><div class="skel-body"><div class="skel-line skel-loc"></div><div class="skel-line skel-title"></div><div class="skel-line skel-meta"></div><div class="skel-line skel-price"></div></div></div>
+      <div class="prop-skel"><div class="skel-img"></div><div class="skel-body"><div class="skel-line skel-loc"></div><div class="skel-line skel-title"></div><div class="skel-line skel-meta"></div><div class="skel-line skel-price"></div></div></div>
+      <div class="prop-skel"><div class="skel-img"></div><div class="skel-body"><div class="skel-line skel-loc"></div><div class="skel-line skel-title"></div><div class="skel-line skel-meta"></div><div class="skel-line skel-price"></div></div></div>
+      <div class="prop-skel"><div class="skel-img"></div><div class="skel-body"><div class="skel-line skel-loc"></div><div class="skel-line skel-title"></div><div class="skel-line skel-meta"></div><div class="skel-line skel-price"></div></div></div>
     </div>
   </div>
 </section>
@@ -2124,18 +2163,7 @@
         </div>
       </a>`).join('');
 
-    /* ── Sample cards shown IMMEDIATELY, then replaced by real API data ── */
-    const samples = [
-      { id:1, title:'Aravalli Pool Villa', location:'Udaipur, Rajasthan', beds:4, baths:3, guests:'10 guests', price:28000, rating:'4.9', badge:'Bestseller', main_image:'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=600&q=75' },
-      { id:2, title:'Heritage Haveli Suite', location:'Old City, Udaipur', beds:3, baths:2, guests:'8 guests', price:18500, rating:'4.8', badge:'Heritage', main_image:'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=600&q=75' },
-      { id:3, title:'Monsoon Forest Retreat', location:'Aravalli Hills, Udaipur', beds:5, baths:4, guests:'12 guests', price:35000, rating:'5.0', badge:'New', main_image:'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=75' },
-      { id:4, title:'Lake View Cottage', location:'Fateh Sagar, Udaipur', beds:2, baths:2, guests:'6 guests', price:12000, rating:'4.7', badge:null, main_image:'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=75' },
-      { id:5, title:'Royal Palace Annexe', location:'City Palace Area, Udaipur', beds:6, baths:5, guests:'15 guests', price:55000, rating:'4.9', badge:'Luxury', main_image:'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=600&q=75' },
-      { id:6, title:'Hillside Garden Villa', location:'Badi Lake, Udaipur', beds:3, baths:2, guests:'8 guests', price:22000, rating:'4.8', badge:null, main_image:'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=600&q=75' }
-    ];
-    grid.innerHTML = renderCards(samples); // show instantly
-
-    /* Then silently try to replace with real DB data — with Railway wake-up retry */
+    /* Skeleton cards are already in the HTML — just load real data and replace */
     if (typeof api !== 'undefined') {
       const _t = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 
