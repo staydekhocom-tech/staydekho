@@ -498,7 +498,19 @@
                   style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-500);cursor:pointer;white-space:nowrap">↺ Default</button>
         </div>
       </div>
-      <div class="form-grp"><label class="form-lbl">Sub-headline</label><textarea class="form-ctrl" id="ss-hero-sub" rows="2"></textarea></div>
+      <div class="form-grp">
+        <label class="form-lbl">Sub-headline</label>
+        <textarea class="form-ctrl" id="ss-hero-sub" rows="2"></textarea>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px 14px;background:#f9fafb;border-radius:8px;border:1px solid var(--gray-200)">
+          <label style="font-size:12px;font-weight:600;color:var(--gray-600);white-space:nowrap;flex-shrink:0">Text Size</label>
+          <input type="range" id="ss-sub-size" min="0.7" max="2.5" step="0.1" value="1.1"
+                 style="flex:1;accent-color:var(--red);cursor:pointer"
+                 oninput="document.getElementById('ss-sub-size-val').textContent=this.value+'rem'"/>
+          <span id="ss-sub-size-val" style="font-size:13px;font-weight:700;color:var(--red);min-width:48px;text-align:right">1.1rem</span>
+          <button onclick="document.getElementById('ss-sub-size').value=1.1;document.getElementById('ss-sub-size-val').textContent='1.1rem'"
+                  style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-500);cursor:pointer;white-space:nowrap">↺ Default</button>
+        </div>
+      </div>
       <div class="form-grp">
         <label class="form-lbl">Background photo URLs <span style="color:var(--gray-400);font-weight:400">(one per line)</span></label>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
@@ -1239,7 +1251,7 @@ async function loadToday() {
 async function loadSiteSettings() {
   try {
     const { settings } = await api.getSiteSettings();
-    document.getElementById('ss-hero-headline').value       = settings.hero_headline || ''; const _hlSz = settings.hero_headline_size || 5; document.getElementById('ss-headline-size').value = _hlSz; document.getElementById('ss-headline-size-val').textContent = _hlSz + 'rem'; document.getElementById('ss-hero-sub').value            = settings.hero_sub      || ''; document.getElementById('ss-hero-slides').value         = (settings.hero_slides || []).join('\n');
+    document.getElementById('ss-hero-headline').value       = settings.hero_headline || ''; const _hlSz = settings.hero_headline_size || 5; document.getElementById('ss-headline-size').value = _hlSz; document.getElementById('ss-headline-size-val').textContent = _hlSz + 'rem'; document.getElementById('ss-hero-sub').value = settings.hero_sub || ''; const _subSz = settings.hero_sub_size || 1.1; document.getElementById('ss-sub-size').value = _subSz; document.getElementById('ss-sub-size-val').textContent = _subSz + 'rem'; document.getElementById('ss-hero-slides').value         = (settings.hero_slides || []).join('\n');
     document.getElementById('ss-hero-slides-mobile').value = (settings.hero_slides_mobile || []).join('\n');
     document.getElementById('ss-stats-villas').value  = settings.stats_villas_override        || ''; document.getElementById('ss-stats-dest').value    = settings.stats_destinations_override || ''; document.getElementById('ss-stats-guests').value  = settings.stats_guests_override        || ''; document.getElementById('ss-stats-rating').value  = settings.stats_rating_override        || '';
     document.getElementById('ss-email').value         = settings.contact_email        || ''; document.getElementById('ss-phone').value         = settings.contact_phone        || ''; document.getElementById('ss-safety-email').value  = settings.contact_safety_email || '';
@@ -1250,7 +1262,7 @@ async function saveSiteSettings() {
   try {
     const slides       = document.getElementById('ss-hero-slides').value.split('\n').map(s => s.trim()).filter(Boolean);
     const slidesMobile = document.getElementById('ss-hero-slides-mobile').value.split('\n').map(s => s.trim()).filter(Boolean);
-    await api.updateSiteSettings({ hero_headline: document.getElementById('ss-hero-headline').value, hero_headline_size: parseFloat(document.getElementById('ss-headline-size').value) || 5, hero_sub: document.getElementById('ss-hero-sub').value, hero_slides: slides, hero_slides_mobile: slidesMobile, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
+    await api.updateSiteSettings({ hero_headline: document.getElementById('ss-hero-headline').value, hero_headline_size: parseFloat(document.getElementById('ss-headline-size').value) || 5, hero_sub: document.getElementById('ss-hero-sub').value, hero_sub_size: parseFloat(document.getElementById('ss-sub-size').value) || 1.1, hero_slides: slides, hero_slides_mobile: slidesMobile, stats_villas_override: document.getElementById('ss-stats-villas').value, stats_destinations_override: document.getElementById('ss-stats-dest').value, stats_guests_override: document.getElementById('ss-stats-guests').value, stats_rating_override: document.getElementById('ss-stats-rating').value, contact_email: document.getElementById('ss-email').value, contact_phone: document.getElementById('ss-phone').value, contact_safety_email: document.getElementById('ss-safety-email').value, social_instagram: document.getElementById('ss-ig').value, social_twitter: document.getElementById('ss-tw').value, social_whatsapp: document.getElementById('ss-wa').value });
     alert('Settings saved successfully!');
   } catch (e) { alert('Save failed: ' + e.message); }
 }

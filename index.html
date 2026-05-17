@@ -1823,6 +1823,9 @@
       if (settings.hero_sub) {
         document.getElementById('hero-sub').innerHTML = settings.hero_sub;
       }
+      if (settings.hero_sub_size) {
+        document.getElementById('hero-sub').style.fontSize = parseFloat(settings.hero_sub_size) + 'rem';
+      }
       // Mobile pe mobile-specific slides use karo, fallback desktop slides
       const isMobile   = window.matchMedia('(max-width: 700px)').matches;
       const mobileSlides = Array.isArray(settings.hero_slides_mobile) ? settings.hero_slides_mobile.filter(Boolean) : [];
