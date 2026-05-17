@@ -35,9 +35,10 @@ const SD = {
 
   // ── DESTINATIONS (homepage chips) ─────────────────────────────
   destinations: [
-    'Udaipur', 'Goa', 'Jaipur', 'Manali',
-    'Coorg', 'Munnar', 'Shimla', 'Pondicherry',
-    'Alibaug', 'Ooty', 'Lonavala', 'Mussoorie',
+    'Udaipur', 'Mount Abu', 'Jawai', 'Ranthambore',
+    'Jodhpur', 'Jaisalmer', 'Jaipur', 'Ajmer',
+    'Pushkar', 'Goa', 'Manali', 'Shimla',
+    'Lonavala', 'Mussoorie',
   ],
 
   // ── GUEST VIDEO REELS (homepage review section) ───────────────
