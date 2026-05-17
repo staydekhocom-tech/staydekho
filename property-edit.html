@@ -104,15 +104,13 @@
     }
     .rule-item:hover{background:#fff;border-color:var(--gray-300);}
     .rule-drag{cursor:grab;color:var(--gray-400);font-size:1.1rem;flex-shrink:0;}
-    .rule-icon-sel{
-      padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:8px;
-      font-size:.8rem;font-family:inherit;background:#fff;cursor:pointer;outline:none;
-      flex-shrink:0;
-    }
     .rule-text-input{
-      flex:1;border:none;background:transparent;font-family:inherit;
-      font-size:.88rem;color:var(--gray-800);outline:none;padding:0;
+      flex:1;border:1.5px solid var(--gray-200);border-radius:8px;
+      background:#fff;font-family:inherit;
+      font-size:.88rem;color:var(--gray-800);outline:none;
+      padding:7px 12px;transition:border-color .2s;
     }
+    .rule-text-input:focus{border-color:var(--red);}
     .rule-del{
       background:none;border:none;cursor:pointer;color:var(--gray-400);
       font-size:1.1rem;padding:4px;transition:color .15s;flex-shrink:0;
@@ -590,11 +588,6 @@ function addAmenity() {
 }
 function removeAmenity(i) { amenities.splice(i,1); renderAmenityTags(); }
 
-const ICON_OPTS = [
-  {v:'clock',l:'⏰ Clock'},{v:'nosmoking',l:'🚭 No Smoking'},{v:'party',l:'👥 Guests/Party'},
-  {v:'pet',l:'🐾 Pets'},{v:'quiet',l:'🔇 Quiet'},{v:'cancel',l:'✅ Cancellation'},
-  {v:'key',l:'🔑 Key'},{v:'info',l:'ℹ️ Info'},
-];
 function renderRules() {
   const el = document.getElementById('rules-list');
   if (!el) return;
@@ -602,17 +595,14 @@ function renderRules() {
   el.innerHTML = rules.map((r,i) => `
     <div class="rule-item" id="rule-${i}">
       <span class="rule-drag" title="Drag to reorder">⠿</span>
-      <select class="rule-icon-sel" onchange="rules[${i}].icon=this.value">
-        ${ICON_OPTS.map(o=>`<option value="${o.v}"${r.icon===o.v?' selected':''}>${o.l}</option>`).join('')}
-      </select>
       <input class="rule-text-input" type="text" value="${esc(r.text||'')}"
-        placeholder="Rule text…"
+        placeholder="Type a rule — e.g. 🚭 No smoking inside the property"
         oninput="rules[${i}].text=this.value"/>
       <button class="rule-del" onclick="removeRule(${i})" title="Delete">×</button>
     </div>`).join('');
 }
 function addRule() {
-  rules.push({ icon:'info', text:'' });
+  rules.push({ icon: 'info', text: '' });
   renderRules();
   setTimeout(() => {
     const inputs = document.querySelectorAll('.rule-text-input');
@@ -742,7 +732,15 @@ function removeImage(i) { images.splice(i, 1); renderImages(); }
 /* ── Photo drag-reorder handlers ───────────────── */
 let _dragIdx = null;
 
+// Sync all category inputs into the images array before any drag
+function syncImageCategories() {
+  document.querySelectorAll('.img-cat-input').forEach((inp, idx) => {
+    if (images[idx]) images[idx].cat = inp.value;
+  });
+}
+
 function onImgDragStart(e, i) {
+  syncImageCategories();   // capture all typed-but-unsaved values first
   _dragIdx = i;
   e.dataTransfer.effectAllowed = 'move';
   setTimeout(() => {
