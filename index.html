@@ -2318,6 +2318,10 @@
     }
   }
   window.reelClick = reelClick;
+
+  // Safety fallback — ensure page is always visible even if components.js fails to load
+  document.body.classList.add('loaded');
+  document.body.style.opacity = '1';
 </script>
 
 <!-- Search suggestions dropdown — outside hero so overflow:hidden doesn't clip it -->
