@@ -2129,13 +2129,13 @@ function calPickDate(dateStr){
   if(!ci||!co) return;
   if(CAL_PICK==='start'||(ci.value&&co.value)){
     ci.value=dateStr;
-    const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+3);
+    const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+1);
     co.value=d.toISOString().split('T')[0];
     CAL_PICK='end';
   } else {
     if(dateStr<=ci.value){
       ci.value=dateStr;
-      const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+3);
+      const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+1);
       co.value=d.toISOString().split('T')[0];
     } else { co.value=dateStr; CAL_PICK='start'; }
   }
