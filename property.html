@@ -579,36 +579,83 @@
   .included-lbl{font-size:.68rem;color:var(--gray-400);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
 
   /* ── Availability Calendar ──────────────────── */
-  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .cal-nav-btn{width:30px;height:30px;border:1.5px solid var(--gray-200);border-radius:8px;
-    background:#fff;cursor:pointer;font-size:1.1rem;color:var(--gray-500);
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .cal-nav-btn{width:32px;height:32px;border:1.5px solid var(--gray-200);border-radius:50%;
+    background:#fff;cursor:pointer;font-size:1rem;color:var(--gray-500);
     display:flex;align-items:center;justify-content:center;transition:all .2s;}
-  .cal-nav-btn:hover{border-color:var(--red);color:var(--red);}
+  .cal-nav-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
   .cal-month-name{font-weight:800;font-size:.9rem;color:var(--dark);}
-  .cal-two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
-  .cal-month-title{font-size:.8rem;font-weight:700;color:var(--gray-600);text-align:center;margin-bottom:7px;}
-  .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:3px;}
-  .cal-dow{text-align:center;font-size:.63rem;font-weight:700;color:var(--gray-400);padding:3px 0;}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .cal-two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+  .cal-month-title{font-size:.82rem;font-weight:700;color:var(--gray-700);text-align:center;margin-bottom:8px;letter-spacing:.01em;}
+  .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;}
+  .cal-dow{text-align:center;font-size:.64rem;font-weight:700;color:var(--gray-400);padding:4px 0;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+
+  /* Base cell — position:relative needed for the diagonal slash */
   .cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
-    font-size:.73rem;border-radius:6px;font-weight:500;cursor:pointer;transition:all .12s;color:var(--gray-700);}
+    font-size:.78rem;border-radius:50%;font-weight:500;cursor:pointer;
+    transition:background .12s,color .12s;color:var(--gray-700);position:relative;overflow:hidden;}
+
   .cal-cell.cal-empty{cursor:default;}
-  .cal-cell.cal-past{color:var(--gray-300);cursor:default;}
-  .cal-cell.cal-booked{background:#fef2f2;color:#fca5a5;cursor:not-allowed;text-decoration:line-through;font-size:.66rem;}
-  .cal-cell.cal-avail:hover{background:var(--red-light);color:var(--red);}
+
+  /* Past dates — faded, no interaction */
+  .cal-cell.cal-past{color:#d1d5db;cursor:default;}
+
+  /* ── Booked / Blocked — Airbnb diagonal-slash style ── */
+  .cal-cell.cal-booked{
+    color:#d1d5db;
+    cursor:not-allowed;
+    background:transparent;
+  }
+  /* Diagonal slash through the cell */
+  .cal-cell.cal-booked::after{
+    content:'';
+    position:absolute;
+    top:50%; left:50%;
+    width:65%; height:1.5px;
+    background:#d1d5db;
+    border-radius:2px;
+    transform:translate(-50%,-50%) rotate(-45deg);
+    pointer-events:none;
+  }
+
+  /* Available — subtle hover circle */
+  .cal-cell.cal-avail:hover{background:var(--gray-100);color:var(--dark);}
+
+  /* Today indicator — small dot underline */
   .cal-cell.cal-today{font-weight:900;color:var(--red);}
-  .cal-cell.cal-ci,.cal-cell.cal-co{background:var(--red)!important;color:#fff!important;font-weight:800;border-radius:8px!important;}
-  .cal-cell.cal-range{background:var(--red-light);color:var(--red);border-radius:0;}
-  .cal-cell.cal-ci{border-radius:8px 0 0 8px!important;}
-  .cal-cell.cal-co{border-radius:0 8px 8px 0!important;}
-  .cal-cell.cal-hover-range{background:var(--red-light);color:var(--red);border-radius:0;}
-  .cal-cell.cal-hover-co{background:rgba(139,23,23,.18);color:var(--red);border-radius:0 8px 8px 0;font-weight:700;}
-  .cal-legend{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;}
-  .cal-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:.71rem;color:var(--gray-500);}
-  .cal-leg-dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
-  .cal-leg-avail{background:var(--gray-100);}
-  .cal-leg-booked{background:#fecaca;}
-  .cal-leg-sel{background:var(--red);}
+  .cal-cell.cal-today::before{
+    content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+    width:4px;height:4px;border-radius:50%;background:var(--red);
+  }
+
+  /* Selected CI / CO — filled circle */
+  .cal-cell.cal-ci,.cal-cell.cal-co{
+    background:var(--red)!important;color:#fff!important;
+    font-weight:800;border-radius:50%!important;
+    box-shadow:0 2px 8px rgba(139,23,23,.35);
+  }
+  .cal-cell.cal-ci::after,.cal-cell.cal-co::after{display:none;}/* hide slash if somehow both */
+
+  /* Range band between CI and CO */
+  .cal-cell.cal-range{background:#fde8e8;color:var(--red);border-radius:0;font-weight:600;}
+  .cal-cell.cal-ci{border-radius:50% 0 0 50%!important;}
+  .cal-cell.cal-co{border-radius:0 50% 50% 0!important;}
+  /* If CI and CO are same date — full circle */
+  .cal-cell.cal-ci.cal-co{border-radius:50%!important;}
+
+  /* Hover range preview */
+  .cal-cell.cal-hover-range{background:#fde8e8;color:var(--red);border-radius:0;}
+  .cal-cell.cal-hover-co{background:rgba(139,23,23,.15);color:var(--red);border-radius:0 50% 50% 0;font-weight:700;}
+
+  /* Legend */
+  .cal-legend{display:flex;gap:14px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+  .cal-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;color:var(--gray-500);}
+  .cal-leg-dot{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;position:relative;overflow:hidden;}
+  .cal-leg-avail{background:var(--gray-100);color:var(--gray-600);}
+  .cal-leg-booked{background:transparent;color:#d1d5db;border:1.5px solid #e5e7eb;}
+  .cal-leg-booked::after{content:'';position:absolute;top:50%;left:50%;width:65%;height:1.5px;background:#d1d5db;border-radius:2px;transform:translate(-50%,-50%) rotate(-45deg);}
+  .cal-leg-sel{background:var(--red);color:#fff;font-weight:800;}
   @media(max-width:600px){.cal-two-col{grid-template-columns:1fr;}.cal-two-col .cal-month-block:last-child{display:none;}}
 
   /* ── Nearby Attractions ─────────────────────── */
@@ -1383,9 +1430,9 @@ function render(p, host, reviews) {
           </div>
           <div id="avail-calendar"></div>
           <div class="cal-legend">
-            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-avail"></span>Available</span>
-            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-booked"></span>Booked</span>
-            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-sel"></span>Selected</span>
+            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-avail">5</span>Available</span>
+            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-booked">5</span>Unavailable</span>
+            <span class="cal-legend-item"><span class="cal-leg-dot cal-leg-sel">5</span>Selected</span>
           </div>
         </div>
 
