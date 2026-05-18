@@ -5,10 +5,23 @@ const { Booking, Payment, Property } = require('../db/models');
 const { protect } = require('../middleware/auth');
 const { sendEmail, bookingConfirmedHtml } = require('../services/email');
 
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Lazy init — reads env vars at call time, not at module load
+function getRazorpay() {
+  const key_id     = process.env.RAZORPAY_KEY_ID;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!key_id || !key_secret) throw new Error('Razorpay keys not configured in environment variables');
+  return new Razorpay({ key_id, key_secret });
+}
+
+// Extract best error message from Razorpay SDK errors
+function rzpErrMsg(err) {
+  return err?.error?.description
+    || err?.error?.reason
+    || err?.description
+    || err?.message
+    || JSON.stringify(err)
+    || 'Payment order creation failed';
+}
 
 // POST /api/payments/create-order
 // body: { booking_id }  — creates a Razorpay order for the given booking
@@ -24,12 +37,14 @@ router.post('/create-order', protect, async (req, res) => {
     if (booking.status !== 'pending')
       return res.status(400).json({ error: 'Booking is not in pending state' });
 
-    const amountInPaise = booking.amount * 100;
+    const amountInPaise = Math.round(booking.amount * 100);
+    if (amountInPaise < 100) return res.status(400).json({ error: 'Booking amount too low (minimum ₹1)' });
 
+    const razorpay = getRazorpay();
     const order = await razorpay.orders.create({
       amount:   amountInPaise,
       currency: 'INR',
-      receipt:  `booking_${booking._id}_${Date.now()}`,
+      receipt:  `bk_${booking._id}_${Date.now()}`.slice(0, 40),
       notes:    { booking_id: booking._id.toString(), user_id: String(req.user.id) },
     });
 
@@ -54,7 +69,7 @@ router.post('/create-order', protect, async (req, res) => {
     });
   } catch (err) {
     console.error('create-order error:', err);
-    res.status(500).json({ error: err.message || 'Payment order creation failed' });
+    res.status(500).json({ error: rzpErrMsg(err) });
   }
 });
 
