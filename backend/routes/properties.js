@@ -260,6 +260,25 @@ router.put('/:id', protect, adminOnly, upload.array('images', 10), async (req, r
   }
 });
 
+// GET /api/properties/:id/availability — returns confirmed booked date ranges
+router.get('/:id/availability', async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      property_id: req.params.id,
+      status: 'confirmed',
+    }).select('checkin checkout').lean();
+
+    const booked = bookings.map(b => ({
+      checkin:  b.checkin,
+      checkout: b.checkout,
+    }));
+
+    res.json({ booked });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/properties/:id/date-prices
 router.get('/:id/date-prices', async (req, res) => {
   try {
