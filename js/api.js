@@ -294,7 +294,7 @@ const api = {
             razorpay_order_id:   response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature:  response.razorpay_signature,
-            booking_id:          booking.id,
+            booking_id:          booking.id || booking._id,
           });
           if (onSuccess) onSuccess(result);
         } catch (err) {
