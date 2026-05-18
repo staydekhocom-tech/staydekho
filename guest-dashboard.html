@@ -335,7 +335,7 @@
     const today = new Date().toISOString().split('T')[0];
     const upcoming = bookings.filter(b => b.check_out >= today && b.status !== 'cancelled');
     sel.innerHTML = upcoming.length
-      ? upcoming.map(b => `<option value="${b.id}">${esc(b.title)} · ${fmtDate(b.check_in)}</option>`).join('')
+      ? upcoming.map(b => `<option value="${b.id || b._id}">${esc(b.title)} · ${fmtDate(b.check_in)}</option>`).join('')
       : `<option value="">No upcoming bookings</option>`;
 
     const list = document.getElementById('addons-list');
@@ -405,14 +405,15 @@
     else if(b.status === 'completed') { statusLabel = 'Completed'; badgeColor = '#1f2937'; badgeBg = '#e5e7eb'; }
     else if(b.status === 'cancelled') { statusLabel = 'Cancelled'; badgeColor = '#b91c1c'; badgeBg = '#fee2e2'; }
     
+    const bid = b.id || b._id;
     const cancelBtn = isUpcoming && b.status !== 'cancelled'
-      ? `<button class="btn btn-sm" style="border:1px solid #fca5a5; color:#b91c1c; background:transparent;" onclick="cancelBooking(${b.id})">Cancel</button>` : '';
+      ? `<button class="btn btn-sm" style="border:1px solid #fca5a5; color:#b91c1c; background:transparent;" onclick="cancelBooking('${bid}')">Cancel</button>` : '';
 
     // Bulletproof Image Fallback  
     const imageUrl = b.main_image || b.image || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80';
       
     return `
-      <div class="booking-item" id="booking-${b.id}">
+      <div class="booking-item" id="booking-${bid}">
         <img class="booking-img" src="${esc(imageUrl)}" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'" alt="${esc(b.title)}" style="width:140px; height:110px; object-fit:cover; border-radius:8px; flex-shrink:0;"/>
         <div class="booking-info" style="flex:1;">
           <div class="booking-name" style="font-size:1.15rem; font-weight:700; color:#1f2937; margin-bottom:4px;">${esc(b.title)}</div>
@@ -435,11 +436,11 @@
     const grid = document.getElementById('saved-grid');
     if (!items.length) { grid.innerHTML = '<div style="color:#9ca3af;padding:30px 20px; grid-column: 1/-1; text-align:center; background:#fff; border-radius:12px; border:1px dashed #e5e7eb;">Nothing saved yet. <a href="listings.html" style="color:#b91c1c; font-weight:600; text-decoration:underline;">Explore</a></div>'; return; }
     
-    grid.innerHTML = items.map(p => `
-      <a href="property.html?id=${p.id}" class="property-card" style="display:block; text-decoration:none; color:inherit; background:#fff; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+    grid.innerHTML = items.map(p => {const pid = p.id || p._id; return `
+      <a href="property.html?id=${pid}" class="property-card" style="display:block; text-decoration:none; color:inherit; background:#fff; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
         <div class="card-img-wrap" style="position:relative; aspect-ratio:4/3; overflow:hidden;">
           <img src="${esc(p.main_image)}" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'" alt="${esc(p.title)}" loading="lazy" style="width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease;"/>
-          <button class="card-wishlist active" data-property-id="${p.id}" onclick="event.preventDefault();event.stopPropagation();unsave(${p.id},this)" style="position:absolute; top:12px; right:12px; background:#fff; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">${HEART_FILL}</button>
+          <button class="card-wishlist active" data-property-id="${pid}" onclick="event.preventDefault();event.stopPropagation();unsave('${pid}',this)" style="position:absolute; top:12px; right:12px; background:#fff; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">${HEART_FILL}</button>
         </div>
         <div class="card-body" style="padding:16px;">
           <div class="card-location" style="font-size:12px; color:#6b7280; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">${PIN} ${esc(p.location||p.city||'')}</div>
@@ -449,7 +450,7 @@
             <div class="card-rating" style="font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px;"><span class="star">${STAR}</span> ${p.rating||'—'}</div>
           </div>
         </div>
-      </a>`).join('');
+      </a>`; }).join('');
   }
 
   async function unsave(id, btn) {
