@@ -1107,7 +1107,7 @@ function openAddReviewModal() {
   document.getElementById('rev-rating').value = 5;
   document.getElementById('rev-text').value = '';
   document.getElementById('rev-image-url').value = '';
-  document.getElementById('rev-date').value = new Date().toISOString().split('T')[0];
+  const _rd=new Date(); document.getElementById('rev-date').value=`${_rd.getFullYear()}-${String(_rd.getMonth()+1).padStart(2,'0')}-${String(_rd.getDate()).padStart(2,'0')}`;
   // Reset image upload UI
   document.getElementById('rev-img-file').value = '';
   document.getElementById('rev-img-status').textContent = 'No file chosen';

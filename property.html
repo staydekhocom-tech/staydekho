@@ -1013,7 +1013,7 @@ function switchCalStage(stage) {
 /* Build one month's grid HTML for the popup */
 function buildCalPopupMonthHtml(year, month) {
   const today    = new Date(); today.setHours(0,0,0,0);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
   const booked   = getBookedSet();
   const startDow = new Date(year, month, 1).getDay();
   const lastDate = new Date(year, month + 1, 0).getDate();
@@ -1154,7 +1154,7 @@ function applyCalDates() {
     // Only CI picked — auto set CO = CI + 1 night
     const d = new Date(CPOP_CI + 'T00:00:00');
     d.setDate(d.getDate() + 1);
-    CPOP_CO = d.toISOString().split('T')[0];
+    CPOP_CO = localDateStr(d);
   }
   // Write to ALL date inputs (desktop + mobile)
   ['bk-checkin','mob-checkin'].forEach(id => {
@@ -1233,7 +1233,7 @@ async function loadProperty() {
     DATE_PRICES = {};
     (dpRes.date_prices || []).forEach(r => { DATE_PRICES[r.date] = r; });
     // Show today's price at top by default
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateStr(new Date());
     const todayDp  = DATE_PRICES[todayStr];
     const todayPrice = (todayDp && todayDp.price) ? todayDp.price : property.price;
     const priceElInit = document.getElementById('bk-price-display');
@@ -1700,12 +1700,12 @@ function initDates() {
   const today = new Date();
   const defCI = new Date(today); defCI.setDate(today.getDate()+1);
   const defCO = new Date(today); defCO.setDate(today.getDate()+2); // default 1 night
-  const ciStr = qs('checkin')  || defCI.toISOString().split('T')[0];
-  const coStr = qs('checkout') || defCO.toISOString().split('T')[0];
+  const ciStr = qs('checkin')  || localDateStr(defCI);
+  const coStr = qs('checkout') || localDateStr(defCO);
 
   ['bk-checkin','bk-checkout','mob-checkin','mob-checkout'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.min = today.toISOString().split('T')[0];
+    if (el) el.min = localDateStr(today);
   });
 
   const ci = document.getElementById('bk-checkin');
@@ -1719,8 +1719,8 @@ function initDates() {
 
   if (ci) ci.addEventListener('change', () => {
     // Minimum checkout = checkin + 1 day (1 night minimum)
-    const minCoDate = new Date(ci.value); minCoDate.setDate(minCoDate.getDate() + 1);
-    const minCoStr = minCoDate.toISOString().split('T')[0];
+    const minCoDate = new Date(ci.value + 'T00:00:00'); minCoDate.setDate(minCoDate.getDate() + 1);
+    const minCoStr = localDateStr(minCoDate);
     if (co) co.min = minCoStr;
     if (co && co.value <= ci.value) {
       co.value = minCoStr; // auto-set to minimum (1 night)
@@ -1747,7 +1747,7 @@ function nightBreakdown(ci, co) {
   const d = new Date(ci);
   const end = new Date(co);
   while (d < end) {
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = localDateStr(d);
     const custom  = DATE_PRICES[dateStr];
     nights.push({ date: dateStr, price: (custom && custom.price) ? custom.price : PROP.price, isCustom: !!(custom && custom.price) });
     d.setDate(d.getDate() + 1);
@@ -1845,8 +1845,8 @@ function closeMobSheet() {
 function onMobDateChange() {
   const mci=document.getElementById('mob-checkin'), mco=document.getElementById('mob-checkout');
   if(mci&&mco) {
-    const minD=new Date(mci.value); minD.setDate(minD.getDate()+1);
-    const minStr=minD.toISOString().split('T')[0];
+    const minD=new Date(mci.value+'T00:00:00'); minD.setDate(minD.getDate()+1);
+    const minStr=localDateStr(minD);
     mco.min=minStr;
     if(mco.value<=mci.value) mco.value=minStr; // auto-set to 1 night minimum
   }
@@ -2237,13 +2237,20 @@ let CAL_YEAR  = new Date().getFullYear();
 let CAL_MONTH = new Date().getMonth();
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+// Use local date parts — avoids UTC shift bug in IST (UTC+5:30)
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function getBookedSet() {
   const s = new Set();
   // 1. Confirmed bookings
   (BOOKED_RANGES||[]).forEach(r => {
     const ci = new Date(r.checkin+'T00:00:00');
     const co = new Date(r.checkout+'T00:00:00');
-    for (let d=new Date(ci); d<co; d.setDate(d.getDate()+1)) s.add(d.toISOString().split('T')[0]);
+    for (let d=new Date(ci); d<co; d.setDate(d.getDate()+1)) s.add(localDateStr(d));
   });
   // 2. Manually blocked dates set by admin in date-price manager
   Object.entries(DATE_PRICES||{}).forEach(([date, dp]) => {
@@ -2253,7 +2260,7 @@ function getBookedSet() {
 }
 function buildCalMonthHtml(year, month) {
   const today = new Date(); today.setHours(0,0,0,0);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
   const startDow = new Date(year,month,1).getDay();
   const lastDate = new Date(year,month+1,0).getDate();
   const booked = getBookedSet();

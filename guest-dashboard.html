@@ -332,7 +332,7 @@
 
   function renderAddons(requests, bookings) {
     const sel = document.getElementById('ao-booking');
-    const today = new Date().toISOString().split('T')[0];
+    const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
     const upcoming = bookings.filter(b => b.check_out >= today && b.status !== 'cancelled');
     sel.innerHTML = upcoming.length
       ? upcoming.map(b => `<option value="${b.id || b._id}">${esc(b.title)} · ${fmtDate(b.check_in)}</option>`).join('')
@@ -376,7 +376,7 @@
   }
 
   function renderBookings(bookings) {
-    const today = new Date().toISOString().split('T')[0];
+    const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
     const upcoming = bookings.filter(b => b.check_out >= today && b.status !== 'cancelled');
     const past = bookings.filter(b => b.check_out < today || b.status === 'completed' || b.status === 'cancelled');
 
