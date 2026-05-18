@@ -1,7 +1,37 @@
-const router = require('express').Router();
+const router   = require('express').Router();
+const Razorpay  = require('razorpay');
 const { Booking, Property, Payment, DatePrice } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
+
+function getRazorpay() {
+  const key_id     = process.env.RAZORPAY_KEY_ID;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!key_id || !key_secret) throw new Error('Razorpay keys not configured');
+  return new Razorpay({ key_id, key_secret });
+}
+
+// Refund the captured payment for a booking (if any). Returns refund object or null.
+async function initiateRefund(bookingId) {
+  const payment = await Payment.findOne({ booking_id: bookingId, status: 'captured' }).lean();
+  if (!payment || !payment.razorpay_payment_id) return null;
+  try {
+    const rzp    = getRazorpay();
+    const refund = await rzp.payments.refund(payment.razorpay_payment_id, {
+      amount: payment.amount, // paise
+      speed:  'normal',
+      notes:  { reason: 'Booking cancelled', booking_id: String(bookingId) },
+    });
+    await Payment.findByIdAndUpdate(payment._id, {
+      status:            'refunded',
+      razorpay_refund_id: refund.id,
+    });
+    return refund;
+  } catch (e) {
+    console.error('Refund error for booking', bookingId, e?.error?.description || e.message);
+    return null;
+  }
+}
 
 // GET /api/bookings  — admin gets all, user gets own
 router.get('/', protect, async (req, res) => {
@@ -138,8 +168,16 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
     return res.status(400).json({ error: `Status must be one of: ${allowed.join(', ')}` });
 
   try {
+    const prev = await Booking.findById(req.params.id).lean();
     await Booking.findByIdAndUpdate(req.params.id, { status });
-    res.json({ message: 'Status updated', status });
+
+    // Auto-refund when admin cancels a previously confirmed booking
+    let refund = null;
+    if (status === 'cancelled' && prev && prev.status === 'confirmed') {
+      refund = await initiateRefund(req.params.id);
+    }
+
+    res.json({ message: 'Status updated', status, refund_initiated: !!refund });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -340,7 +378,7 @@ router.get('/:id/invoice', (req, res, next) => {
           <strong>${row.prop_name}</strong>
           <div class="desc-sub">${row.prop_location} · ${row.prop_beds || '—'} Beds · Up to ${row.prop_guests || '—'} Guests</div>
         </td>
-        <td>${INR(row.prop_price)}/night</td>
+        <td>${INR(pricePn)}/night</td>
         <td>${row.nights}</td>
         <td>${INR(baseAmt)}</td>
       </tr>
@@ -430,17 +468,22 @@ router.get('/:id/invoice', (req, res, next) => {
   }
 });
 
-// DELETE /api/bookings/:id  — cancel booking
+// DELETE /api/bookings/:id  — cancel booking (guest or admin)
 router.delete('/:id', protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id).lean();
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (req.user.role !== 'admin' && booking.user_id.toString() !== req.user.id)
       return res.status(403).json({ error: 'Not authorized' });
-    if (booking.status === 'confirmed')
-      return res.status(400).json({ error: 'Cannot cancel a confirmed booking. Contact support.' });
+    if (booking.status === 'cancelled')
+      return res.status(400).json({ error: 'Booking is already cancelled' });
+    if (['checked_in', 'checked_out'].includes(booking.status))
+      return res.status(400).json({ error: 'Cannot cancel a booking that is already checked-in or completed' });
 
     await Booking.findByIdAndUpdate(req.params.id, { status: 'cancelled' });
+
+    // Auto-refund if payment was captured
+    if (booking.status === 'confirmed') await initiateRefund(req.params.id);
 
     // Send cancellation email (non-blocking)
     const cancelled = await Booking.findById(req.params.id)
