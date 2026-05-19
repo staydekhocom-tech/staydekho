@@ -174,14 +174,24 @@ const api = {
 
   myBookings: () => api.listBookings(),
   myTrips: () => api.listBookings().then(d => {
-    const bookings = (d.bookings || []).map(b => ({
-      ...b,
-      title:      b.property_name || b.title || 'Property',
-      main_image: JSON.parse(b.property_images || '[]')[0] || null,
-      check_in:   b.checkin  || b.check_in,
-      check_out:  b.checkout || b.check_out,
-      total:      b.amount   || b.total || 0,
-    }));
+    const bookings = (d.bookings || []).map(b => {
+      // property_id comes as a populated object from backend — extract just the ID string
+      const propIdRaw = b.property_id;
+      const propId = (propIdRaw && typeof propIdRaw === 'object')
+        ? (propIdRaw._id || propIdRaw.id || '').toString()
+        : String(propIdRaw || '');
+      let mainImg = null;
+      try { mainImg = JSON.parse(b.property_images || '[]')[0] || null; } catch(e){}
+      return {
+        ...b,
+        property_id: propId,
+        title:      b.property_name || b.title || 'Property',
+        main_image: mainImg,
+        check_in:   b.checkin  || b.check_in,
+        check_out:  b.checkout || b.check_out,
+        total:      b.amount   || b.total || 0,
+      };
+    });
     return { bookings };
   }),
   wishlist: () => {

@@ -380,9 +380,13 @@
     const upcoming = bookings.filter(b => b.check_out >= today && b.status !== 'cancelled');
     const past = bookings.filter(b => b.check_out < today || b.status === 'completed' || b.status === 'cancelled');
 
-    document.getElementById('stat-total').textContent = bookings.length;
+    const nonCancelled = bookings.filter(b => b.status !== 'cancelled');
+    document.getElementById('stat-total').textContent = nonCancelled.length;
     document.getElementById('stat-upcoming').textContent = upcoming.length;
-    document.getElementById('stat-nights').textContent = past.reduce((n,b) => n + (b.nights||0), 0);
+    // Nights stayed: only completed/confirmed past trips (not cancelled)
+    document.getElementById('stat-nights').textContent = past
+      .filter(b => b.status !== 'cancelled')
+      .reduce((n,b) => n + (b.nights||0), 0);
 
     document.getElementById('upcoming-list').innerHTML = upcoming.length
       ? upcoming.map(b => bookingItem(b, true)).join('')
