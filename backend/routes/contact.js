@@ -9,6 +9,9 @@ router.post('/', async (req, res) => {
   if (!name || !email || !subject || !message)
     return res.status(400).json({ error: 'Name, email, subject aur message required hain.' });
 
+  // Escape HTML to prevent injection in admin email
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
   try {
     await Contact.create({
       name:    name.trim(),
@@ -23,23 +26,23 @@ router.post('/', async (req, res) => {
     if (adminEmail) {
       sendEmail(
         adminEmail,
-        `New Contact Form: ${subject} — from ${name}`,
+        `New Contact Form: ${esc(subject)} — from ${esc(name)}`,
         `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;border:1px solid #eee;border-radius:10px;overflow:hidden">
           <div style="background:#8B1717;padding:20px 24px">
             <h2 style="color:#fff;margin:0;font-size:1.2rem">New Contact Form Submission</h2>
           </div>
           <div style="padding:24px">
             <table style="width:100%;border-collapse:collapse;font-size:.9rem">
-              <tr><td style="color:#666;padding:6px 0;width:100px">Name</td><td style="font-weight:600">${name}</td></tr>
-              <tr><td style="color:#666;padding:6px 0">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>
-              <tr><td style="color:#666;padding:6px 0">Phone</td><td>${phone || '—'}</td></tr>
-              <tr><td style="color:#666;padding:6px 0">Subject</td><td style="font-weight:600">${subject}</td></tr>
+              <tr><td style="color:#666;padding:6px 0;width:100px">Name</td><td style="font-weight:600">${esc(name)}</td></tr>
+              <tr><td style="color:#666;padding:6px 0">Email</td><td><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
+              <tr><td style="color:#666;padding:6px 0">Phone</td><td>${phone ? esc(phone) : '—'}</td></tr>
+              <tr><td style="color:#666;padding:6px 0">Subject</td><td style="font-weight:600">${esc(subject)}</td></tr>
             </table>
             <div style="background:#fafafa;border:1px solid #eee;border-radius:8px;padding:16px;margin-top:16px">
               <div style="font-size:.75rem;color:#999;font-weight:600;text-transform:uppercase;margin-bottom:8px">Message</div>
-              <p style="margin:0;color:#333;white-space:pre-wrap">${message}</p>
+              <p style="margin:0;color:#333;white-space:pre-wrap">${esc(message)}</p>
             </div>
-            <a href="mailto:${email}?subject=Re: ${subject}" style="display:inline-block;margin-top:16px;background:#8B1717;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:.9rem">Reply to ${name}</a>
+            <a href="mailto:${esc(email)}?subject=Re: ${esc(subject)}" style="display:inline-block;margin-top:16px;background:#8B1717;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:.9rem">Reply to ${esc(name)}</a>
           </div>
         </div>`
       ).catch(e => console.error('Contact email error:', e.message));
