@@ -84,7 +84,7 @@ router.post('/image', protect, imageUpload.single('image'), (req, res) => {
 const memUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_, file, cb) => { const ok = ['.jpg','.jpeg','.png','.webp','.avif']; ok.includes(path.extname(file.originalname).toLowerCase()) ? cb(null,true) : cb(new Error('Only image files allowed')); }
 });
-router.post('/images', protect, adminOnly, memUpload.array('images', 40), async (req, res) => {
+router.post('/images', protect, adminOnly, memUpload.array('images', 70), async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'Koi file nahi mili' });
   try {
     let urls;
