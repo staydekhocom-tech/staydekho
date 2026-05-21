@@ -147,7 +147,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/properties — admin only
-router.post('/', protect, adminOnly, upload.array('images', 10), async (req, res) => {
+router.post('/', protect, adminOnly, upload.array('images', 70), async (req, res) => {
   const data = req.body;
 
   if (!data.name || !data.location || !data.price)
@@ -200,7 +200,7 @@ router.post('/', protect, adminOnly, upload.array('images', 10), async (req, res
 });
 
 // PUT /api/properties/:id — admin only
-router.put('/:id', protect, adminOnly, upload.array('images', 10), async (req, res) => {
+router.put('/:id', protect, adminOnly, upload.array('images', 70), async (req, res) => {
   try {
     const existing = await Property.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Property not found' });
