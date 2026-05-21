@@ -370,8 +370,8 @@
     const n = new URLSearchParams(location.search).get('redirect') || new URLSearchParams(location.search).get('next');
     if (n) {
       const decoded = decodeURIComponent(n);
-      // Only allow same-origin redirects (no external URLs / open redirect protection)
-      if (decoded.startsWith('/') || decoded.startsWith(location.origin) || !decoded.includes('://')) {
+      // Only allow same-origin redirects — block //evil.com and http://evil.com style attacks
+      if (decoded.startsWith(location.origin) || (/^\/[^/]/.test(decoded) || decoded === '/')) {
         return decoded;
       }
     }

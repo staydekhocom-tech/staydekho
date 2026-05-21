@@ -1,0 +1,20 @@
+.vercel
+
+# Environment / secrets — NEVER commit these
+.env
+.env.local
+.env.production
+*.env
+
+# Node modules
+node_modules/
+backend/node_modules/
+
+# Build / cache
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# Uploads (use Cloudinary instead)
+uploads/
