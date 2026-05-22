@@ -634,31 +634,6 @@ function handleDrop(e) {
   if (e.dataTransfer.files.length) handleDeviceUpload(e.dataTransfer.files);
 }
 
-// Compress image client-side using Canvas before uploading
-// Reduces 3-8MB camera photos to ~200-400KB — makes upload 10x faster
-function compressImage(file, maxW = 1600, quality = 0.82) {
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxW / img.width);
-        const w = Math.round(img.width  * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(blob => {
-          // If compression made it larger (already small), use original
-          resolve(blob && blob.size < file.size ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
-        }, 'image/jpeg', quality);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 async function handleDeviceUpload(files) {
   const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
   if (!imageFiles.length) { setUploadStatus('No valid image files selected.', 'error'); return; }
@@ -682,40 +657,26 @@ async function handleDeviceUpload(files) {
   if (inp) inp.disabled = true;
 
   try {
+    const fd = new FormData();
+    toUpload.forEach(f => fd.append('images', f));
+
     const token = getToken();
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:5000/api'
       : 'https://staydekho-production.up.railway.app/api';
 
-    // Step 1: Compress all images client-side first
-    setUploadStatus(`Compressing ${toUpload.length} photo(s)…`, 'uploading');
-    const compressed = await Promise.all(toUpload.map(f => compressImage(f)));
+    const res  = await fetch(`${apiBase}/uploads/images`, { method: 'POST', headers, body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
 
-    // Step 2: Upload in batches of 10 to avoid timeout/memory issues
-    const BATCH = 10;
-    const allUrls = [];
-    for (let i = 0; i < compressed.length; i += BATCH) {
-      const batch = compressed.slice(i, i + BATCH);
-      const done  = Math.min(i + BATCH, compressed.length);
-      setUploadStatus(`Uploading ${done} / ${compressed.length} photos…`, 'uploading');
-
-      const fd = new FormData();
-      batch.forEach(f => fd.append('images', f));
-      const res  = await fetch(`${apiBase}/uploads/images`, { method: 'POST', headers, body: fd });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
-      allUrls.push(...(data.urls || []));
-
-      // Add batch to gallery immediately so user sees progress
-      (data.urls || []).forEach(url => images.push({ url, cat: 'Exterior' }));
-      renderImages();
-      updatePhotoCounter();
-    }
-
-    setUploadStatus(`✓ ${allUrls.length} photo(s) uploaded! Change categories below.`, 'success');
-    setTimeout(() => setUploadStatus(''), 5000);
+    const { urls = [] } = data;
+    urls.forEach(url => images.push({ url, cat: 'Exterior' }));
+    renderImages();
+    setUploadStatus(`${urls.length} photo(s) uploaded! You can change categories below.`, 'success');
+    setTimeout(() => setUploadStatus(''), 4000);
   } catch (err) {
     setUploadStatus('Upload failed: ' + err.message, 'error');
   } finally {
