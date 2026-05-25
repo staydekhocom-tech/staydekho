@@ -756,6 +756,24 @@ function syncImageCategories() {
   });
 }
 
+/* ── Auto-scroll while dragging near top/bottom edge ── */
+let _scrollRaf = null;
+function _startDragScroll(e) {
+  const ZONE = 100;   // px from edge to trigger scroll
+  const SPEED = 12;   // px per frame
+  function step() {
+    const y = e.clientY;
+    if (y < ZONE)        window.scrollBy(0, -SPEED);
+    else if (y > window.innerHeight - ZONE) window.scrollBy(0, SPEED);
+    _scrollRaf = requestAnimationFrame(step);
+  }
+  if (_scrollRaf) cancelAnimationFrame(_scrollRaf);
+  _scrollRaf = requestAnimationFrame(step);
+}
+function _stopDragScroll() {
+  if (_scrollRaf) { cancelAnimationFrame(_scrollRaf); _scrollRaf = null; }
+}
+
 function onImgDragStart(e, i) {
   syncImageCategories();   // capture all typed-but-unsaved values first
   _dragIdx = i;
@@ -764,6 +782,7 @@ function onImgDragStart(e, i) {
     const items = document.querySelectorAll('.img-item');
     if (items[i]) items[i].classList.add('img-dragging');
   }, 0);
+  document.addEventListener('dragover', _startDragScroll);
 }
 function onImgDragOver(e, i) {
   e.preventDefault();
@@ -788,6 +807,8 @@ function onImgDrop(e, i) {
   toast('Photo order updated — click Save to keep changes', 'success');
 }
 function onImgDragEnd() {
+  _stopDragScroll();
+  document.removeEventListener('dragover', _startDragScroll);
   document.querySelectorAll('.img-item').forEach(el => {
     el.classList.remove('img-dragging', 'img-drop-here');
   });
