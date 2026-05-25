@@ -152,6 +152,20 @@
     .img-url-field input{flex:1;}
     .img-cat-field{display:flex;gap:8px;}
     .img-cat-field input{flex:1;}
+
+    /* ── Category Chips ── */
+    .cat-chips-wrap{margin-bottom:10px;}
+    .cat-chips-label{font-size:.72rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+    .cat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+    .cat-chip{padding:4px 12px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;
+      font-size:.76rem;font-weight:600;cursor:pointer;color:var(--gray-600);transition:all .15s;line-height:1.4;}
+    .cat-chip:hover{border-color:var(--red);color:var(--red);background:#fff5f5;}
+    .cat-chip.active{border-color:var(--red);color:var(--red);background:#fff5f5;}
+    .sub-chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px;}
+    .sub-chip{padding:3px 10px;border-radius:20px;border:1.5px solid #e5e7eb;background:#f9fafb;
+      font-size:.73rem;font-weight:600;cursor:pointer;color:var(--gray-500);transition:all .15s;}
+    .sub-chip:hover{border-color:var(--red);color:var(--red);background:#fff5f5;}
+    .sub-chip.active{border-color:var(--red);color:var(--red);background:#fff5f5;}
     .add-img-box{
       border:2px dashed var(--gray-200);border-radius:12px;padding:20px;
       background:#fafafa;
@@ -529,10 +543,26 @@ function buildForm() {
             <div class="img-url-field">
               <input type="text" id="new-img-url" placeholder="Paste any image URL…"/>
             </div>
-            <div class="img-cat-field" style="margin-top:8px">
-              <input type="text" id="new-img-cat" placeholder="Category — e.g. Exterior, Room 1, Pool…"/>
+            <!-- Category quick-pick chips -->
+            <div class="cat-chips-wrap" style="margin-top:10px">
+              <div class="cat-chips-label">Category</div>
+              <div class="cat-chips" id="main-cat-chips"></div>
+              <div class="sub-chips" id="room-sub-row" style="display:none"></div>
+              <div class="sub-chips" id="bath-sub-row" style="display:none"></div>
+            </div>
+            <div class="img-cat-field">
+              <input type="text" id="new-img-cat" placeholder="Ya custom type karo…" list="cat-datalist"/>
               <button class="btn btn-outline btn-sm" onclick="addImage()">Add</button>
             </div>
+            <datalist id="cat-datalist">
+              <option value="Exterior"/><option value="Bedroom"/><option value="Swimming Pool"/>
+              <option value="Living Room"/><option value="Bathroom"/><option value="Kitchen"/>
+              <option value="Dining Area"/><option value="Courtyard"/><option value="Terrace"/>
+              <option value="Parking"/><option value="Outdoors"/><option value="Others"/>
+              <option value="Room 1"/><option value="Room 2"/><option value="Room 3"/>
+              <option value="Room 4"/><option value="Room 5"/><option value="Room 6"/>
+              <option value="Bathroom 1"/><option value="Bathroom 2"/><option value="Bathroom 3"/>
+            </datalist>
           </div>
         </div>
 
@@ -706,7 +736,7 @@ function renderImages() {
           drag to reorder
         </div>
         <input class="img-cat-input" type="text" value="${esc(img.cat||'')}"
-          placeholder="Category" oninput="images[${i}].cat=this.value"/>
+          placeholder="Category" list="cat-datalist" oninput="images[${i}].cat=this.value"/>
         <button class="img-del-btn" onclick="removeImage(${i})">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           Remove
@@ -916,6 +946,61 @@ function esc(s) {
 }
 
 loadProperty();
+
+/* ── Category Chips ─────────────────────────────── */
+const CAT_LIST = [
+  'Exterior','Bedroom','Swimming Pool','Living Room','Bathroom',
+  'Kitchen','Dining Area','Courtyard','Terrace','Parking','Outdoors','Others'
+];
+
+function buildCatChips() {
+  const wrap = document.getElementById('main-cat-chips');
+  if (!wrap) return;
+  wrap.innerHTML = CAT_LIST.map(c =>
+    `<button class="cat-chip" type="button" onclick="pickMainCat('${c}',this)">${c}</button>`
+  ).join('');
+
+  // Room sub-chips (up to 10 rooms)
+  const roomRow = document.getElementById('room-sub-row');
+  if (roomRow) roomRow.innerHTML = Array.from({length:10},(_,i)=>
+    `<button class="sub-chip" type="button" onclick="pickSubCat('Room ${i+1}',this,'room-sub-row')">Room ${i+1}</button>`
+  ).join('');
+
+  // Bathroom sub-chips (up to 6)
+  const bathRow = document.getElementById('bath-sub-row');
+  if (bathRow) bathRow.innerHTML = Array.from({length:6},(_,i)=>
+    `<button class="sub-chip" type="button" onclick="pickSubCat('Bathroom ${i+1}',this,'bath-sub-row')">Bathroom ${i+1}</button>`
+  ).join('');
+}
+
+function pickMainCat(cat, el) {
+  document.querySelectorAll('#main-cat-chips .cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const roomRow = document.getElementById('room-sub-row');
+  const bathRow = document.getElementById('bath-sub-row');
+  roomRow.style.display = cat === 'Bedroom'  ? 'flex' : 'none';
+  bathRow.style.display = cat === 'Bathroom' ? 'flex' : 'none';
+  // Reset sub-chip active
+  roomRow.querySelectorAll('.sub-chip').forEach(c => c.classList.remove('active'));
+  bathRow.querySelectorAll('.sub-chip').forEach(c => c.classList.remove('active'));
+  if (cat === 'Bedroom') {
+    document.getElementById('new-img-cat').value = 'Room 1';
+    roomRow.querySelector('.sub-chip')?.classList.add('active');
+  } else if (cat === 'Bathroom') {
+    document.getElementById('new-img-cat').value = 'Bathroom 1';
+    bathRow.querySelector('.sub-chip')?.classList.add('active');
+  } else {
+    document.getElementById('new-img-cat').value = cat;
+  }
+}
+
+function pickSubCat(val, el, rowId) {
+  document.querySelectorAll(`#${rowId} .sub-chip`).forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('new-img-cat').value = val;
+}
+
+buildCatChips();
 </script>
 </body>
 </html>
