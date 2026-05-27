@@ -26,6 +26,18 @@ function uploadToCloudinary(buffer) {
   });
 }
 
+/* Upload buffers to Cloudinary with max `concurrency` parallel requests.
+   Prevents memory spikes and Cloudinary rate-limit errors on large batches. */
+async function uploadAllToCloudinary(buffers, concurrency = 4) {
+  const results = [];
+  for (let i = 0; i < buffers.length; i += concurrency) {
+    const batch = buffers.slice(i, i + concurrency);
+    const urls  = await Promise.all(batch.map(buf => uploadToCloudinary(buf)));
+    results.push(...urls);
+  }
+  return results;
+}
+
 const imgDir = path.join(__dirname, '..', 'uploads', 'images');
 const docDir = path.join(__dirname, '..', 'uploads', 'brochures');
 const avDir  = path.join(__dirname, '..', 'uploads', 'avatars');
@@ -89,7 +101,7 @@ router.post('/images', protect, adminOnly, memUpload.array('images', 70), async 
   try {
     let urls;
     if (cloudinary) {
-      urls = await Promise.all(req.files.map(f => uploadToCloudinary(f.buffer)));
+      urls = await uploadAllToCloudinary(req.files.map(f => f.buffer));
     } else {
       urls = req.files.map(file => {
         const ext  = path.extname(file.originalname).toLowerCase();

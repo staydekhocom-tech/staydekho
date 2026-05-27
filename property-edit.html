@@ -676,37 +676,45 @@ async function handleDeviceUpload(files) {
 
   const toUpload = imageFiles.slice(0, slots);
   const skipped  = imageFiles.length - toUpload.length;
-  setUploadStatus(
-    skipped > 0
-      ? `Uploading ${toUpload.length} photo(s) (${skipped} skipped — limit reached)…`
-      : `Uploading ${toUpload.length} photo(s)…`,
-    'uploading'
-  );
+  if (skipped > 0) setUploadStatus(`${toUpload.length} photos upload hogi (${skipped} skipped — limit)…`, 'uploading');
 
   const inp = document.getElementById('device-file-input');
   if (inp) inp.disabled = true;
 
+  const token   = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000/api'
+    : 'https://staydekho-production.up.railway.app/api';
+
+  /* ── Upload in batches of 5 so the request stays small ── */
+  const BATCH = 5;
+  const allUrls = [];
+
   try {
-    const fd = new FormData();
-    toUpload.forEach(f => fd.append('images', f));
+    for (let i = 0; i < toUpload.length; i += BATCH) {
+      const batch = toUpload.slice(i, i + BATCH);
+      const from  = i + 1;
+      const to    = Math.min(i + BATCH, toUpload.length);
+      setUploadStatus(`Uploading ${from}–${to} of ${toUpload.length} photos…`, 'uploading');
 
-    const token = getToken();
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+      const fd = new FormData();
+      batch.forEach(f => fd.append('images', f));
 
-    const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:5000/api'
-      : 'https://staydekho-production.up.railway.app/api';
+      const res  = await fetch(`${apiBase}/uploads/images`, { method: 'POST', headers, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
 
-    const res  = await fetch(`${apiBase}/uploads/images`, { method: 'POST', headers, body: fd });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+      (data.urls || []).forEach(url => {
+        allUrls.push(url);
+        images.push({ url, cat: 'Exterior' });
+      });
+      renderImages(); // show each batch immediately as it finishes
+    }
 
-    const { urls = [] } = data;
-    urls.forEach(url => images.push({ url, cat: 'Exterior' }));
-    renderImages();
-    setUploadStatus(`${urls.length} photo(s) uploaded! You can change categories below.`, 'success');
-    setTimeout(() => setUploadStatus(''), 4000);
+    setUploadStatus(`${allUrls.length} photo(s) uploaded! Niche categories change kar sakte ho.`, 'success');
+    setTimeout(() => setUploadStatus(''), 5000);
   } catch (err) {
     setUploadStatus('Upload failed: ' + err.message, 'error');
   } finally {
