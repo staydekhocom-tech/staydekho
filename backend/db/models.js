@@ -84,11 +84,15 @@ const otpSchema = new Schema({
 
 // ── 6. Review ──────────────────────────────────────────
 const reviewSchema = new Schema({
-  user_id:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
-  booking_id:  { type: Schema.Types.ObjectId, ref: 'Booking', default: null },
-  rating:      { type: Number, required: true, min: 1, max: 5 },
-  text:        { type: String, default: '' },
+  user_id:       { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  property_id:   { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  booking_id:    { type: Schema.Types.ObjectId, ref: 'Booking', default: null },
+  rating:        { type: Number, required: true, min: 1, max: 5 },
+  text:          { type: String, default: '' },
+  // Admin-created review extras
+  guest_name:    { type: String, default: '' },   // custom name shown on homepage card
+  image_url:     { type: String, default: '' },   // guest photo (card background)
+  property_name: { type: String, default: '' },   // cached for display
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 // ── 7. GuestReel ───────────────────────────────────────

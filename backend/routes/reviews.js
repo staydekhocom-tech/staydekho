@@ -13,7 +13,8 @@ router.get('/featured', async (req, res) => {
 
     const reviews = docs.map(r => ({
       ...r,
-      user_name:     r.user_id?.name || 'Guest',
+      user_name:     r.guest_name || r.user_id?.name || 'Guest',
+      image_url:     r.image_url || '',
       property_name: r.property_name || 'StayDekho Property',
     }));
 
@@ -51,8 +52,9 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/reviews  — auth required
+// Admin can also pass: guest_name, image_url (to create curated homepage reviews)
 router.post('/', protect, async (req, res) => {
-  const { property_id, booking_id, rating, text } = req.body;
+  const { property_id, booking_id, rating, text, guest_name, image_url } = req.body;
   if (!property_id || !rating || !text)
     return res.status(400).json({ error: 'property_id, rating and text are required' });
   if (rating < 1 || rating > 5)
@@ -63,43 +65,52 @@ router.post('/', protect, async (req, res) => {
     const prop = await Property.findById(property_id).lean();
     if (!prop) return res.status(404).json({ error: 'Property not found' });
 
-    // If booking_id provided, check ownership
-    if (booking_id) {
-      const bk = await Booking.findOne({ _id: booking_id, user_id: req.user.id }).lean();
-      if (!bk) return res.status(403).json({ error: 'Booking not found or not yours' });
+    const isAdmin = req.user.role === 'admin';
+
+    // Non-admin: one review per user per property — update if exists
+    if (!isAdmin) {
+      if (booking_id) {
+        const bk = await Booking.findOne({ _id: booking_id, user_id: req.user.id }).lean();
+        if (!bk) return res.status(403).json({ error: 'Booking not found or not yours' });
+      }
+      const existing = await Review.findOne({ user_id: req.user.id, property_id }).lean();
+      if (existing) {
+        await Review.findByIdAndUpdate(existing._id, {
+          rating:     Number(rating),
+          text:       String(text).trim(),
+          booking_id: booking_id || null,
+        });
+        const updated = await Review.findById(existing._id).populate('user_id', 'name').lean();
+        return res.json({
+          review: { ...updated, user_name: updated.user_id?.name || 'Guest' },
+          updated: true,
+        });
+      }
     }
 
-    // One review per user per property — update if exists
-    const existing = await Review.findOne({ user_id: req.user.id, property_id }).lean();
-    if (existing) {
-      await Review.findByIdAndUpdate(existing._id, {
-        rating:     Number(rating),
-        text:       String(text).trim(),
-        booking_id: booking_id || null,
-      });
-      const updated = await Review.findById(existing._id)
-        .populate('user_id', 'name')
-        .lean();
-      return res.json({
-        review: { ...updated, user_name: updated.user_id?.name || 'Guest' },
-        updated: true,
-      });
-    }
-
-    const created = await Review.create({
-      user_id:    req.user.id,
+    // Build review data
+    const reviewData = {
+      user_id:       req.user.id,
       property_id,
-      booking_id: booking_id || null,
-      rating:     Number(rating),
-      text:       String(text).trim(),
-    });
+      booking_id:    booking_id || null,
+      rating:        Number(rating),
+      text:          String(text).trim(),
+      property_name: prop.name || '',
+    };
+    // Admin extras — custom guest name & photo
+    if (isAdmin) {
+      if (guest_name) reviewData.guest_name = String(guest_name).trim();
+      if (image_url)  reviewData.image_url  = String(image_url).trim();
+    }
 
-    const review = await Review.findById(created._id)
-      .populate('user_id', 'name')
-      .lean();
+    const created = await Review.create(reviewData);
+    const review  = await Review.findById(created._id).populate('user_id', 'name').lean();
 
     res.status(201).json({
-      review: { ...review, user_name: review.user_id?.name || 'Guest' },
+      review: {
+        ...review,
+        user_name: review.guest_name || review.user_id?.name || 'Guest',
+      },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

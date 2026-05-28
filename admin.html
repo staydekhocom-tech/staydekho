@@ -1116,7 +1116,7 @@ function openAddReviewModal() {
   const prev = document.getElementById('rev-img-preview');
   prev.src = ''; prev.style.display = 'none';
   const propSelect = document.getElementById('rev-property');
-  propSelect.innerHTML = '<option value="">Select Property...</option>' + properties.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+  propSelect.innerHTML = '<option value="">Select Property...</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   showModal('review-add-modal');
 }
 
@@ -1132,12 +1132,11 @@ async function saveAdminReview() {
   btn.textContent = 'Saving...'; btn.disabled = true;
   try {
     await api.createReview({
-      user_name:     guest,
-      property_name: property,
-      rating:        Math.min(5, Math.max(1, rating)),
-      text:          text,
-      image_url:     imageUrl || '',
-      date:          date || undefined,
+      guest_name:  guest,
+      property_id: property,
+      rating:      Math.min(5, Math.max(1, rating)),
+      text:        text,
+      image_url:   imageUrl || '',
     });
     closeModal('review-add-modal');
     await initAdmin();
