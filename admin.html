@@ -1104,20 +1104,34 @@ function renderReviews() {
   }).join('');
 }
 
-function openAddReviewModal() {
+async function openAddReviewModal() {
   document.getElementById('rev-guest').value = '';
   document.getElementById('rev-rating').value = 5;
   document.getElementById('rev-text').value = '';
   document.getElementById('rev-image-url').value = '';
   const _rd=new Date(); document.getElementById('rev-date').value=`${_rd.getFullYear()}-${String(_rd.getMonth()+1).padStart(2,'0')}-${String(_rd.getDate()).padStart(2,'0')}`;
-  // Reset image upload UI
   document.getElementById('rev-img-file').value = '';
   document.getElementById('rev-img-status').textContent = 'No file chosen';
   const prev = document.getElementById('rev-img-preview');
   prev.src = ''; prev.style.display = 'none';
+
   const propSelect = document.getElementById('rev-property');
-  propSelect.innerHTML = '<option value="">Select Property...</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  propSelect.innerHTML = '<option value="">Loading properties…</option>';
   showModal('review-add-modal');
+
+  // Always fetch fresh list so dropdown is never empty
+  try {
+    if (!properties.length && api && api.listProperties) {
+      const res = await api.listProperties().catch(() => ({ properties: [] }));
+      properties = (res.properties || []).map(p => ({
+        id: p.id || p._id, name: p.name || p.title,
+      }));
+    }
+  } catch(e) { /* ignore */ }
+
+  propSelect.innerHTML = properties.length
+    ? '<option value="">Select Property...</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+    : '<option value="">No properties found — add one first</option>';
 }
 
 async function saveAdminReview() {
