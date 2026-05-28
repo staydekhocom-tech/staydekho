@@ -54,6 +54,13 @@ async function _doRequest(method, path, body, urlIdx) {
   }
 
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    // Token expired or invalid — clear and redirect to login
+    localStorage.removeItem('sd_token');
+    localStorage.removeItem('sd_user');
+    const cur = location.pathname.split('/').pop() || '';
+    if (cur !== 'login.html') location.href = 'login.html?expired=1';
+  }
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }
