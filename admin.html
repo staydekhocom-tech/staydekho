@@ -1519,14 +1519,14 @@ async function loadIcalPage() {
             <ul style="font-size:12.5px;color:var(--gray-600);padding-left:0;list-style:none">
               ${(data.sources || []).map(s => `<li style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--gray-100)">
                 <span>${s.label || 'External'} — <code>${s.url}</code> ${s.last_error ? `<span style="color:#dc2626">(${s.last_error})</span>` : ''}</span>
-                <button class="btn-icon" onclick="delIcalSource(${s.id})">✕</button>
+                <button class="btn-icon" onclick="delIcalSource('${s.id||s._id}')">✕</button>
               </li>`).join('')}
             </ul>
             <div style="display:flex;gap:8px;margin-top:8px">
               <input class="form-ctrl" placeholder="https://www.airbnb.com/calendar/ical/…ics" id="ical-url-${p.id}"/>
               <input class="form-ctrl" placeholder="Label e.g. Airbnb" style="max-width:140px" id="ical-label-${p.id}"/>
-              <button class="btn btn-primary btn-sm" onclick="addIcalSource(${p.id})">+ Add</button>
-              <button class="btn btn-sm" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearIcalBlocks(${p.id}, '${p.name}')">🧹 Clear blocks</button>
+              <button class="btn btn-primary btn-sm" onclick="addIcalSource('${p.id}')">+ Add</button>
+              <button class="btn btn-sm" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="clearIcalBlocks('${p.id}', '${p.name}')">🧹 Clear blocks</button>
             </div>
           </div>`);
       } catch (e) { /* skip property on error */ }
