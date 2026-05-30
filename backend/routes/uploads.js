@@ -86,10 +86,25 @@ function publicUrl(req, sub, filename) {
   return `${req.protocol}://${req.get('host')}/uploads/${sub}/${filename}`;
 }
 
-// POST /api/uploads/image  — single image upload
-router.post('/image', protect, imageUpload.single('image'), (req, res) => {
+// POST /api/uploads/image  — single image upload (Cloudinary if available, else local)
+const memSingle = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => { const ok = ['.jpg','.jpeg','.png','.webp','.avif']; ok.includes(path.extname(file.originalname).toLowerCase()) ? cb(null,true) : cb(new Error('Only image files allowed')); }
+});
+router.post('/image', protect, memSingle.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  res.json({ url: publicUrl(req, 'images', req.file.filename) });
+  try {
+    if (cloudinary) {
+      const url = await uploadToCloudinary(req.file.buffer);
+      return res.json({ url });
+    }
+    // Fallback: save to local disk
+    const ext  = path.extname(req.file.originalname).toLowerCase();
+    const name = `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}${ext}`;
+    fs.writeFileSync(path.join(imgDir, name), req.file.buffer);
+    res.json({ url: publicUrl(req, 'images', name) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Upload failed' });
+  }
 });
 
 // POST /api/uploads/images  — multiple images (max 40) → Cloudinary or local
