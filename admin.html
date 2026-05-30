@@ -331,6 +331,67 @@
     <div class="prop-grid" id="prop-grid"></div>
   </div>
 
+  <!-- ── PROPERTY DASHBOARD ── -->
+  <div class="page-view" id="page-prop-dash">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-outline" onclick="showPage('properties')" style="padding:7px 14px;font-size:13px">← Back</button>
+        <div>
+          <div class="page-title" id="pdash-name">Property Dashboard</div>
+          <div class="page-subtitle" id="pdash-location"></div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a class="btn btn-outline btn-sm" id="pdash-view-link" href="#" target="_blank">👁 View Live</a>
+        <button class="btn btn-primary btn-sm" id="pdash-edit-btn">✏️ Edit Property</button>
+      </div>
+    </div>
+
+    <!-- Hero strip: cover image + thumbnails -->
+    <div class="card" style="margin-bottom:20px;padding:0;overflow:hidden;display:flex">
+      <div style="width:280px;flex-shrink:0;background:#eee">
+        <img id="pdash-cover" src="" alt="" style="width:100%;height:190px;object-fit:cover;display:block" onerror="this.style.display='none'"/>
+      </div>
+      <div style="padding:18px 22px;flex:1;min-width:0">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="pdash-thumbs"></div>
+        <div style="font-size:13px;color:var(--gray-500);margin-bottom:6px">📍 <span id="pdash-loc2"></span></div>
+        <div style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:4px" id="pdash-price"></div>
+        <div style="font-size:13px;color:var(--gray-500)" id="pdash-meta"></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--gray-400)" id="pdash-status-badge"></div>
+      </div>
+    </div>
+
+    <!-- 4 stat cards -->
+    <div class="stats-grid" style="margin-bottom:22px" id="pdash-stats"></div>
+
+    <!-- Main grid: bookings (left) + reviews+ical (right) -->
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:22px">
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="sec-title">📋 Bookings</div>
+          <span id="pdash-bk-count" style="font-size:12px;color:var(--gray-400)"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Guest</th><th>Check-in</th><th>Check-out</th><th>Guests</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+            <tbody id="pdash-bk-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="card">
+          <div class="sec-hdr"><div class="sec-title">⭐ Reviews</div><span id="pdash-rev-count" style="font-size:12px;color:var(--gray-400)"></span></div>
+          <div id="pdash-reviews"></div>
+        </div>
+        <div class="card">
+          <div class="sec-hdr"><div class="sec-title">🔁 iCal Sync</div></div>
+          <div id="pdash-ical"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="page-view" id="page-bookings">
     <div class="topbar">
       <div><div class="page-title">Bookings</div><div class="page-subtitle">All reservations in one place</div></div>
@@ -816,6 +877,7 @@ async function initAdmin() {
 
     bookings = (booksRes.bookings || []).map(b => ({
       id: b.id || b._id, guest: b.guest_name || b.user_name || '—', property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout, guests: b.guests || 1, amount: b.amount || 0, status: b.status || 'pending',
+      propId: (b.property_id?._id || b.property_id || '').toString(),
     }));
 
     users = (usersRes.users || []).map(u => ({
@@ -1606,11 +1668,121 @@ window.deleteBlogPost    = deleteBlogPost;
 
 // ── RENDER ──
 function filterProps(q) { renderProps(properties.filter(p => p.name.toLowerCase().includes(q.toLowerCase()) || p.location.toLowerCase().includes(q.toLowerCase()))); }
+
+// ── PROPERTY DASHBOARD ─────────────────────────────────────
+async function openPropDash(id) {
+  showPage('prop-dash');
+  const prop = properties.find(p => String(p.id) === String(id));
+  if (!prop) return;
+
+  // Header
+  document.getElementById('pdash-name').textContent = prop.name;
+  document.getElementById('pdash-location').textContent = '📍 ' + prop.location;
+  document.getElementById('pdash-loc2').textContent = prop.location;
+  document.getElementById('pdash-price').textContent = '₹' + Number(prop.price).toLocaleString('en-IN') + ' / night';
+  document.getElementById('pdash-meta').textContent = '👤 ' + prop.guests + ' guests · 🛏 ' + prop.beds + ' beds';
+  document.getElementById('pdash-status-badge').innerHTML = '<span class="badge ' + (prop.status === 'Active' ? 'b-active' : 'b-inactive') + '">' + prop.status + '</span>';
+  document.getElementById('pdash-view-link').href = 'property.html?id=' + id;
+  document.getElementById('pdash-edit-btn').onclick = () => editProp(id);
+
+  // Hero + thumbnails
+  const imgs = prop.images || [];
+  const cover = document.getElementById('pdash-cover');
+  if (imgs[0]) { cover.src = imgs[0]; cover.style.display = 'block'; } else cover.style.display = 'none';
+  document.getElementById('pdash-thumbs').innerHTML =
+    imgs.slice(1, 7).map(src => `<img src="${src}" style="width:52px;height:40px;object-fit:cover;border-radius:6px;border:2px solid var(--gray-200)" onerror="this.style.display='none'"/>`).join('') +
+    (imgs.length > 7 ? `<span style="font-size:11px;color:var(--gray-400);align-self:center;margin-left:2px">+${imgs.length - 7} more</span>` : '');
+
+  // Filter bookings & reviews by this property
+  const propBookings = bookings.filter(b => !b.isExternal && String(b.propId) === String(id));
+  const propReviews  = reviews.filter(r => r.property === prop.name);
+
+  // Stats
+  const nonCancelled = propBookings.filter(b => b.status !== 'cancelled');
+  const revenue = propBookings.filter(b => b.status === 'confirmed').reduce((s, b) => s + (b.amount || 0), 0);
+  const avgRating = propReviews.length ? (propReviews.reduce((s, r) => s + r.rating, 0) / propReviews.length).toFixed(1) : '—';
+  document.getElementById('pdash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon si-blue">📋</div><div><div class="stat-val">${nonCancelled.length}</div><div class="stat-lbl">Total Bookings</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-green">💰</div><div><div class="stat-val">₹${revenue >= 100000 ? (revenue/100000).toFixed(1)+'L' : Number(revenue).toLocaleString('en-IN')}</div><div class="stat-lbl">Total Revenue</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-orange">⭐</div><div><div class="stat-val">${avgRating}</div><div class="stat-lbl">Avg Rating</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-red">💬</div><div><div class="stat-val">${propReviews.length}</div><div class="stat-lbl">Reviews</div></div></div>
+  `;
+
+  // Bookings table
+  document.getElementById('pdash-bk-count').textContent = propBookings.length + ' total';
+  document.getElementById('pdash-bk-tbody').innerHTML = propBookings.length
+    ? propBookings.map(b => {
+        const st = b.status || 'pending';
+        const acts = [];
+        if (st === 'pending') acts.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="updateBookingStatus('${b.id}','confirmed');openPropDash('${id}')">✓</button>`);
+        if (st !== 'cancelled') acts.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled');openPropDash('${id}')">✕</button>`);
+        acts.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?token='+localStorage.getItem('sd_token'),'_blank')" title="Invoice">🧾</button>`);
+        return `<tr>
+          <td><b>${b.guest}</b></td>
+          <td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td>
+          <td>${b.guests}</td>
+          <td><b>₹${Number(b.amount||0).toLocaleString('en-IN')}</b></td>
+          <td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td>
+          <td><div style="display:flex;gap:4px">${acts.join('')}</div></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:20px">No bookings yet for this property</td></tr>';
+
+  // Reviews
+  document.getElementById('pdash-rev-count').textContent = propReviews.length + ' reviews';
+  document.getElementById('pdash-reviews').innerHTML = propReviews.length
+    ? propReviews.map(r => `
+        <div style="border-bottom:1px solid var(--gray-100);padding:10px 0;font-size:13px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>${r.guest}</strong>
+            <span style="color:#f59e0b;font-size:13px">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+          </div>
+          <div style="color:var(--gray-500);margin-top:3px;font-size:12.5px">${r.text || ''}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <span style="font-size:11px;color:var(--gray-400)">${r.date}</span>
+            <button class="btn-icon" onclick="deleteReview('${r.id}')">🗑</button>
+          </div>
+        </div>`).join('')
+    : '<div style="color:var(--gray-400);font-size:13px;text-align:center;padding:12px 0">No reviews yet</div>';
+
+  // iCal — async
+  const icalEl = document.getElementById('pdash-ical');
+  icalEl.innerHTML = '<div style="color:var(--gray-400);font-size:13px">Loading…</div>';
+  try {
+    const d = await api.icalForProperty(id);
+    icalEl.innerHTML = `
+      <div style="font-size:11.5px;color:var(--gray-500);margin-bottom:5px;font-weight:600">Export URL (paste in Airbnb):</div>
+      <code style="display:block;background:var(--gray-50);padding:8px;border-radius:6px;font-size:10.5px;word-break:break-all;margin-bottom:10px;cursor:pointer" onclick="navigator.clipboard.writeText('${d.export_url}');showAdminToast('URL copied!','success')">${d.export_url}</code>
+      <div style="font-size:11.5px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Import Sources:</div>
+      ${(d.sources||[]).length
+        ? d.sources.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--gray-100);font-size:12px">
+            <span>${s.label||'External'} ${s.last_error?`<span style="color:#dc2626">(${s.last_error})</span>`:'<span style="color:#16a34a">✓</span>'}</span>
+            <button class="btn-icon" onclick="api.deleteIcalSource('${s.id||s._id}').then(()=>openPropDash('${id}'))">✕</button>
+          </div>`).join('')
+        : '<div style="color:var(--gray-400);font-size:12px;margin-bottom:8px">No sources added yet</div>'
+      }
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input class="form-ctrl" id="pdical-url-${id}" placeholder="Airbnb iCal URL…" style="font-size:12px"/>
+        <input class="form-ctrl" id="pdical-lbl-${id}" placeholder="Label" style="max-width:80px;font-size:12px"/>
+        <button class="btn btn-primary btn-sm" onclick="pdashAddIcal('${id}')">+ Add</button>
+      </div>`;
+  } catch(e) {
+    icalEl.innerHTML = '<div style="color:#dc2626;font-size:12px">Could not load iCal data</div>';
+  }
+}
+
+async function pdashAddIcal(propId) {
+  const url   = (document.getElementById('pdical-url-'+propId)||{}).value?.trim();
+  const label = (document.getElementById('pdical-lbl-'+propId)||{}).value?.trim();
+  if (!url) return;
+  try { await api.addIcalSource(propId, { url, label }); openPropDash(propId); }
+  catch(e) { alert(e.message); }
+}
 function filterBookings(q) { renderBookings(bookings.filter(b => !b.isExternal && ((b.guest || '').toLowerCase().includes(q.toLowerCase()) || (b.property || '').toLowerCase().includes(q.toLowerCase())))); }
 function filterByStatus(s) { renderBookings(s ? bookings.filter(b => b.status === s && !b.isExternal) : bookings); }
 function filterUsers(q) { renderUsers(users.filter(u => (u.name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase()))); }
 
-function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp('${p.id}')">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c;flex:1" onclick="deleteProp('${p.id}')">🗑 Delete</button></div></div></div>`; }).join(''); }
+function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-primary btn-sm" style="flex:1" onclick="openPropDash('${p.id}')">📊 Details</button><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp('${p.id}')">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteProp('${p.id}')">🗑</button></div></div></div>`; }).join(''); }
 function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="updateBookingStatus('${b.id}','confirmed')">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?token='+localStorage.getItem('sd_token'),'_blank')" title="Invoice">🧾</button>`); return `<tr><td style="color:var(--gray-400);font-size:11.5px">#${b.id}</td><td><b>${b.guest}</b></td><td>${b.property}</td><td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td><td>${b.guests}</td><td><b>₹${Number(b.amount||0).toLocaleString('en-IN')}</b></td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td><td><div style="display:flex;gap:4px">${actions.join('')}</div></td></tr>`; }).join(''); }
 function renderUsers(list) { document.getElementById('users-tbody').innerHTML = list.map(u => `<tr><td style="color:var(--gray-400);font-size:11.5px">#${u.id}</td><td><b>${u.name}</b>${u.role==='admin'?'<span class="badge b-confirmed" style="margin-left:6px;font-size:10px">Admin</span>':''}</td><td>${u.email}</td><td>${u.phone || '—'}</td><td>${u.bookings || 0} bookings</td><td style="color:var(--gray-400)">${u.joined}</td><td><div style="display:flex;gap:5px"><a class="btn btn-outline btn-sm" href="mailto:${u.email}">Email</a></div></td></tr>`).join(''); }
 function renderReels() { const STAR = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#FFD700"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`; const grid = document.getElementById('reels-admin-grid'); const empty = document.getElementById('reels-empty-msg'); if (!grid) return; if (!reels.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; } if (empty) empty.style.display = 'none'; grid.innerHTML = reels.map(r => `<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.1);position:relative"><div style="position:relative;aspect-ratio:9/16;background:#1a0a0a;overflow:hidden">${r.poster_url ? `<img src="${r.poster_url}" alt="${r.name}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.3);font-size:2rem">🎬</div>`}<span style="position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:20px;font-size:.6rem;font-weight:700; background:${r.active ? 'rgba(34,197,94,.9)' : 'rgba(239,68,68,.9)'};color:#fff">${r.active ? 'Active' : 'Hidden'}</span>${r.video_url ? `<span style="position:absolute;top:8px;left:8px;background:rgba(139,23,23,.85);color:#fff;font-size:.58rem;font-weight:700;padding:3px 8px;border-radius:20px">🎬 Video</span>` : ''}</div><div style="padding:12px"><div style="font-size:.7rem;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${r.stay}</div><div style="font-weight:700;font-size:.85rem;margin-bottom:2px">${r.name}</div><div style="font-size:.72rem;color:var(--gray-400);margin-bottom:6px">${r.location || '—'}</div><div style="display:flex;gap:2px;margin-bottom:6px">${STAR.repeat(r.stars || 5)}</div>${r.quote ? `<div style="font-size:.68rem;color:var(--gray-500);line-height:1.4;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">"${r.quote}"</div>` : ''}<div style="display:flex;gap:6px"><button onclick="openEditReel('${r.id}')" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">✏️ Edit</button><button onclick="toggleReelActive('${r.id}', ${r.active ? 0 : 1})" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">${r.active ? '🙈 Hide' : '👁 Show'}</button><button onclick="deleteReel('${r.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:.72rem;cursor:pointer">🗑</button></div></div></div>`).join(''); }
