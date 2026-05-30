@@ -7,16 +7,21 @@ router.get('/featured', async (req, res) => {
   try {
     const docs = await Review.find({ rating: { $gte: 4 } })
       .populate('user_id', 'name')
+      .populate('property_id', 'name images')
       .sort({ rating: -1, created_at: -1 })
       .limit(12)
       .lean();
 
-    const reviews = docs.map(r => ({
-      ...r,
-      user_name:     r.guest_name || r.user_id?.name || 'Guest',
-      image_url:     r.image_url || '',
-      property_name: r.property_name || 'StayDekho Property',
-    }));
+    const reviews = docs.map(r => {
+      // Use review image if set, else use property's first image as card background
+      const propImg = Array.isArray(r.property_id?.images) ? r.property_id.images[0] : null;
+      return {
+        ...r,
+        user_name:     r.guest_name || r.user_id?.name || 'Guest',
+        image_url:     r.image_url || propImg || '',
+        property_name: r.property_name || r.property_id?.name || 'StayDekho Property',
+      };
+    });
 
     res.json({ reviews });
   } catch (err) {

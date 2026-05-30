@@ -1161,7 +1161,8 @@ function renderReviews() {
   const tbody = document.getElementById('reviews-tbody');
   if (!reviews.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px">No reviews yet</td></tr>`; return; }
   tbody.innerHTML = reviews.map(r => {
-    let avatar = r.image_url ? `<img src="${r.image_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:50%;background:var(--red-light);color:var(--red);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;flex-shrink:0;">${r.guest.charAt(0).toUpperCase()}</div>`;
+    const _init = `<div style="width:32px;height:32px;border-radius:50%;background:var(--red-light);color:var(--red);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;flex-shrink:0;">${r.guest.charAt(0).toUpperCase()}</div>`;
+    let avatar = r.image_url ? `<img src="${r.image_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','${_init.replace(/'/g,'"')}')">` : _init;
     return `<tr><td><div style="display:flex;align-items:center;gap:10px">${avatar}<b>${r.guest}</b></div></td><td>${r.property}</td><td><span class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span></td><td style="max-width:250px;color:var(--gray-600);font-size:13px">${r.text}</td><td style="color:var(--gray-400);white-space:nowrap">${r.date}</td><td><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteReview('${r.id}')">🗑 Delete</button></td></tr>`;
   }).join('');
 }
