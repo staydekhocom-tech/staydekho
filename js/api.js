@@ -212,6 +212,7 @@ const api = {
 
   listReviews:   (property_id) => request('GET', `/reviews?property_id=${property_id}`),
   createReview:  (body)        => request('POST', '/reviews', body),
+  updateReview:  (id, body)    => request('PUT',  `/reviews/${id}`, body),
   deleteReview:  (id)          => request('DELETE', `/reviews/${id}`),
 
   submitContact: (body) => request('POST', '/contact', body),

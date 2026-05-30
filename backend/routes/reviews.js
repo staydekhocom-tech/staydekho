@@ -122,6 +122,29 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
+// PUT /api/reviews/:id  — admin only (edit guest_name, rating, text, image_url)
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id).lean();
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+    if (req.user.role !== 'admin' && review.user_id.toString() !== req.user.id)
+      return res.status(403).json({ error: 'Not authorized' });
+
+    const { rating, text, guest_name, image_url } = req.body;
+    const update = {};
+    if (rating)     update.rating     = Number(rating);
+    if (text)       update.text       = String(text).trim();
+    if (guest_name !== undefined) update.guest_name = String(guest_name).trim();
+    if (image_url  !== undefined) update.image_url  = String(image_url).trim();
+
+    const updated = await Review.findByIdAndUpdate(req.params.id, update, { new: true })
+      .populate('user_id', 'name').lean();
+    res.json({ review: { ...updated, user_name: updated.guest_name || updated.user_id?.name || 'Guest' } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/reviews/:id  — only own review or admin
 router.delete('/:id', protect, async (req, res) => {
   try {
