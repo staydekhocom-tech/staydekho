@@ -1249,7 +1249,12 @@ async function loadProperty() {
 
     render(property, host || {}, reviews || []);
     loadSimilarProperties(property);
-    loadNearbyFromOSM(property.location || '');
+    // Use stored lat/lng for precise nearby attractions, else fallback to geocoding
+    if (property.lat && property.lng) {
+      loadNearbyFromOSM(property.location || '', property.lat, property.lng);
+    } else {
+      loadNearbyFromOSM(property.location || '', null, null);
+    }
   } catch (e) {
     showError(e.message || 'Property not found.');
   }
@@ -2236,19 +2241,25 @@ function _osmIcon(t) {
   return '📍';
 }
 
-async function loadNearbyFromOSM(location) {
+async function loadNearbyFromOSM(location, storedLat, storedLng) {
   const grid = document.getElementById('nearby-grid');
   if (!grid) return;
   try {
-    // 1. Geocode: location text → lat/lng
-    const geoRes = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1&accept-language=en`,
-      { headers: { 'Accept-Language': 'en-US,en' } }
-    );
-    const geoData = await geoRes.json();
-    if (!geoData || !geoData.length) return;
-    const lat = parseFloat(geoData[0].lat);
-    const lon = parseFloat(geoData[0].lon);
+    let lat, lon;
+    if (storedLat && storedLng) {
+      // Use exact stored coordinates — most accurate
+      lat = storedLat; lon = storedLng;
+    } else {
+      // Fallback: geocode location text
+      const geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1&accept-language=en`,
+        { headers: { 'Accept-Language': 'en-US,en' } }
+      );
+      const geoData = await geoRes.json();
+      if (!geoData || !geoData.length) return;
+      lat = parseFloat(geoData[0].lat);
+      lon = parseFloat(geoData[0].lon);
+    }
 
     // 2. Overpass API: nearby tourist spots within 6km
     const r = 6000;

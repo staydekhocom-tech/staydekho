@@ -450,6 +450,17 @@ function buildForm() {
           <label>Google Maps URL</label>
           <input type="text" id="f-map-url" value="${esc(p.map_url || '')}" placeholder="https://maps.google.com/..."/>
         </div>
+        <div class="field">
+          <label>📍 Property Location Pin <span class="hint">(map pe click karke exact location set karo — nearby attractions ke liye zaroori)</span></label>
+          <div style="display:flex;gap:10px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+            <input type="number" id="f-lat" step="any" placeholder="Latitude (e.g. 25.4358)" value="${p.lat || ''}" style="width:160px;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px"/>
+            <input type="number" id="f-lng" step="any" placeholder="Longitude (e.g. 73.7133)" value="${p.lng || ''}" style="width:160px;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px"/>
+            <button type="button" onclick="searchMapLocation()" style="padding:8px 14px;background:#8B1717;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">🔍 Find on Map</button>
+            <span style="font-size:12px;color:#9ca3af">ya map pe click karo pin lagane ke liye</span>
+          </div>
+          <div id="prop-map-picker" style="height:300px;border-radius:10px;border:1.5px solid #e5e7eb;overflow:hidden;background:#f3f4f6"></div>
+          <p style="font-size:11.5px;color:#9ca3af;margin-top:6px">💡 Map pe kisi bhi jagah click karo → pin set ho jaayega, coordinates auto-fill honge</p>
+        </div>
         <div class="field-grid">
           <div class="field">
             <label>FOMO: bookings this week <span class="hint">(blank = auto)</span></label>
@@ -937,6 +948,8 @@ async function saveAll() {
     ...(fomoVE  ? { fomo_viewers:  fomoVE.value === '' ? null : Number(fomoVE.value) } : {}),
     ...(fomoEE  ? { fomo_enabled:  fomoEE.checked } : {}),
     property_types: getSelectedTypes(),
+    lat: document.getElementById('f-lat')?.value ? parseFloat(document.getElementById('f-lat').value) : null,
+    lng: document.getElementById('f-lng')?.value ? parseFloat(document.getElementById('f-lng').value) : null,
   };
 
   try {
@@ -1030,6 +1043,86 @@ function pickSubCat(val, el, rowId) {
 }
 
 buildCatChips();
+</script>
+
+<!-- Leaflet.js Map Picker -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let _mapPicker = null, _mapMarker = null;
+
+function initMapPicker(lat, lng) {
+  const el = document.getElementById('prop-map-picker');
+  if (!el || _mapPicker) return;
+
+  const defLat = lat || 24.5854;  // India center
+  const defLng = lng || 73.7125;
+  const zoom   = lat ? 14 : 5;
+
+  _mapPicker = L.map('prop-map-picker').setView([defLat, defLng], zoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(_mapPicker);
+
+  // Show existing pin if coordinates saved
+  if (lat && lng) {
+    _mapMarker = L.marker([lat, lng]).addTo(_mapPicker)
+      .bindPopup('Property location').openPopup();
+  }
+
+  // Click on map → set pin + fill lat/lng inputs
+  _mapPicker.on('click', function(e) {
+    const { lat, lng } = e.latlng;
+    document.getElementById('f-lat').value = lat.toFixed(6);
+    document.getElementById('f-lng').value = lng.toFixed(6);
+    if (_mapMarker) _mapPicker.removeLayer(_mapMarker);
+    _mapMarker = L.marker([lat, lng]).addTo(_mapPicker)
+      .bindPopup('📍 Property location').openPopup();
+  });
+}
+
+async function searchMapLocation() {
+  const loc = document.getElementById('f-location')?.value?.trim();
+  if (!loc) return alert('Pehle location field mein location type karo');
+  try {
+    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc)}&format=json&limit=1`);
+    const data = await res.json();
+    if (!data.length) return alert('Location nahi mili. Thoda aur specific likho.');
+    const lat = parseFloat(data[0].lat);
+    const lng = parseFloat(data[0].lon);
+    document.getElementById('f-lat').value = lat.toFixed(6);
+    document.getElementById('f-lng').value = lng.toFixed(6);
+    if (_mapPicker) {
+      _mapPicker.setView([lat, lng], 14);
+      if (_mapMarker) _mapPicker.removeLayer(_mapMarker);
+      _mapMarker = L.marker([lat, lng]).addTo(_mapPicker)
+        .bindPopup('📍 ' + data[0].display_name).openPopup();
+    }
+  } catch(e) { alert('Search failed: ' + e.message); }
+}
+
+// Init map when Settings section is visible (lazy load)
+const _mapObs = new MutationObserver(() => {
+  const el = document.getElementById('prop-map-picker');
+  if (el && el.offsetParent !== null && !_mapPicker) {
+    const lat = parseFloat(document.getElementById('f-lat')?.value || '');
+    const lng = parseFloat(document.getElementById('f-lng')?.value || '');
+    initMapPicker(lat || null, lng || null);
+    _mapObs.disconnect();
+  }
+});
+_mapObs.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+// Also init when page fully loads in case map is visible
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (!_mapPicker) {
+      const lat = parseFloat(document.getElementById('f-lat')?.value || '');
+      const lng = parseFloat(document.getElementById('f-lng')?.value || '');
+      initMapPicker(lat || null, lng || null);
+    }
+  }, 800);
+});
 </script>
 </body>
 </html>

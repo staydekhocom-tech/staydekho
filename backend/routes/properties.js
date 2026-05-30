@@ -191,6 +191,8 @@ router.post('/', protect, adminOnly, upload.array('images', 70), async (req, res
       fomo_viewers:   data.fomo_viewers   ?? null,
       fomo_enabled:   data.fomo_enabled === false ? false : true,
       property_types: propTypes,
+      lat:            data.lat != null ? parseFloat(data.lat) : null,
+      lng:            data.lng != null ? parseFloat(data.lng) : null,
     });
 
     res.status(201).json({ property: normalize(created.toObject()) });
@@ -251,6 +253,8 @@ router.put('/:id', protect, adminOnly, upload.array('images', 70), async (req, r
         ? (existing.fomo_enabled ?? true)
         : Boolean(data.fomo_enabled),
       property_types: updPropTypes,
+      lat: data.lat != null ? parseFloat(data.lat) : (existing.lat ?? null),
+      lng: data.lng != null ? parseFloat(data.lng) : (existing.lng ?? null),
     };
 
     const updated = await Property.findByIdAndUpdate(req.params.id, updateData, { new: true }).lean();
