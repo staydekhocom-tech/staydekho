@@ -110,7 +110,7 @@ if (process.env.ICAL_SYNC_DISABLED !== '1') {
     } catch (e) { console.error('iCal sync error:', e.message); }
   }
 
-  const intervalMs = Number(process.env.ICAL_SYNC_INTERVAL_MS) || (60 * 60 * 1000);
+  const intervalMs = Number(process.env.ICAL_SYNC_INTERVAL_MS) || (20 * 60 * 1000); // default 20 min
   setTimeout(runIcalSync, 30 * 1000);
   setInterval(runIcalSync, intervalMs);
 }
