@@ -1249,6 +1249,7 @@ async function loadProperty() {
 
     render(property, host || {}, reviews || []);
     loadSimilarProperties(property);
+    loadNearbyFromOSM(property.location || '');
   } catch (e) {
     showError(e.message || 'Property not found.');
   }
@@ -2144,7 +2145,9 @@ window.addEventListener('scroll',()=>{
 },{passive:true});
 
 /* ═══════════════════════════════════════════════════
-   NEARBY ATTRACTIONS
+   NEARBY ATTRACTIONS — Dynamic via OpenStreetMap
+   Fallback: hardcoded data shown instantly
+   Then replaced with real OSM data async
 ═══════════════════════════════════════════════════ */
 const NEARBY_DATA = {
   'Udaipur':   [
@@ -2177,7 +2180,22 @@ const NEARBY_DATA = {
     {icon:'🌺', name:'Mandore Gardens',       dist:'8 km',   time:'20 min'},
     {icon:'🛍️', name:'Sardar Market',         dist:'1.5 km', time:'6 min'},
   ],
+  'Jawai':     [
+    {icon:'🦁', name:'Jawai Leopard Safari',  dist:'5 km',   time:'15 min'},
+    {icon:'🐊', name:'Jawai Bandh Dam',       dist:'3 km',   time:'10 min'},
+    {icon:'⛰️', name:'Granite Hills',         dist:'4 km',   time:'12 min'},
+    {icon:'🛕', name:'Bera Temple',           dist:'8 km',   time:'20 min'},
+  ],
 };
+
+function _nearbyItemHtml(s) {
+  return `<div class="nearby-item">
+    <span class="nearby-icon">${s.icon}</span>
+    <div><div class="nearby-name">${esc(s.name)}</div><div class="nearby-dist">${esc(s.dist)}</div></div>
+    <span class="nearby-badge">${esc(s.time)}</span>
+  </div>`;
+}
+
 function buildNearbyHtml(location) {
   const city = (location||'').split(',')[0].trim();
   let spots = null;
@@ -2186,17 +2204,81 @@ function buildNearbyHtml(location) {
       spots = v; break;
     }
   }
-  if (!spots) return '';
-  return `<div class="prop-section">
+  const inner = spots
+    ? spots.map(_nearbyItemHtml).join('')
+    : '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Loading nearby places…</div>';
+  return `<div class="prop-section" id="nearby-section">
     <h3>Nearby Attractions</h3>
-    <div class="nearby-grid">
-      ${spots.map(s=>`<div class="nearby-item">
-        <span class="nearby-icon">${s.icon}</span>
-        <div><div class="nearby-name">${esc(s.name)}</div><div class="nearby-dist">${esc(s.dist)}</div></div>
-        <span class="nearby-badge">${esc(s.time)}</span>
-      </div>`).join('')}
-    </div>
+    <div class="nearby-grid" id="nearby-grid">${inner}</div>
   </div>`;
+}
+
+function _haversine(lat1,lon1,lat2,lon2) {
+  const R=6371, dL=(lat2-lat1)*Math.PI/180, dO=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function _osmIcon(t) {
+  if (!t) return '📍';
+  if (t.historic==='fort'||t.historic==='castle') return '🏰';
+  if (t.historic==='palace') return '🏯';
+  if (t.historic==='temple') return '🛕';
+  if (t.historic) return '🏛️';
+  if (t.tourism==='museum') return '🏛️';
+  if (t.tourism==='viewpoint') return '🔭';
+  if (t.tourism==='theme_park') return '🎡';
+  if (t.leisure==='beach') return '🏖️';
+  if (t.leisure==='garden') return '🌸';
+  if (t.leisure==='park') return '🌳';
+  if (t.leisure==='nature_reserve') return '🌿';
+  if (t.amenity==='place_of_worship') return t.religion==='muslim'?'🕌':t.religion==='christian'?'⛪':'🛕';
+  if (t.natural==='water'||t.natural==='lake') return '💧';
+  return '📍';
+}
+
+async function loadNearbyFromOSM(location) {
+  const grid = document.getElementById('nearby-grid');
+  if (!grid) return;
+  try {
+    // 1. Geocode: location text → lat/lng
+    const geoRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1&accept-language=en`,
+      { headers: { 'Accept-Language': 'en-US,en' } }
+    );
+    const geoData = await geoRes.json();
+    if (!geoData || !geoData.length) return;
+    const lat = parseFloat(geoData[0].lat);
+    const lon = parseFloat(geoData[0].lon);
+
+    // 2. Overpass API: nearby tourist spots within 6km
+    const r = 6000;
+    const q = `[out:json][timeout:12];(node["tourism"~"attraction|museum|viewpoint|theme_park"](around:${r},${lat},${lon});node["historic"~"monument|castle|ruins|fort|palace|temple"](around:${r},${lat},${lon});node["leisure"~"park|garden|beach|nature_reserve"](around:${r},${lat},${lon});node["amenity"="place_of_worship"]["name"](around:${r},${lat},${lon}););out 15;`;
+    const ovRes = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
+    const ovData = await ovRes.json();
+
+    const els = (ovData.elements||[]).filter(e => e.tags && (e.tags['name:en'] || e.tags.name));
+    if (!els.length) return; // keep fallback
+
+    const spots = els
+      .map(el => {
+        const dist = _haversine(lat, lon, el.lat, el.lon);
+        const mins = Math.max(1, Math.round(dist / 0.5)); // ~30 km/h by car
+        return {
+          icon: _osmIcon(el.tags),
+          name: el.tags['name:en'] || el.tags.name,
+          dist: `${dist.toFixed(1)} km`,
+          time: mins < 60 ? `${mins} min` : `${(mins/60).toFixed(1)} hr`,
+          _d: dist,
+        };
+      })
+      .sort((a,b) => a._d - b._d)
+      .slice(0, 5);
+
+    grid.innerHTML = spots.map(_nearbyItemHtml).join('');
+  } catch(e) {
+    // Keep fallback silently
+    console.log('OSM nearby:', e.message);
+  }
 }
 
 /* ═══════════════════════════════════════════════════
