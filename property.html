@@ -2244,52 +2244,89 @@ function _osmIcon(t) {
 async function loadNearbyFromOSM(location, storedLat, storedLng) {
   const grid = document.getElementById('nearby-grid');
   if (!grid) return;
+
+  // Show loading state
+  grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">⏳ Loading nearby places…</div>';
+
   try {
     let lat, lon;
+
     if (storedLat && storedLng) {
-      // Use exact stored coordinates — most accurate
       lat = storedLat; lon = storedLng;
     } else {
-      // Fallback: geocode location text
+      // Geocode: location text → lat/lng via Nominatim
       const geoRes = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1&accept-language=en`,
         { headers: { 'Accept-Language': 'en-US,en' } }
       );
       const geoData = await geoRes.json();
-      if (!geoData || !geoData.length) return;
+      if (!geoData || !geoData.length) { _showFallbackNearby(location, grid); return; }
       lat = parseFloat(geoData[0].lat);
       lon = parseFloat(geoData[0].lon);
     }
 
-    // 2. Overpass API: nearby tourist spots within 6km
-    const r = 6000;
-    const q = `[out:json][timeout:12];(node["tourism"~"attraction|museum|viewpoint|theme_park"](around:${r},${lat},${lon});node["historic"~"monument|castle|ruins|fort|palace|temple"](around:${r},${lat},${lon});node["leisure"~"park|garden|beach|nature_reserve"](around:${r},${lat},${lon});node["amenity"="place_of_worship"]["name"](around:${r},${lat},${lon}););out 15;`;
-    const ovRes = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-    const ovData = await ovRes.json();
+    // Wikipedia GeoSearch — fast, free, great India coverage
+    const wikiRes = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=15000&gslimit=15&format=json&origin=*`
+    );
+    const wikiData = await wikiRes.json();
+    const pages = (wikiData.query?.geosearch || []).filter(p => p.title && p.dist);
 
-    const els = (ovData.elements||[]).filter(e => e.tags && (e.tags['name:en'] || e.tags.name));
-    if (!els.length) return; // keep fallback
+    if (!pages.length) { _showFallbackNearby(location, grid); return; }
 
-    const spots = els
-      .map(el => {
-        const dist = _haversine(lat, lon, el.lat, el.lon);
-        const mins = Math.max(1, Math.round(dist / 0.5)); // ~30 km/h by car
-        return {
-          icon: _osmIcon(el.tags),
-          name: el.tags['name:en'] || el.tags.name,
-          dist: `${dist.toFixed(1)} km`,
-          time: mins < 60 ? `${mins} min` : `${(mins/60).toFixed(1)} hr`,
-          _d: dist,
-        };
-      })
-      .sort((a,b) => a._d - b._d)
-      .slice(0, 5);
+    // Map Wikipedia icons by keywords
+    function _wikiIcon(title) {
+      const t = title.toLowerCase();
+      if (t.includes('fort') || t.includes('qila')) return '🏰';
+      if (t.includes('palace') || t.includes('mahal')) return '🏯';
+      if (t.includes('temple') || t.includes('mandir') || t.includes('mata') || t.includes('devi')) return '🛕';
+      if (t.includes('mosque') || t.includes('dargah')) return '🕌';
+      if (t.includes('church')) return '⛪';
+      if (t.includes('lake') || t.includes('sagar') || t.includes('talab')) return '💧';
+      if (t.includes('dam') || t.includes('bandh')) return '🌊';
+      if (t.includes('beach') || t.includes('coast')) return '🏖️';
+      if (t.includes('garden') || t.includes('bagh') || t.includes('bari')) return '🌸';
+      if (t.includes('park') || t.includes('sanctuary') || t.includes('wildlife')) return '🌿';
+      if (t.includes('museum') || t.includes('gallery')) return '🏛️';
+      if (t.includes('waterfall') || t.includes('falls')) return '💦';
+      if (t.includes('hill') || t.includes('peak') || t.includes('mount')) return '⛰️';
+      if (t.includes('leopard') || t.includes('tiger') || t.includes('safari')) return '🦁';
+      if (t.includes('bazaar') || t.includes('market') || t.includes('chowk')) return '🛍️';
+      if (t.includes('ghats') || t.includes('ghat')) return '🏊';
+      if (t.includes('haveli') || t.includes('castle')) return '🏛️';
+      if (t.includes('step well') || t.includes('baori') || t.includes('vav')) return '🏗️';
+      return '📍';
+    }
+
+    const spots = pages.slice(0, 6).map(p => {
+      const distKm = (p.dist / 1000).toFixed(1);
+      const mins   = Math.max(1, Math.round(p.dist / 1000 / 0.5)); // ~30 km/h
+      return {
+        icon: _wikiIcon(p.title),
+        name: p.title,
+        dist: `${distKm} km`,
+        time: mins < 60 ? `${mins} min` : `${(mins/60).toFixed(1)} hr`,
+      };
+    });
 
     grid.innerHTML = spots.map(_nearbyItemHtml).join('');
+
   } catch(e) {
-    // Keep fallback silently
-    console.log('OSM nearby:', e.message);
+    console.log('Nearby load failed:', e.message);
+    _showFallbackNearby(location, grid);
   }
+}
+
+function _showFallbackNearby(location, grid) {
+  const city = (location||'').split(',')[0].trim();
+  let spots = null;
+  for (const [k,v] of Object.entries(NEARBY_DATA)) {
+    if (city.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(city.toLowerCase())) {
+      spots = v; break;
+    }
+  }
+  if (spots) grid.innerHTML = spots.map(_nearbyItemHtml).join('');
+  else grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">No nearby attractions found</div>';
 }
 
 /* ═══════════════════════════════════════════════════
