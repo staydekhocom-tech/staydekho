@@ -44,8 +44,9 @@ const propertySchema = new Schema({
   fomo_viewers:   { type: Number, default: null },
   fomo_enabled:   { type: Boolean, default: true },
   property_types: { type: String, default: '[]' },
-  lat:            { type: Number, default: null },
-  lng:            { type: Number, default: null },
+  lat:               { type: Number, default: null },
+  lng:               { type: Number, default: null },
+  nearby_attractions:{ type: String, default: '[]' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 // ── 3. Booking ─────────────────────────────────────────

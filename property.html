@@ -1249,11 +1249,19 @@ async function loadProperty() {
 
     render(property, host || {}, reviews || []);
     loadSimilarProperties(property);
-    // Use stored lat/lng for precise nearby attractions, else fallback to geocoding
-    if (property.lat && property.lng) {
-      loadNearbyFromOSM(property.location || '', property.lat, property.lng);
+    // If admin manually added nearby attractions → use those directly
+    const manualNearby = (() => { try { return JSON.parse(property.nearby_attractions || '[]'); } catch(e){ return []; } })();
+    if (manualNearby.length) {
+      // Show manual data instantly — no API needed
+      const grid = document.getElementById('nearby-grid');
+      if (grid) grid.innerHTML = manualNearby.map(_nearbyItemHtml).join('');
     } else {
-      loadNearbyFromOSM(property.location || '', null, null);
+      // No manual data → use Wikipedia GeoSearch
+      if (property.lat && property.lng) {
+        loadNearbyFromOSM(property.location || '', property.lat, property.lng);
+      } else {
+        loadNearbyFromOSM(property.location || '', null, null);
+      }
     }
   } catch (e) {
     showError(e.message || 'Property not found.');

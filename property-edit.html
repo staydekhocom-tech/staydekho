@@ -451,6 +451,12 @@ function buildForm() {
           <input type="text" id="f-map-url" value="${esc(p.map_url || '')}" placeholder="https://maps.google.com/..."/>
         </div>
         <div class="field">
+          <label>📍 Nearby Attractions <span class="hint">(manually add karo — property page pe dikhenge)</span></label>
+          <div id="nearby-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+          <button type="button" onclick="addNearbyRow()" style="padding:8px 14px;background:#f3f4f6;border:1.5px dashed #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#4b5563;width:100%">+ Add Attraction</button>
+        </div>
+
+        <div class="field">
           <label>📍 Property Location Pin <span class="hint">(map pe click karke exact location set karo — nearby attractions ke liye zaroori)</span></label>
           <div style="display:flex;gap:10px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
             <input type="number" id="f-lat" step="any" placeholder="Latitude (e.g. 25.4358)" value="${p.lat || ''}" style="width:160px;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px"/>
@@ -596,6 +602,13 @@ function buildForm() {
   renderAmenityTags();
   renderImages();
   setTimeout(initTypeCheckboxStyles, 0);
+  // Load nearby attractions editor with saved data
+  setTimeout(() => {
+    try {
+      const saved = JSON.parse(PROP.nearby_attractions || '[]');
+      loadNearbyEditor(saved);
+    } catch(e) { loadNearbyEditor([]); }
+  }, 0);
 }
 
 let currentStatus = PROP ? PROP.status : 'Active';
@@ -950,6 +963,7 @@ async function saveAll() {
     property_types: getSelectedTypes(),
     lat: document.getElementById('f-lat')?.value ? parseFloat(document.getElementById('f-lat').value) : null,
     lng: document.getElementById('f-lng')?.value ? parseFloat(document.getElementById('f-lng').value) : null,
+    nearby_attractions: JSON.stringify(getNearbyAttractions()),
   };
 
   try {
@@ -1043,6 +1057,77 @@ function pickSubCat(val, el, rowId) {
 }
 
 buildCatChips();
+
+// ── NEARBY ATTRACTIONS EDITOR ──────────────────────────
+const NEARBY_ICONS = ['📍','🏰','🏯','🛕','🕌','⛪','💧','🌊','🏖️','🌸','🌳','🌿','🏛️','💦','⛰️','🦁','🛍️','🏊','🏗️','🎡','🔭','🚤','🚡','🌺','🏔️'];
+
+function addNearbyRow(data = {}) {
+  const list = document.getElementById('nearby-list');
+  const idx  = list.children.length;
+  const div  = document.createElement('div');
+  div.dataset.idx = idx;
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;background:#f9fafb;padding:10px;border-radius:8px;border:1px solid #e5e7eb';
+
+  // Icon selector
+  const iconSel = document.createElement('select');
+  iconSel.style.cssText = 'width:60px;padding:6px 4px;border:1px solid #e5e7eb;border-radius:6px;font-size:16px;text-align:center';
+  NEARBY_ICONS.forEach(ic => {
+    const opt = document.createElement('option');
+    opt.value = ic; opt.textContent = ic;
+    if (ic === (data.icon || '📍')) opt.selected = true;
+    iconSel.appendChild(opt);
+  });
+  div.appendChild(iconSel);
+
+  // Name input
+  const nameIn = document.createElement('input');
+  nameIn.type = 'text'; nameIn.placeholder = 'Place name (e.g. City Palace)';
+  nameIn.value = data.name || '';
+  nameIn.style.cssText = 'flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px';
+  div.appendChild(nameIn);
+
+  // Distance
+  const distIn = document.createElement('input');
+  distIn.type = 'text'; distIn.placeholder = 'Distance (e.g. 3.2 km)';
+  distIn.value = data.dist || '';
+  distIn.style.cssText = 'width:110px;padding:7px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px';
+  div.appendChild(distIn);
+
+  // Time
+  const timeIn = document.createElement('input');
+  timeIn.type = 'text'; timeIn.placeholder = 'Time (e.g. 12 min)';
+  timeIn.value = data.time || '';
+  timeIn.style.cssText = 'width:100px;padding:7px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px';
+  div.appendChild(timeIn);
+
+  // Remove button
+  const rmBtn = document.createElement('button');
+  rmBtn.type = 'button'; rmBtn.textContent = '✕';
+  rmBtn.style.cssText = 'width:30px;height:30px;border:none;background:#fee2e2;color:#dc2626;border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0';
+  rmBtn.onclick = () => div.remove();
+  div.appendChild(rmBtn);
+
+  list.appendChild(div);
+}
+
+function getNearbyAttractions() {
+  return Array.from(document.getElementById('nearby-list')?.children || []).map(row => {
+    const inputs = row.querySelectorAll('input, select');
+    return {
+      icon: inputs[0]?.value || '📍',
+      name: inputs[1]?.value?.trim() || '',
+      dist: inputs[2]?.value?.trim() || '',
+      time: inputs[3]?.value?.trim() || '',
+    };
+  }).filter(r => r.name);
+}
+
+function loadNearbyEditor(attractions) {
+  const list = document.getElementById('nearby-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (attractions || []).forEach(a => addNearbyRow(a));
+}
 </script>
 
 <!-- Leaflet.js Map Picker -->
