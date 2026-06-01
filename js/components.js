@@ -16,7 +16,7 @@ const HOUSE_SVG = `
 const LOGO_HTML = `
   <a href="index.html" class="nav-logo">
     <span class="logo-wordmark">
-      <span class="logo-stay">Sta<span style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:-2px;line-height:1"><span style="line-height:0;margin-bottom:0px;width:18px;height:11px;color:inherit">${HOUSE_SVG}</span><span>y</span></span></span><span class="logo-dekh">Dekh</span>
+      <span class="logo-stay">Sta<span style="position:relative;display:inline-block;line-height:1"><span style="position:absolute;left:50%;transform:translateX(-50%);bottom:78%;width:18px;height:11px;line-height:0;display:block;color:inherit">${HOUSE_SVG}</span>y</span></span><span class="logo-dekh">Dekh</span>
       <span class="logo-o">${LOGO_SVG}</span>
     </span>
   </a>`;
