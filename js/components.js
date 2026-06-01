@@ -6,18 +6,18 @@ const LOGO_SVG = `
     <line class="handle" x1="16.2" y1="16.2" x2="24" y2="24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   </svg>`;
 
-/* House icon that sits above the "y" in Stay — matches real logo */
+/* House/roof icon above "y" — matches real StayDekho logo exactly:
+   peaked roof + left chimney, stroke style, no filled walls */
 const HOUSE_SVG = `
-  <svg viewBox="0 0 32 26" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <rect x="6" y="0" width="5" height="8" rx="1"/>
-    <polygon points="0,16 16,2 32,16"/>
-    <rect x="3" y="14" width="26" height="12" rx="2"/>
+  <svg viewBox="0 0 34 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="6" y="0" width="4.5" height="7" rx="0.8" fill="currentColor"/>
+    <polyline points="0,19 17,4 34,19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
 const LOGO_HTML = `
   <a href="index.html" class="nav-logo">
     <span class="logo-wordmark">
-      <span class="logo-stay">Sta<span style="position:relative;display:inline-block"><span style="position:absolute;bottom:105%;left:50%;transform:translateX(-50%);width:15px;height:12px;line-height:0;color:inherit;display:block">${HOUSE_SVG}</span>y</span></span><span class="logo-dekh">Dekh</span>
+      <span class="logo-stay">Sta<span style="position:relative;display:inline-block"><span style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);width:18px;height:11px;line-height:0;color:inherit;display:block">${HOUSE_SVG}</span>y</span></span><span class="logo-dekh">Dekh</span>
       <span class="logo-o">${LOGO_SVG}</span>
     </span>
   </a>`;
