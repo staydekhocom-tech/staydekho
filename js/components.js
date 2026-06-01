@@ -6,18 +6,18 @@ const LOGO_SVG = `
     <line class="handle" x1="16.2" y1="16.2" x2="24" y2="24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   </svg>`;
 
-/* House/roof icon — chimney LEFT, peaked roof, sits right on top of "y" */
+/* House/roof icon — chimney LEFT, peaked roof above "y" only */
 const HOUSE_SVG = `
-  <svg viewBox="0 0 34 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 34 22" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="5" y="0" width="5" height="8" rx="1" fill="currentColor"/>
-    <polyline points="0,19 17,4 34,19" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="0,21 17,5 34,21" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
 const LOGO_HTML = `
   <a href="index.html" class="nav-logo">
     <span class="logo-wordmark">
-      <span class="logo-stay">Sta<span style="position:relative;display:inline-block;line-height:1"><span style="position:absolute;left:50%;transform:translateX(-50%);bottom:78%;width:18px;height:11px;line-height:0;display:block;color:inherit">${HOUSE_SVG}</span>y</span></span><span class="logo-dekh">Dekh</span>
-      <span class="logo-o">${LOGO_SVG}</span>
+      <span class="logo-stay">Stay<span style="position:absolute;margin-left:-11px;margin-top:-12px;width:14px;height:10px;display:inline-block;line-height:0;color:inherit;vertical-align:top">${HOUSE_SVG}</span></span><span class="logo-dekh">Dekh</span>
+      <span class="logo-o" style="vertical-align:-16px">${LOGO_SVG}</span>
     </span>
   </a>`;
 
