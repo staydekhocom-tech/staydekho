@@ -6,9 +6,9 @@
 const SD = {
 
   // ── CONTACT ──────────────────────────────────────────────────
-  phone:         '+91 87699 05983',   // ← display ke liye
-  phone_link:    '918769905983',      // ← same number bina + aur spaces ke
-  whatsapp:      '918769905983',      // ← WhatsApp number (bina + ke)
+  phone:         '+91 87692 22983',   // ← display ke liye
+  phone_link:    '918769222983',      // ← same number bina + aur spaces ke
+  whatsapp:      '918769222983',      // ← WhatsApp number (bina + ke)
   whatsapp_msg:  'Hi StayDekho! I want to enquire about your properties.',
   email:         'info@staydekho.com',
   safety_email:  'safety@staydekho.com',
