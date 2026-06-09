@@ -60,7 +60,11 @@ const bookingSchema = new Schema({
   checkout:            { type: String, required: true },
   guests:              { type: Number, default: 1 },
   nights:              { type: Number, default: 1 },
-  amount:              { type: Number, required: true },
+  amount:              { type: Number, required: true },  // advance paid (30%)
+  total_amount:        { type: Number, default: null },   // full booking price
+  balance_amount:      { type: Number, default: null },   // remaining 70%
+  balance_paid:        { type: Boolean, default: false }, // collected at check-in
+  payment_type:        { type: String, default: 'partial', enum: ['full', 'partial'] },
   status:              { type: String, default: 'pending', enum: ['pending', 'confirmed', 'cancelled', 'checked_in', 'checked_out'] },
   razorpay_order_id:   { type: String, default: null },
   razorpay_payment_id: { type: String, default: null },

@@ -138,23 +138,52 @@ router.post('/', protect, async (req, res) => {
     const gstRate  = avgNight > 7500 ? 0.18 : avgNight > 1000 ? 0.12 : 0;
     const gst      = Math.round(base * gstRate);
     const svc      = Math.round(base * 0.05);
-    const amount   = base + gst + svc;
+    const total    = base + gst + svc;
+
+    // 30% advance at booking, 70% at check-in
+    const advance  = Math.round(total * 0.30);
+    const balance  = total - advance;
 
     const booking = await Booking.create({
-      user_id:     req.user.id,
+      user_id:      req.user.id,
       property_id,
-      guest_name:  guest_name  || req.user.name,
-      guest_email: guest_email || req.user.email,
-      guest_phone: guest_phone || req.user.phone || '',
+      guest_name:   guest_name  || req.user.name,
+      guest_email:  guest_email || req.user.email,
+      guest_phone:  guest_phone || req.user.phone || '',
       checkin,
       checkout,
-      guests:      guests || 1,
+      guests:       guests || 1,
       nights,
-      amount,
-      status:      'pending',
+      amount:       advance,        // only 30% charged online
+      total_amount: total,          // full price
+      balance_amount: balance,      // 70% due at check-in
+      payment_type: 'partial',
+      balance_paid: false,
+      status:       'pending',
     });
 
-    res.status(201).json({ booking: booking.toObject(), amount, nights });
+    res.status(201).json({
+      booking: booking.toObject(),
+      amount:         advance,
+      total_amount:   total,
+      balance_amount: balance,
+      nights,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/bookings/:id/balance-paid  — admin marks balance collected at check-in
+router.put('/:id/balance-paid', protect, adminOnly, async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { balance_paid: true },
+      { new: true }
+    ).lean();
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    res.json({ message: 'Balance marked as collected', booking });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

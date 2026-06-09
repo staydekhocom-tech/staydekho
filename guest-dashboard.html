@@ -450,7 +450,21 @@
             </div>
           </div>
         </div>
-        <div class="booking-amount" style="text-align:right; font-size:1.25rem; font-weight:800; color:#1f2937;">₹${fmt(b.total)}</div>
+        <div class="booking-amount" style="text-align:right;">
+          ${b.total_amount && b.balance_amount && !b.balance_paid && b.status === 'confirmed'
+            ? `<div style="font-size:.75rem;color:#6b7280;margin-bottom:2px">Advance Paid</div>
+               <div style="font-size:1.1rem;font-weight:800;color:#15803d;">₹${fmt(b.amount || b.total)}</div>
+               <div style="margin-top:6px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:6px 10px;font-size:.75rem;">
+                 <div style="font-weight:700;color:#92400e;">⏰ Due at Check-in</div>
+                 <div style="font-size:1rem;font-weight:800;color:#b45309;">₹${fmt(b.balance_amount)}</div>
+               </div>`
+            : b.total_amount && b.balance_paid
+            ? `<div style="font-size:.75rem;color:#6b7280;margin-bottom:2px">Total Paid</div>
+               <div style="font-size:1.1rem;font-weight:800;color:#1f2937;">₹${fmt(b.total_amount)}</div>
+               <div style="margin-top:4px;font-size:.7rem;color:#15803d;font-weight:600;">✅ Fully Paid</div>`
+            : `<div style="font-size:1.25rem;font-weight:800;color:#1f2937;">₹${fmt(b.total)}</div>`
+          }
+        </div>
       </div>`;
   }
 

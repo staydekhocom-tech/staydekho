@@ -145,6 +145,7 @@ const api = {
     return request('POST', '/bookings', b);
   },
   updateBookingStatus: (id, status) => request('PUT',    `/bookings/${id}/status`, { status }),
+  markBalancePaid:     (id)         => request('PUT',    `/bookings/${id}/balance-paid`, {}),
   cancelBooking:       (id)         => request('DELETE', `/bookings/${id}`),
 
   toggleWishlist: async (propertyId) => {
@@ -191,12 +192,16 @@ const api = {
       try { mainImg = JSON.parse(b.property_images || '[]')[0] || null; } catch(e){}
       return {
         ...b,
-        property_id: propId,
-        title:      b.property_name || b.title || 'Property',
-        main_image: mainImg,
-        check_in:   b.checkin  || b.check_in,
-        check_out:  b.checkout || b.check_out,
-        total:      b.amount   || b.total || 0,
+        property_id:    propId,
+        title:          b.property_name || b.title || 'Property',
+        main_image:     mainImg,
+        check_in:       b.checkin  || b.check_in,
+        check_out:      b.checkout || b.check_out,
+        total:          b.total_amount || b.amount || b.total || 0,
+        amount:         b.amount || 0,
+        total_amount:   b.total_amount || null,
+        balance_amount: b.balance_amount || null,
+        balance_paid:   b.balance_paid   || false,
       };
     });
     return { bookings };
