@@ -759,13 +759,14 @@
 
 <div class="modal-bd" id="reel-add-modal">
   <div class="modal" style="max-width:580px">
-    <div class="modal-hdr"><div class="modal-title">Add Guest Reel</div><button class="modal-close" onclick="closeModal('reel-add-modal')">✕</button></div>
-    <div class="form-row"><div class="form-grp"><label class="form-lbl">Guest Name *</label><input class="form-ctrl" id="rl-name"/></div><div class="form-grp"><label class="form-lbl">Location (City)</label><input class="form-ctrl" id="rl-location"/></div></div>
-    <div class="form-grp"><label class="form-lbl">Stay Name *</label><input class="form-ctrl" id="rl-stay"/></div>
-    <div class="form-grp"><label class="form-lbl">Review Quote</label><textarea class="form-ctrl" id="rl-quote" rows="2"></textarea></div>
-    <div class="form-row"><div class="form-grp"><label class="form-lbl">Stars (1–5)</label><input class="form-ctrl" id="rl-stars" type="number" min="1" max="5" value="5"/></div><div class="form-grp"><label class="form-lbl">Sort Order</label><input class="form-ctrl" id="rl-order" type="number" value="0" min="0"/></div></div>
-    <div class="form-grp"><label class="form-lbl">🎬 Video File <span style="font-weight:400;color:var(--gray-400)">(MP4/MOV, max 300MB)</span></label><input class="form-ctrl" id="rl-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Or paste URL</label><input class="form-ctrl" id="rl-video-url"/></div>
-    <div class="form-grp"><label class="form-lbl">🖼️ Poster Image <span style="font-weight:400;color:var(--gray-400)">(thumbnail — JPG/PNG)</span></label><input class="form-ctrl" id="rl-poster-file" type="file" accept="image/*" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Or paste URL</label><input class="form-ctrl" id="rl-poster-url"/></div>
+    <div class="modal-hdr"><div class="modal-title">Add Reel / Video</div><button class="modal-close" onclick="closeModal('reel-add-modal')">✕</button></div>
+    <div class="form-grp"><label class="form-lbl">🎬 Video File <span style="font-weight:400;color:var(--gray-400)">(MP4/MOV, max 300MB) *</span></label><input class="form-ctrl" id="rl-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Or paste URL</label><input class="form-ctrl" id="rl-video-url" placeholder="https://..."/></div>
+    <div class="form-grp"><label class="form-lbl">🖼️ Thumbnail Image <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label><input class="form-ctrl" id="rl-poster-file" type="file" accept="image/*" style="padding:6px"/><label class="form-lbl" style="margin-top:6px">Or paste URL</label><input class="form-ctrl" id="rl-poster-url"/></div>
+    <div class="form-grp"><label class="form-lbl">Label <span style="font-weight:400;color:var(--gray-400)">(optional — e.g. "Goa Pool Villa")</span></label><input class="form-ctrl" id="rl-stay" placeholder="Optional title for this video"/></div>
+    <div style="display:none">
+      <input class="form-ctrl" id="rl-name"/><input class="form-ctrl" id="rl-location"/><textarea class="form-ctrl" id="rl-quote"></textarea>
+      <input class="form-ctrl" id="rl-stars" type="number" value="5"/><input class="form-ctrl" id="rl-order" type="number" value="0"/>
+    </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-outline" onclick="closeModal('reel-add-modal')">Cancel</button><button class="btn btn-primary" id="rl-save-btn" onclick="saveReel()">Save Reel</button></div>
   </div>
 </div>
@@ -1419,11 +1420,12 @@ function openEditReel(id) {
   showModal('reel-add-modal');
 }
 async function saveReel() {
-  const name = document.getElementById('rl-name').value.trim(); const stay = document.getElementById('rl-stay').value.trim();
-  if (!name || !stay) { alert('Guest Name and Stay Name are required!'); return; }
-  const btn = document.getElementById('rl-save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
-  const fd = new FormData(); fd.append('name', name); fd.append('location', document.getElementById('rl-location').value.trim()); fd.append('stay', stay); fd.append('quote', document.getElementById('rl-quote').value.trim()); fd.append('stars', document.getElementById('rl-stars').value); fd.append('sort_order', document.getElementById('rl-order').value); fd.append('video_url', document.getElementById('rl-video-url').value.trim()); fd.append('poster_url', document.getElementById('rl-poster-url').value.trim());
+  const stay = document.getElementById('rl-stay').value.trim() || 'StayDekho Reel';
   const videoFile = document.getElementById('rl-video-file').files[0]; const posterFile = document.getElementById('rl-poster-file').files[0];
+  const videoUrl  = document.getElementById('rl-video-url').value.trim();
+  if (!videoFile && !videoUrl) { alert('Please choose a video file or paste a video URL!'); return; }
+  const btn = document.getElementById('rl-save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
+  const fd = new FormData(); fd.append('name', document.getElementById('rl-name').value.trim() || 'Guest'); fd.append('location', document.getElementById('rl-location').value.trim()); fd.append('stay', stay); fd.append('quote', document.getElementById('rl-quote').value.trim()); fd.append('stars', document.getElementById('rl-stars').value || 5); fd.append('sort_order', document.getElementById('rl-order').value || 0); fd.append('video_url', videoUrl); fd.append('poster_url', document.getElementById('rl-poster-url').value.trim());
   if (videoFile) fd.append('video', videoFile); if (posterFile) fd.append('poster', posterFile);
   try { if (reelEditId) { await api.updateReel(reelEditId, fd); } else { await api.createReel(fd); } closeModal('reel-add-modal'); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.textContent = reelEditId ? 'Update Reel' : 'Save Reel'; }
 }
