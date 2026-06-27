@@ -1846,10 +1846,10 @@ function renderPricingCalendarRows() {
       <td>${fmtDate(d.date)}</td>
       <td>${d.day}</td>
       <td>${monthName}</td>
-      <td><input class="form-ctrl pc-holiday-input" data-i="${i}" value="${d.holiday_note}" style="width:100px;padding:4px 6px;font-size:12px"/></td>
+      <td><input class="form-ctrl pc-holiday-input" data-i="${i}" data-field="holiday" value="${d.holiday_note}" style="width:100px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
       <td>${d.isWeekend ? 'Weekend' : ''}</td>
-      <td><input class="form-ctrl pc-base-input" data-i="${i}" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:75px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
-      <td><input class="form-ctrl pc-hike-input" data-i="${i}" type="number" value="${hike}" style="width:55px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
+      <td><input class="form-ctrl pc-base-input" data-i="${i}" data-field="base" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:75px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
+      <td><input class="form-ctrl pc-hike-input" data-i="${i}" data-field="hike" type="number" value="${hike}" style="width:55px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
       <td><strong>${fmtMoney(final)}</strong></td>
       ${pcTds(pcRowCells(airbnb, true), '#fdecea')}
       ${pcTds(pcRowCells(booking, false), '#eaf2fd')}
@@ -1865,12 +1865,21 @@ function renderPricingCalendarRows() {
 
 function pcOnEdit(i, el) {
   const row = pcDays[i];
-  const tr = el.closest('tr');
-  const baseInp = tr.querySelector('.pc-base-input');
-  const hikeInp = tr.querySelector('.pc-hike-input');
-  row.price = baseInp.value === '' ? null : Number(baseInp.value);
-  row.hike_pct = Number(hikeInp.value) || 0;
+  const field = el.dataset.field;
+  if (field === 'base')    row.price = el.value === '' ? null : Number(el.value);
+  if (field === 'hike')    row.hike_pct = Number(el.value) || 0;
+  if (field === 'holiday') row.holiday_note = el.value;
+
+  // Re-render but keep focus + cursor position on the input being typed in
+  const selStart = el.selectionStart, selEnd = el.selectionEnd;
   renderPricingCalendarRows();
+  const newEl = document.querySelector(`[data-i="${i}"][data-field="${field}"]`);
+  if (newEl) {
+    newEl.focus();
+    if (newEl.setSelectionRange && (newEl.type === 'text' || newEl.type === undefined)) {
+      try { newEl.setSelectionRange(selStart, selEnd); } catch (e) {}
+    }
+  }
 }
 
 async function savePricingCalendar() {
