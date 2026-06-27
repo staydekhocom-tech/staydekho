@@ -187,11 +187,13 @@ const addonRequestSchema = new Schema({
 
 // ── 15. DatePrice ──────────────────────────────────────
 const datePriceSchema = new Schema({
-  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
-  date:        { type: String, required: true },
-  price:       { type: Number, default: null },
-  blocked:     { type: Boolean, default: false },
-  note:        { type: String, default: '' },
+  property_id:  { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  date:         { type: String, required: true },
+  price:        { type: Number, default: null },
+  blocked:      { type: Boolean, default: false },
+  note:         { type: String, default: '' },
+  hike_pct:     { type: Number, default: 0 },   // % hike over base price (festival/weekend)
+  holiday_note: { type: String, default: '' },  // National Holiday / Festival label
 }, { toJSON });
 datePriceSchema.index({ property_id: 1, date: 1 }, { unique: true });
 

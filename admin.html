@@ -493,6 +493,7 @@
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       <button class="btn btn-outline ops-tab-btn" data-tab="ops-dashboard" onclick="showOpsTab('ops-dashboard')">📊 Dashboard</button>
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-pricing" onclick="showOpsTab('ops-pricing')">💰 Pricing Calendar</button>
       <button class="btn btn-outline ops-tab-btn" data-tab="ops-bookings" onclick="showOpsTab('ops-bookings')">📋 Bookings Log</button>
       <button class="btn btn-outline ops-tab-btn" data-tab="ops-cleaning" onclick="showOpsTab('ops-cleaning')">🧹 Cleaning Tracker</button>
       <button class="btn btn-outline ops-tab-btn" data-tab="ops-expenses" onclick="showOpsTab('ops-expenses')">💸 Expenses</button>
@@ -519,6 +520,38 @@
       <div class="card" style="margin-top:16px">
         <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100)">Monthly Revenue Report</div>
         <div class="table-wrap"><table><thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th><th>Nights</th></tr></thead><tbody id="ops-monthly-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PRICING CALENDAR -->
+    <div class="ops-subtab" id="ops-pricing" style="display:none">
+      <div id="ops-pricing-noprop" style="padding:40px;text-align:center;color:var(--gray-400)">Select a property from the dropdown above to view/edit its Pricing Calendar.</div>
+      <div id="ops-pricing-content" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="font-size:13px;font-weight:600">Default Base Price (₹)</label>
+            <input class="form-ctrl" id="pc-base-price" type="number" style="width:120px" onchange="pcApplyDefaultBase()"/>
+            <span style="font-size:12px;color:var(--gray-400)">Applies to days with no custom price</span>
+          </div>
+          <button class="btn btn-primary" onclick="savePricingCalendar()">💾 Save Pricing Calendar</button>
+        </div>
+        <div class="card" style="overflow-x:auto">
+          <table style="font-size:12.5px;white-space:nowrap">
+            <thead>
+              <tr>
+                <th>Date</th><th>Day</th><th>Holiday/Festival</th><th>Weekend</th>
+                <th>Base Price (₹)</th><th>Hike %</th><th>Final Price (₹)</th>
+                <th style="background:#fdecea">Airbnb Guest Paid</th><th style="background:#fdecea">Airbnb We Receive</th>
+                <th style="background:#eaf2fd">Booking.com Guest Paid</th><th style="background:#eaf2fd">Booking.com We Receive</th>
+                <th style="background:#eafaf0">Agoda Guest Paid</th><th style="background:#eafaf0">Agoda We Receive</th>
+                <th style="background:#fff8e1">MMT/Goibibo Guest Paid</th><th style="background:#fff8e1">MMT/Goibibo We Receive</th>
+                <th style="background:#f3eafd">StayDekho Direct Price</th>
+                <th>Availability</th>
+              </tr>
+            </thead>
+            <tbody id="ops-pricing-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1649,6 +1682,7 @@ function showOpsTab(tabId) {
   document.getElementById(tabId).style.display = '';
   document.querySelectorAll('.ops-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
   if (tabId === 'ops-dashboard') loadOpsDashboard();
+  if (tabId === 'ops-pricing')   loadPricingCalendar();
   if (tabId === 'ops-bookings')  loadBookingsLog();
   if (tabId === 'ops-cleaning')  loadCleaningTasks();
   if (tabId === 'ops-expenses')  loadExpenses();
@@ -1681,6 +1715,144 @@ async function loadOpsDashboard() {
     ).join('');
     document.getElementById('ops-monthly-tbody').innerHTML = repRows || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400)">No data yet</td></tr>';
   } catch (e) { console.error(e); }
+}
+
+// ── PRICING CALENDAR (real-time formulas, like the Excel sheet) ──
+let pcDatePrices = [];
+let pcDays = [];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// Live formula: Base Price + Hike% → Final Price → per-platform Guest Paid / We Receive
+function pcCalcPlatform(finalPrice, cfg) {
+  cfg = cfg || {};
+  const discount   = finalPrice * ((cfg.discount_pct || 0) / 100);
+  const netRate     = finalPrice - discount;
+  const gst         = netRate * ((cfg.gst_pct || 0) / 100);
+  const guestPaid   = Math.round(netRate + gst);
+  const commission = netRate * ((cfg.commission_pct || 0) / 100);
+  const commGst     = commission * ((cfg.gst_pct || 0) / 100);
+  const tds          = netRate * ((cfg.tds_pct || 0) / 100);
+  const weReceive   = Math.round(guestPaid - commission - commGst - tds);
+  return { guestPaid, weReceive };
+}
+function pcCalcDirect(finalPrice, cfg) {
+  cfg = cfg || {};
+  return Math.round(finalPrice * (1 + ((cfg.markup_pct || 0) / 100)));
+}
+
+async function loadPricingCalendar() {
+  if (!opsSelectedProperty) {
+    document.getElementById('ops-pricing-noprop').style.display = '';
+    document.getElementById('ops-pricing-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('ops-pricing-noprop').style.display = 'none';
+  document.getElementById('ops-pricing-content').style.display = '';
+  await ensureOpsSettingsLoaded();
+
+  try {
+    const [dpRes, bookingsRes] = await Promise.all([
+      api.getDatePrices(opsSelectedProperty),
+      api.listBookingsLog({ property_id: opsSelectedProperty }),
+    ]);
+    pcDatePrices = dpRes.date_prices || [];
+    const activeBookings = (bookingsRes.bookings || []).filter(b => b.status !== 'cancelled');
+
+    document.getElementById('pc-base-price').value = opsPlatformSettings.default_base_price || 4000;
+
+    // Build 90-day range starting today
+    pcDays = [];
+    const today = new Date();
+    for (let i = 0; i < 90; i++) {
+      const d = new Date(today); d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const existing = pcDatePrices.find(p => p.date === dateStr);
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      const bookedRow = activeBookings.find(b => dateStr >= (b.checkin||'').slice(0,10) && dateStr < (b.checkout||'').slice(0,10));
+      pcDays.push({
+        date: dateStr,
+        day: DAY_NAMES[d.getDay()],
+        isWeekend,
+        price: existing ? existing.price : null,
+        hike_pct: existing ? (existing.hike_pct || (isWeekend ? 10 : 0)) : (isWeekend ? 10 : 0),
+        holiday_note: existing ? (existing.holiday_note || '') : '',
+        blocked: existing ? existing.blocked : false,
+        bookedVia: bookedRow ? (PLATFORM_LABELS[bookedRow.platform] || bookedRow.platform) + ' — ' + bookedRow.guest_name : '',
+      });
+    }
+    renderPricingCalendar();
+  } catch (e) { console.error(e); }
+}
+
+function pcApplyDefaultBase() {
+  const v = Number(document.getElementById('pc-base-price').value) || 4000;
+  document.querySelectorAll('.pc-base-input').forEach(inp => { if (!inp.value) inp.value = v; });
+  renderPricingCalendarRows();
+}
+
+function renderPricingCalendar() { renderPricingCalendarRows(); }
+
+function renderPricingCalendarRows() {
+  const defaultBase = Number(document.getElementById('pc-base-price').value) || 4000;
+  const platforms = (opsPlatformSettings && opsPlatformSettings.platforms) || {};
+  const rows = pcDays.map((d, i) => {
+    const base = d.price != null ? d.price : defaultBase;
+    const hike = d.hike_pct || 0;
+    const final = Math.round(base * (1 + hike / 100));
+    const airbnb  = pcCalcPlatform(final, platforms.airbnb);
+    const booking = pcCalcPlatform(final, platforms.booking_com);
+    const agoda   = pcCalcPlatform(final, platforms.agoda);
+    const mmt      = pcCalcPlatform(final, platforms.mmt_goibibo);
+    const direct   = pcCalcDirect(final, platforms.direct);
+    const rowColor = d.blocked ? 'background:#fde8e8' : (d.bookedVia ? 'background:#fff8e1' : '');
+    return `<tr style="${rowColor}">
+      <td>${fmtDate(d.date)}</td>
+      <td>${d.day}</td>
+      <td><input class="form-ctrl pc-holiday-input" data-i="${i}" value="${d.holiday_note}" style="width:110px;padding:4px 6px;font-size:12px"/></td>
+      <td>${d.isWeekend ? 'Weekend' : ''}</td>
+      <td><input class="form-ctrl pc-base-input" data-i="${i}" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:80px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
+      <td><input class="form-ctrl pc-hike-input" data-i="${i}" type="number" value="${hike}" style="width:60px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
+      <td><strong>${fmtMoney(final)}</strong></td>
+      <td style="background:#fdecea">${fmtMoney(airbnb.guestPaid)}</td><td style="background:#fdecea">${fmtMoney(airbnb.weReceive)}</td>
+      <td style="background:#eaf2fd">${fmtMoney(booking.guestPaid)}</td><td style="background:#eaf2fd">${fmtMoney(booking.weReceive)}</td>
+      <td style="background:#eafaf0">${fmtMoney(agoda.guestPaid)}</td><td style="background:#eafaf0">${fmtMoney(agoda.weReceive)}</td>
+      <td style="background:#fff8e1">${fmtMoney(mmt.guestPaid)}</td><td style="background:#fff8e1">${fmtMoney(mmt.weReceive)}</td>
+      <td style="background:#f3eafd">${fmtMoney(direct)}</td>
+      <td>${d.blocked ? '<span class="badge b-cancelled">Blocked</span>' : (d.bookedVia ? `<span class="badge">${d.bookedVia}</span>` : '<span class="badge b-confirmed">Available</span>')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ops-pricing-tbody').innerHTML = rows;
+}
+
+function pcOnEdit(i, el) {
+  const row = pcDays[i];
+  const tr = el.closest('tr');
+  const baseInp = tr.querySelector('.pc-base-input');
+  const hikeInp = tr.querySelector('.pc-hike-input');
+  row.price = baseInp.value === '' ? null : Number(baseInp.value);
+  row.hike_pct = Number(hikeInp.value) || 0;
+  renderPricingCalendarRows();
+}
+
+async function savePricingCalendar() {
+  document.querySelectorAll('.pc-holiday-input').forEach(inp => { pcDays[Number(inp.dataset.i)].holiday_note = inp.value.trim(); });
+  document.querySelectorAll('.pc-base-input').forEach(inp => { const i = Number(inp.dataset.i); pcDays[i].price = inp.value === '' ? null : Number(inp.value); });
+  document.querySelectorAll('.pc-hike-input').forEach(inp => { pcDays[Number(inp.dataset.i)].hike_pct = Number(inp.value) || 0; });
+
+  const defaultBase = Number(document.getElementById('pc-base-price').value) || 4000;
+  const prices = pcDays
+    .filter(d => d.price != null || d.hike_pct || d.holiday_note || d.blocked)
+    .map(d => ({ date: d.date, price: d.price, hike_pct: d.hike_pct, holiday_note: d.holiday_note, blocked: d.blocked }));
+
+  try {
+    await api.saveDatePrices(opsSelectedProperty, prices);
+    if (opsPlatformSettings) {
+      opsPlatformSettings.default_base_price = defaultBase;
+      await api.updatePlatformSettings({ platforms: opsPlatformSettings.platforms, default_base_price: defaultBase });
+    }
+    alert('Pricing calendar saved!');
+    loadPricingCalendar();
+  } catch (err) { alert('Error: ' + err.message); }
 }
 
 // ── BOOKINGS LOG ──

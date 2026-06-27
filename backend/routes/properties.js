@@ -293,7 +293,7 @@ router.get('/:id/date-prices', async (req, res) => {
     const rows = await DatePrice.find({ property_id: req.params.id })
       .sort({ date: 1 })
       .lean();
-    res.json({ date_prices: rows.map(r => ({ date: r.date, price: r.price, blocked: r.blocked, note: r.note })) });
+    res.json({ date_prices: rows.map(r => ({ date: r.date, price: r.price, blocked: r.blocked, note: r.note, hike_pct: r.hike_pct || 0, holiday_note: r.holiday_note || '' })) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -310,17 +310,19 @@ router.post('/:id/date-prices', protect, adminOnly, async (req, res) => {
 
     for (const r of prices) {
       if (!r.date) continue;
-      if (!r.blocked && !r.price) {
+      if (!r.blocked && !r.price && !r.hike_pct && !r.holiday_note) {
         await DatePrice.deleteOne({ property_id: req.params.id, date: r.date });
       } else {
         await DatePrice.findOneAndUpdate(
           { property_id: req.params.id, date: r.date },
           {
-            property_id: req.params.id,
-            date:    r.date,
-            price:   r.price   || null,
-            blocked: r.blocked ? true : false,
-            note:    r.note    || '',
+            property_id:  req.params.id,
+            date:         r.date,
+            price:        r.price   || null,
+            blocked:      r.blocked ? true : false,
+            note:         r.note    || '',
+            hike_pct:     r.hike_pct || 0,
+            holiday_note: r.holiday_note || '',
           },
           { upsert: true, new: true }
         );
@@ -328,7 +330,7 @@ router.post('/:id/date-prices', protect, adminOnly, async (req, res) => {
     }
 
     const updated = await DatePrice.find({ property_id: req.params.id }).sort({ date: 1 }).lean();
-    res.json({ date_prices: updated.map(r => ({ date: r.date, price: r.price, blocked: r.blocked, note: r.note })) });
+    res.json({ date_prices: updated.map(r => ({ date: r.date, price: r.price, blocked: r.blocked, note: r.note, hike_pct: r.hike_pct || 0, holiday_note: r.holiday_note || '' })) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
