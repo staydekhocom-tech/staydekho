@@ -536,17 +536,17 @@
           <button class="btn btn-primary" onclick="savePricingCalendar()">💾 Save Pricing Calendar</button>
         </div>
         <div class="card" style="overflow-x:auto">
-          <table style="font-size:12.5px;white-space:nowrap">
+          <table style="font-size:12px;white-space:nowrap">
             <thead>
               <tr>
-                <th>Date</th><th>Day</th><th>Holiday/Festival</th><th>Weekend</th>
+                <th>Date</th><th>Day</th><th>Month</th><th>Holiday/Festival</th><th>Weekend</th>
                 <th>Base Price (₹)</th><th>Hike %</th><th>Final Price (₹)</th>
-                <th style="background:#fdecea">Airbnb Guest Paid</th><th style="background:#fdecea">Airbnb We Receive</th>
-                <th style="background:#eaf2fd">Booking.com Guest Paid</th><th style="background:#eaf2fd">Booking.com We Receive</th>
-                <th style="background:#eafaf0">Agoda Guest Paid</th><th style="background:#eafaf0">Agoda We Receive</th>
-                <th style="background:#fff8e1">MMT/Goibibo Guest Paid</th><th style="background:#fff8e1">MMT/Goibibo We Receive</th>
+                <th style="background:#fdecea">Airbnb Target We Receive</th><th style="background:#fdecea">Airbnb Suggested Base Rate</th><th style="background:#fdecea">Airbnb Base Rate</th><th style="background:#fdecea">Airbnb Discount</th><th style="background:#fdecea">Airbnb Net Rate</th><th style="background:#fdecea">Airbnb GST %</th><th style="background:#fdecea">Airbnb Guest Paid</th><th style="background:#fdecea">Airbnb Hosting+TDS %</th><th style="background:#fdecea">Airbnb We Receive</th>
+                <th style="background:#eaf2fd">Booking.com Target We Receive</th><th style="background:#eaf2fd">Booking.com Suggested Base Rate</th><th style="background:#eaf2fd">Booking.com Base Rate</th><th style="background:#eaf2fd">Booking.com Discount</th><th style="background:#eaf2fd">Booking.com Net Rate</th><th style="background:#eaf2fd">Booking.com Guest Paid</th><th style="background:#eaf2fd">Booking.com Commission+GST %</th><th style="background:#eaf2fd">Booking.com We Receive</th>
+                <th style="background:#eafaf0">Agoda Target We Receive</th><th style="background:#eafaf0">Agoda Suggested Base Rate</th><th style="background:#eafaf0">Agoda Base Rate</th><th style="background:#eafaf0">Agoda Discount</th><th style="background:#eafaf0">Agoda Net Rate</th><th style="background:#eafaf0">Agoda GST %</th><th style="background:#eafaf0">Agoda Guest Paid</th><th style="background:#eafaf0">Agoda Commission+GST+TDS %</th><th style="background:#eafaf0">Agoda We Receive</th>
+                <th style="background:#fff8e1">MMT/Goibibo Target We Receive</th><th style="background:#fff8e1">MMT/Goibibo Suggested Base Rate</th><th style="background:#fff8e1">MMT/Goibibo Base Rate</th><th style="background:#fff8e1">MMT/Goibibo Discount</th><th style="background:#fff8e1">MMT/Goibibo Net Rate</th><th style="background:#fff8e1">MMT/Goibibo GST %</th><th style="background:#fff8e1">MMT/Goibibo Guest Paid</th><th style="background:#fff8e1">MMT/Goibibo Commission+GST+TDS %</th><th style="background:#fff8e1">MMT/Goibibo We Receive</th>
                 <th style="background:#f3eafd">StayDekho Direct Price</th>
-                <th>Availability</th>
+                <th>Availability</th><th>Booked Via / Notes</th>
               </tr>
             </thead>
             <tbody id="ops-pricing-tbody"></tbody>
@@ -1723,21 +1723,54 @@ let pcDays = [];
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 // Live formula: Base Price + Hike% → Final Price → per-platform Guest Paid / We Receive
-function pcCalcPlatform(finalPrice, cfg) {
+// Full Excel-style breakdown per platform.
+// mode: 'airbnb'  → guest pays GST extra, host deduction = commission + TDS (no GST on commission)
+//       'otaGst'  → guest pays GST extra (Agoda/MMT) AND GST charged on commission too
+//       'booking' → guest paid = net rate (tax-inclusive), GST charged only on commission
+function pcCalcPlatformFull(finalPrice, cfg, mode) {
   cfg = cfg || {};
-  const discount   = finalPrice * ((cfg.discount_pct || 0) / 100);
-  const netRate     = finalPrice - discount;
-  const gst         = netRate * ((cfg.gst_pct || 0) / 100);
-  const guestPaid   = Math.round(netRate + gst);
-  const commission = netRate * ((cfg.commission_pct || 0) / 100);
-  const commGst     = commission * ((cfg.gst_pct || 0) / 100);
-  const tds          = netRate * ((cfg.tds_pct || 0) / 100);
-  const weReceive   = Math.round(guestPaid - commission - commGst - tds);
-  return { guestPaid, weReceive };
+  const commissionPct = cfg.commission_pct || 0, gstPct = cfg.gst_pct || 0, tdsPct = cfg.tds_pct || 0, discountPct = cfg.discount_pct || 0;
+  const suggestedBaseRate = finalPrice;
+  const baseRate           = finalPrice;
+  const discount            = baseRate * (discountPct / 100);
+  const netRate             = baseRate - discount;
+  const commission          = netRate * (commissionPct / 100);
+  const tds                  = netRate * (tdsPct / 100);
+
+  let guestPaid, commGst = 0, combinedPct, weReceive;
+  if (mode === 'booking') {
+    guestPaid   = netRate;
+    commGst      = commission * (gstPct / 100);
+    combinedPct = +(commissionPct + (commissionPct * gstPct / 100) + tdsPct).toFixed(1);
+    weReceive   = netRate - commission - commGst - tds;
+  } else if (mode === 'otaGst') {
+    guestPaid   = netRate * (1 + gstPct / 100);
+    commGst      = commission * (gstPct / 100);
+    combinedPct = +(commissionPct + (commissionPct * gstPct / 100) + tdsPct).toFixed(1);
+    weReceive   = netRate - commission - commGst - tds;
+  } else { // airbnb
+    guestPaid   = netRate * (1 + gstPct / 100);
+    combinedPct = +(commissionPct + tdsPct).toFixed(1);
+    weReceive   = netRate - commission - tds;
+  }
+  weReceive = Math.round(weReceive);
+  return {
+    target: weReceive, suggestedBaseRate: Math.round(suggestedBaseRate), baseRate: Math.round(baseRate),
+    discount: Math.round(discount), netRate: Math.round(netRate), gstPct,
+    guestPaid: Math.round(guestPaid), combinedPct, weReceive,
+  };
 }
 function pcCalcDirect(finalPrice, cfg) {
   cfg = cfg || {};
   return Math.round(finalPrice * (1 + ((cfg.markup_pct || 0) / 100)));
+}
+function pcRowCells(r, hasGst) {
+  const cells = [r.target, r.suggestedBaseRate, r.baseRate, r.discount, r.netRate];
+  if (hasGst) cells.push(r.gstPct + '%');
+  cells.push(r.guestPaid);
+  cells.push(r.combinedPct + '%');
+  cells.push(r.weReceive);
+  return cells;
 }
 
 async function loadPricingCalendar() {
@@ -1792,6 +1825,9 @@ function pcApplyDefaultBase() {
 
 function renderPricingCalendar() { renderPricingCalendarRows(); }
 
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function pcTds(cells, bg) { return cells.map(v => `<td style="background:${bg}">${typeof v === 'number' ? fmtMoney(v) : v}</td>`).join(''); }
+
 function renderPricingCalendarRows() {
   const defaultBase = Number(document.getElementById('pc-base-price').value) || 4000;
   const platforms = (opsPlatformSettings && opsPlatformSettings.platforms) || {};
@@ -1799,26 +1835,29 @@ function renderPricingCalendarRows() {
     const base = d.price != null ? d.price : defaultBase;
     const hike = d.hike_pct || 0;
     const final = Math.round(base * (1 + hike / 100));
-    const airbnb  = pcCalcPlatform(final, platforms.airbnb);
-    const booking = pcCalcPlatform(final, platforms.booking_com);
-    const agoda   = pcCalcPlatform(final, platforms.agoda);
-    const mmt      = pcCalcPlatform(final, platforms.mmt_goibibo);
+    const airbnb  = pcCalcPlatformFull(final, platforms.airbnb, 'airbnb');
+    const booking = pcCalcPlatformFull(final, platforms.booking_com, 'booking');
+    const agoda   = pcCalcPlatformFull(final, platforms.agoda, 'otaGst');
+    const mmt      = pcCalcPlatformFull(final, platforms.mmt_goibibo, 'otaGst');
     const direct   = pcCalcDirect(final, platforms.direct);
+    const monthName = MONTH_NAMES[new Date(d.date).getMonth()];
     const rowColor = d.blocked ? 'background:#fde8e8' : (d.bookedVia ? 'background:#fff8e1' : '');
     return `<tr style="${rowColor}">
       <td>${fmtDate(d.date)}</td>
       <td>${d.day}</td>
-      <td><input class="form-ctrl pc-holiday-input" data-i="${i}" value="${d.holiday_note}" style="width:110px;padding:4px 6px;font-size:12px"/></td>
+      <td>${monthName}</td>
+      <td><input class="form-ctrl pc-holiday-input" data-i="${i}" value="${d.holiday_note}" style="width:100px;padding:4px 6px;font-size:12px"/></td>
       <td>${d.isWeekend ? 'Weekend' : ''}</td>
-      <td><input class="form-ctrl pc-base-input" data-i="${i}" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:80px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
-      <td><input class="form-ctrl pc-hike-input" data-i="${i}" type="number" value="${hike}" style="width:60px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
+      <td><input class="form-ctrl pc-base-input" data-i="${i}" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:75px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
+      <td><input class="form-ctrl pc-hike-input" data-i="${i}" type="number" value="${hike}" style="width:55px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
       <td><strong>${fmtMoney(final)}</strong></td>
-      <td style="background:#fdecea">${fmtMoney(airbnb.guestPaid)}</td><td style="background:#fdecea">${fmtMoney(airbnb.weReceive)}</td>
-      <td style="background:#eaf2fd">${fmtMoney(booking.guestPaid)}</td><td style="background:#eaf2fd">${fmtMoney(booking.weReceive)}</td>
-      <td style="background:#eafaf0">${fmtMoney(agoda.guestPaid)}</td><td style="background:#eafaf0">${fmtMoney(agoda.weReceive)}</td>
-      <td style="background:#fff8e1">${fmtMoney(mmt.guestPaid)}</td><td style="background:#fff8e1">${fmtMoney(mmt.weReceive)}</td>
+      ${pcTds(pcRowCells(airbnb, true), '#fdecea')}
+      ${pcTds(pcRowCells(booking, false), '#eaf2fd')}
+      ${pcTds(pcRowCells(agoda, true), '#eafaf0')}
+      ${pcTds(pcRowCells(mmt, true), '#fff8e1')}
       <td style="background:#f3eafd">${fmtMoney(direct)}</td>
-      <td>${d.blocked ? '<span class="badge b-cancelled">Blocked</span>' : (d.bookedVia ? `<span class="badge">${d.bookedVia}</span>` : '<span class="badge b-confirmed">Available</span>')}</td>
+      <td>${d.blocked ? '<span class="badge b-cancelled">Blocked</span>' : (d.bookedVia ? '<span class="badge b-confirmed">Booked</span>' : '<span class="badge b-confirmed">Available</span>')}</td>
+      <td>${d.bookedVia || '—'}</td>
     </tr>`;
   }).join('');
   document.getElementById('ops-pricing-tbody').innerHTML = rows;
