@@ -1,0 +1,290 @@
+const router = require('express').Router();
+const { Booking, Property, Expense, CleaningTask, PlatformSetting } = require('../db/models');
+const { protect, adminOnly } = require('../middleware/auth');
+
+router.use(protect, adminOnly);
+
+// ── Platform Settings (commission/GST/TDS config) ─────
+router.get('/platform-settings', async (req, res) => {
+  try {
+    let doc = await PlatformSetting.findOne({ property_id: null }).lean();
+    if (!doc) doc = (await PlatformSetting.create({ property_id: null })).toObject();
+    res.json({ settings: doc });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/platform-settings', async (req, res) => {
+  try {
+    const { platforms, default_base_price } = req.body;
+    const doc = await PlatformSetting.findOneAndUpdate(
+      { property_id: null },
+      { platforms, default_base_price },
+      { new: true, upsert: true }
+    ).lean();
+    res.json({ settings: doc });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Bookings Log (multi-platform — manual OTA entries) ─
+// Computes net_payout = total - commission - gst_on_commission - tds
+function calcPayout(total, p) {
+  const commission = total * ((p.commission_pct || 0) / 100);
+  const gst         = commission * ((p.gst_pct || 0) / 100);
+  const tds          = total * ((p.tds_pct || 0) / 100);
+  const net          = total - commission - gst - tds;
+  return { commission, gst, tds, net: Math.round(net) };
+}
+
+router.get('/bookings-log', async (req, res) => {
+  try {
+    const { platform, property_id } = req.query;
+    const q = {};
+    if (platform)    q.platform    = platform;
+    if (property_id) q.property_id = property_id;
+    const rows = await Booking.find(q)
+      .populate('property_id', 'name location')
+      .sort({ checkin: -1 })
+      .lean();
+    const bookings = rows.map(b => ({
+      ...b,
+      property_name: b.property_id?.name,
+      property_id:   b.property_id?._id,
+    }));
+    res.json({ bookings });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/bookings-log', async (req, res) => {
+  try {
+    const {
+      property_id, guest_name, guest_phone, checkin, checkout,
+      platform, total_amount, advance_amount, status, notes,
+    } = req.body;
+    if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
+      return res.status(400).json({ error: 'Property, guest name, dates and total amount required hain' });
+
+    const cin  = new Date(checkin);
+    const cout = new Date(checkout);
+    const nights = Math.max(1, Math.ceil((cout - cin) / (1000 * 60 * 60 * 24)));
+
+    const settingsDoc = await PlatformSetting.findOne({ property_id: null }).lean();
+    const pCfg = (settingsDoc?.platforms || {})[platform] || {};
+    const { commission, gst, tds, net } = calcPayout(Number(total_amount), pCfg);
+
+    const advance = Number(advance_amount) || 0;
+    const balance = Number(total_amount) - advance;
+
+    const booking = await Booking.create({
+      property_id, guest_name, guest_phone: guest_phone || '',
+      guest_email: '', checkin, checkout, nights,
+      amount: advance, total_amount: Number(total_amount), balance_amount: balance,
+      balance_paid: balance <= 0,
+      payment_type: advance >= Number(total_amount) ? 'full' : 'partial',
+      status: status || 'confirmed',
+      platform: platform || 'direct',
+      commission_pct: pCfg.commission_pct || 0,
+      gst_on_commission_pct: pCfg.gst_pct || 0,
+      tds_pct: pCfg.tds_pct || 0,
+      net_payout: net,
+      notes: notes || '',
+    });
+
+    res.status(201).json({ booking: booking.toObject(), payout: { commission, gst, tds, net } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/bookings-log/:id', async (req, res) => {
+  try {
+    const existing = await Booking.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ error: 'Booking nahi mili' });
+
+    const body = req.body;
+    let net_payout = existing.net_payout;
+    if (body.total_amount !== undefined || body.platform !== undefined) {
+      const settingsDoc = await PlatformSetting.findOne({ property_id: null }).lean();
+      const platform = body.platform || existing.platform;
+      const pCfg = (settingsDoc?.platforms || {})[platform] || {};
+      const total = body.total_amount !== undefined ? Number(body.total_amount) : existing.total_amount;
+      net_payout = calcPayout(total, pCfg).net;
+      body.commission_pct = pCfg.commission_pct || 0;
+      body.gst_on_commission_pct = pCfg.gst_pct || 0;
+      body.tds_pct = pCfg.tds_pct || 0;
+    }
+    const updated = await Booking.findByIdAndUpdate(req.params.id, { ...body, net_payout }, { new: true }).lean();
+    res.json({ booking: updated });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/bookings-log/:id', async (req, res) => {
+  try {
+    await Booking.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Booking deleted' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Cleaning Tracker ───────────────────────────────────
+router.get('/cleaning', async (req, res) => {
+  try {
+    const { property_id } = req.query;
+    const q = property_id ? { property_id } : {};
+    const tasks = await CleaningTask.find(q).sort({ date: 1 }).lean();
+    res.json({ tasks });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/cleaning', async (req, res) => {
+  try {
+    const { property_id, date, checkout_today, status, cleaned_by, notes } = req.body;
+    if (!property_id || !date) return res.status(400).json({ error: 'Property aur date required hain' });
+    const task = await CleaningTask.findOneAndUpdate(
+      { property_id, date },
+      { checkout_today: !!checkout_today, status: status || 'pending', cleaned_by: cleaned_by || '', notes: notes || '' },
+      { new: true, upsert: true }
+    ).lean();
+    res.status(201).json({ task });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/cleaning/:id', async (req, res) => {
+  try { await CleaningTask.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Expenses ───────────────────────────────────────────
+router.get('/expenses', async (req, res) => {
+  try {
+    const { property_id } = req.query;
+    const q = property_id ? { property_id } : {};
+    const expenses = await Expense.find(q).sort({ date: -1 }).lean();
+    res.json({ expenses });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/expenses', async (req, res) => {
+  try {
+    const { property_id, date, category, description, amount, paid_by, notes } = req.body;
+    if (!date || !amount) return res.status(400).json({ error: 'Date aur amount required hain' });
+    const expense = await Expense.create({ property_id: property_id || null, date, category, description, amount, paid_by, notes });
+    res.status(201).json({ expense: expense.toObject() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/expenses/:id', async (req, res) => {
+  try {
+    const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
+    res.json({ expense });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/expenses/:id', async (req, res) => {
+  try { await Expense.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Dashboard / Reports ────────────────────────────────
+router.get('/dashboard', async (req, res) => {
+  try {
+    const { from, to, property_id } = req.query;
+    const q = { status: { $ne: 'cancelled' } };
+    if (property_id) q.property_id = property_id;
+    if (from || to) {
+      q.checkin = {};
+      if (from) q.checkin.$gte = from;
+      if (to)   q.checkin.$lte = to;
+    }
+    const bookings = await Booking.find(q).lean();
+
+    const totalBookings = bookings.length;
+    const totalRevenue  = bookings.reduce((s, b) => s + (b.total_amount || b.amount || 0), 0);
+    const totalNights   = bookings.reduce((s, b) => s + (b.nights || 0), 0);
+    const pendingBalance= bookings.reduce((s, b) => s + (b.balance_paid ? 0 : (b.balance_amount || 0)), 0);
+    const adr            = totalNights ? Math.round(totalRevenue / totalNights) : 0;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const in7   = new Date(today); in7.setDate(in7.getDate() + 7);
+    const fmt = (d) => d.toISOString().split('T')[0];
+    const upcomingCheckins  = bookings.filter(b => b.checkin  >= fmt(today) && b.checkin  <= fmt(in7)).length;
+    const upcomingCheckouts = bookings.filter(b => b.checkout >= fmt(today) && b.checkout <= fmt(in7)).length;
+
+    const byPlatform = {};
+    for (const b of bookings) {
+      const p = b.platform || 'direct';
+      if (!byPlatform[p]) byPlatform[p] = { bookings: 0, revenue: 0, net_payout: 0 };
+      byPlatform[p].bookings += 1;
+      byPlatform[p].revenue  += (b.total_amount || b.amount || 0);
+      byPlatform[p].net_payout += (b.net_payout != null ? b.net_payout : (b.total_amount || b.amount || 0));
+    }
+
+    // occupancy: needs a date-range; default to 90 days if not given
+    let rangeDays = 90;
+    if (from && to) rangeDays = Math.max(1, Math.ceil((new Date(to) - new Date(from)) / (1000*60*60*24)));
+    const propCount = property_id ? 1 : await Property.countDocuments({ status: 'Active' });
+    const occupancyPct = propCount ? Math.min(100, Math.round((totalNights / (propCount * rangeDays)) * 100)) : 0;
+
+    res.json({
+      total_bookings: totalBookings,
+      total_revenue:  totalRevenue,
+      total_nights:   totalNights,
+      occupancy_pct:  occupancyPct,
+      adr,
+      upcoming_checkins:  upcomingCheckins,
+      upcoming_checkouts: upcomingCheckouts,
+      pending_balance: pendingBalance,
+      by_platform: byPlatform,
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Monthly Revenue Report ─────────────────────────────
+router.get('/monthly-report', async (req, res) => {
+  try {
+    const { property_id } = req.query;
+    const q = { status: { $ne: 'cancelled' } };
+    if (property_id) q.property_id = property_id;
+    const bookings = await Booking.find(q).lean();
+
+    const months = {};
+    for (const b of bookings) {
+      const key = (b.checkin || '').slice(0, 7); // YYYY-MM
+      if (!key) continue;
+      if (!months[key]) months[key] = { month: key, total_bookings: 0, total_revenue: 0, total_nights: 0, by_platform: {} };
+      months[key].total_bookings += 1;
+      months[key].total_revenue  += (b.total_amount || b.amount || 0);
+      months[key].total_nights   += (b.nights || 0);
+      const p = b.platform || 'direct';
+      months[key].by_platform[p] = (months[key].by_platform[p] || 0) + (b.total_amount || b.amount || 0);
+    }
+    const report = Object.values(months).sort((a, b) => a.month.localeCompare(b.month));
+    res.json({ report });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Owner Payout Summary (platform-wise) ───────────────
+router.get('/payout-summary', async (req, res) => {
+  try {
+    const { property_id } = req.query;
+    const q = { status: { $ne: 'cancelled' } };
+    if (property_id) q.property_id = property_id;
+    const bookings = await Booking.find(q).lean();
+
+    const platforms = ['direct', 'airbnb', 'booking_com', 'agoda', 'mmt_goibibo', 'walkin'];
+    const settingsDoc = await PlatformSetting.findOne({ property_id: null }).lean();
+
+    const summary = platforms.map(p => {
+      const rows = bookings.filter(b => (b.platform || 'direct') === p);
+      const gross = rows.reduce((s, b) => s + (b.total_amount || b.amount || 0), 0);
+      const net   = rows.reduce((s, b) => s + (b.net_payout != null ? b.net_payout : (b.total_amount || b.amount || 0)), 0);
+      const cfg   = (settingsDoc?.platforms || {})[p] || {};
+      return {
+        platform: p,
+        commission_pct: cfg.commission_pct || 0,
+        bookings: rows.length,
+        gross_revenue: gross,
+        net_payout: net,
+      };
+    });
+    res.json({ summary });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+module.exports = router;

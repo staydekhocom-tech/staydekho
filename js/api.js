@@ -251,6 +251,31 @@ const api = {
     return request('GET', `/admin/bookings${q ? '?' + q : ''}`);
   },
 
+  // ── Operations / PMS ──────────────────────────────────
+  getPlatformSettings:    () => request('GET', '/operations/platform-settings'),
+  updatePlatformSettings: (body) => request('PUT', '/operations/platform-settings', body),
+  listBookingsLog:        (params = {}) => {
+    Object.keys(params).forEach(k => (params[k] == null || params[k] === '') && delete params[k]);
+    const q = new URLSearchParams(params).toString();
+    return request('GET', `/operations/bookings-log${q ? '?' + q : ''}`);
+  },
+  createBookingLog: (body) => request('POST', '/operations/bookings-log', body),
+  updateBookingLog: (id, body) => request('PUT', `/operations/bookings-log/${id}`, body),
+  deleteBookingLog: (id) => request('DELETE', `/operations/bookings-log/${id}`),
+  listCleaningTasks: (property_id) => request('GET', `/operations/cleaning${property_id ? '?property_id=' + property_id : ''}`),
+  saveCleaningTask:  (body) => request('POST', '/operations/cleaning', body),
+  deleteCleaningTask:(id) => request('DELETE', `/operations/cleaning/${id}`),
+  listExpenses:  (property_id) => request('GET', `/operations/expenses${property_id ? '?property_id=' + property_id : ''}`),
+  createExpense: (body) => request('POST', '/operations/expenses', body),
+  updateExpense: (id, body) => request('PUT', `/operations/expenses/${id}`, body),
+  deleteExpense: (id) => request('DELETE', `/operations/expenses/${id}`),
+  opsDashboard:    (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request('GET', `/operations/dashboard${q ? '?' + q : ''}`);
+  },
+  opsMonthlyReport: (property_id) => request('GET', `/operations/monthly-report${property_id ? '?property_id=' + property_id : ''}`),
+  opsPayoutSummary: (property_id) => request('GET', `/operations/payout-summary${property_id ? '?property_id=' + property_id : ''}`),
+
   getSiteSettings:    () => request('GET', '/site-settings'),
   getPublicStats:     () => request('GET', '/site-settings/public-stats'),
   updateSiteSettings: (settings) => request('PUT', '/site-settings', { settings }),

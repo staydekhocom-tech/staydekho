@@ -60,6 +60,7 @@ app.use('/api/ical',          require('./routes/ical'));
 app.use('/api/guides',        require('./routes/guides'));
 app.use('/api/addons',        require('./routes/addons'));
 app.use('/api/blog',          require('./routes/blog'));
+app.use('/api/operations',    require('./routes/operations'));
 
 // ── Health check ──────────────────────────────────────
 app.get('/api/health', (req, res) => {

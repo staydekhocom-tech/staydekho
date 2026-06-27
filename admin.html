@@ -76,6 +76,7 @@
     .btn-primary{background:var(--red);color:#fff;} .btn-primary:hover{background:var(--red-dark);}
     .btn-outline{background:transparent;color:var(--gray-600);border:1.5px solid var(--gray-200);}
     .btn-outline:hover{border-color:var(--red);color:var(--red);}
+    .ops-tab-btn.active{background:var(--red);color:#fff;border-color:var(--red);}
     .btn-black {background: #222; color: #fff;} .btn-black:hover {background: #000;}
     .btn-sm{padding:5px 10px;font-size:11.5px;}
     .btn-icon{width:30px;height:30px;padding:0;justify-content:center;border-radius:7px;background:var(--gray-100);color:var(--gray-600);border:none;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;}
@@ -239,6 +240,7 @@
     <div class="sidebar-link" onclick="showPage('properties');closeSidebar()"><span class="icon">🏡</span> Properties</div>
     <div class="sidebar-link" onclick="showPage('bookings');closeSidebar()"><span class="icon">📋</span> Bookings</div>
     <div class="sidebar-link" onclick="showPage('calendar');closeSidebar()"><span class="icon">📅</span> Calendar</div>
+    <div class="sidebar-link" onclick="showPage('operations');closeSidebar()"><span class="icon">🧾</span> Operations / PMS</div>
     <div class="nav-sec-lbl">People</div>
     <div class="sidebar-link" onclick="showPage('users');closeSidebar()"><span class="icon">👥</span> Users</div>
     <div class="sidebar-link" onclick="showPage('reviews');closeSidebar()"><span class="icon">⭐</span> Reviews</div>
@@ -474,6 +476,110 @@
             <button class="btn btn-black" style="flex:1" onclick="saveCalendarChanges()">Save</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧾 OPERATIONS / PMS PAGE -->
+  <div class="page-view" id="page-operations">
+    <div class="topbar">
+      <div><div class="page-title">Operations / PMS</div><div class="page-subtitle">Multi-channel bookings, pricing, cleaning, expenses &amp; payouts</div></div>
+      <div class="topbar-right">
+        <select class="search-inp" id="ops-prop-filter" style="width:220px" onchange="onOpsPropChange()">
+          <option value="">All Properties</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-dashboard" onclick="showOpsTab('ops-dashboard')">📊 Dashboard</button>
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-bookings" onclick="showOpsTab('ops-bookings')">📋 Bookings Log</button>
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-cleaning" onclick="showOpsTab('ops-cleaning')">🧹 Cleaning Tracker</button>
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-expenses" onclick="showOpsTab('ops-expenses')">💸 Expenses</button>
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-payout" onclick="showOpsTab('ops-payout')">🏦 Payout Summary</button>
+      <button class="btn btn-outline ops-tab-btn" data-tab="ops-settings" onclick="showOpsTab('ops-settings')">⚙️ Platform Settings</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="ops-subtab" id="ops-dashboard">
+      <div class="stats-row" id="ops-stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Bookings</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-bookings">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Revenue</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-revenue">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Occupancy %</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-occupancy">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">ADR (₹)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-adr">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Upcoming Check-ins (7d)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-checkins">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Upcoming Check-outs (7d)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-checkouts">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Pending Balance (₹)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-pending">—</div></div>
+        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Nights</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-nights">—</div></div>
+      </div>
+      <div class="card">
+        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100)">Revenue by Platform</div>
+        <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Bookings</th><th>Gross Revenue</th><th>Net Payout</th></tr></thead><tbody id="ops-platform-tbody"></tbody></table></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100)">Monthly Revenue Report</div>
+        <div class="table-wrap"><table><thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th><th>Nights</th></tr></thead><tbody id="ops-monthly-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- BOOKINGS LOG -->
+    <div class="ops-subtab" id="ops-bookings" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="openAddBookingLog()">+ Add Booking</button></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Guest</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Platform</th><th>Total</th><th>Advance</th><th>Balance</th><th>Net Payout</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="ops-bookings-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLEANING TRACKER -->
+    <div class="ops-subtab" id="ops-cleaning" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="openAddCleaning()">+ Add Cleaning Task</button></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Property</th><th>Checkout Today?</th><th>Status</th><th>Cleaned By</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody id="ops-cleaning-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="ops-subtab" id="ops-expenses" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="openAddExpense()">+ Add Expense</button></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid By</th><th>Actions</th></tr></thead>
+            <tbody id="ops-expenses-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYOUT SUMMARY -->
+    <div class="ops-subtab" id="ops-payout" style="display:none">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Platform</th><th>Commission %</th><th>Bookings</th><th>Gross Revenue</th><th>Net Payout</th></tr></thead>
+            <tbody id="ops-payout-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLATFORM SETTINGS -->
+    <div class="ops-subtab" id="ops-settings" style="display:none">
+      <div class="card" style="padding:20px;max-width:760px">
+        <div style="font-weight:700;margin-bottom:14px">Default Base Price (₹)</div>
+        <input class="form-ctrl" id="ops-base-price" type="number" style="max-width:200px;margin-bottom:24px"/>
+        <div id="ops-platform-settings-grid"></div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="saveOpsSettings()">Save Settings</button>
       </div>
     </div>
   </div>
@@ -757,6 +863,79 @@
   </div>
 </div>
 
+<div class="modal-bd" id="ops-booking-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-hdr"><div class="modal-title" id="ops-booking-modal-title">Add Booking</div><button class="modal-close" onclick="closeModal('ops-booking-modal')">✕</button></div>
+    <input type="hidden" id="ob-edit-id"/>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="ob-property"></select></div>
+      <div class="form-grp"><label class="form-lbl">Platform *</label>
+        <select class="form-ctrl" id="ob-platform" onchange="updateBookingLogPreview()">
+          <option value="direct">StayDekho Direct</option>
+          <option value="airbnb">Airbnb</option>
+          <option value="booking_com">Booking.com</option>
+          <option value="agoda">Agoda</option>
+          <option value="mmt_goibibo">MMT/Goibibo</option>
+          <option value="walkin">Walk-in</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Guest Name *</label><input class="form-ctrl" id="ob-guest-name"/></div>
+      <div class="form-grp"><label class="form-lbl">Guest Phone</label><input class="form-ctrl" id="ob-guest-phone"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Check-in *</label><input class="form-ctrl" id="ob-checkin" type="date"/></div>
+      <div class="form-grp"><label class="form-lbl">Check-out *</label><input class="form-ctrl" id="ob-checkout" type="date"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Total Amount (₹) *</label><input class="form-ctrl" id="ob-total" type="number" oninput="updateBookingLogPreview()"/></div>
+      <div class="form-grp"><label class="form-lbl">Advance Received (₹)</label><input class="form-ctrl" id="ob-advance" type="number" value="0" oninput="updateBookingLogPreview()"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Status</label>
+        <select class="form-ctrl" id="ob-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="checked_in">Checked In</option><option value="checked_out">Checked Out</option><option value="cancelled">Cancelled</option></select>
+      </div>
+      <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ob-notes"/></div>
+    </div>
+    <div id="ob-payout-preview" style="background:var(--gray-50);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--gray-600);margin-bottom:6px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-booking-modal')">Cancel</button><button class="btn btn-primary" id="ob-save-btn" onclick="saveBookingLog()">Save Booking</button></div>
+  </div>
+</div>
+
+<div class="modal-bd" id="ops-cleaning-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr"><div class="modal-title">Add Cleaning Task</div><button class="modal-close" onclick="closeModal('ops-cleaning-modal')">✕</button></div>
+    <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="ct-property"></select></div>
+    <div class="form-grp"><label class="form-lbl">Date *</label><input class="form-ctrl" id="ct-date" type="date"/></div>
+    <div class="form-grp"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="ct-checkout"/> Checkout happening today</label></div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Status</label><select class="form-ctrl" id="ct-status"><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="done">Done</option></select></div>
+      <div class="form-grp"><label class="form-lbl">Cleaned By</label><input class="form-ctrl" id="ct-cleaned-by"/></div>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ct-notes"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-cleaning-modal')">Cancel</button><button class="btn btn-primary" onclick="saveCleaningTask()">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-bd" id="ops-expense-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr"><div class="modal-title">Add Expense</div><button class="modal-close" onclick="closeModal('ops-expense-modal')">✕</button></div>
+    <div class="form-grp"><label class="form-lbl">Property</label><select class="form-ctrl" id="ex-property"><option value="">— General —</option></select></div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Date *</label><input class="form-ctrl" id="ex-date" type="date"/></div>
+      <div class="form-grp"><label class="form-lbl">Amount (₹) *</label><input class="form-ctrl" id="ex-amount" type="number"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Category</label><select class="form-ctrl" id="ex-category"><option>Cleaning</option><option>Maintenance</option><option>Utilities</option><option>Supplies</option><option>Staff</option><option>Marketing</option><option>General</option></select></div>
+      <div class="form-grp"><label class="form-lbl">Paid By</label><input class="form-ctrl" id="ex-paid-by"/></div>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Description</label><input class="form-ctrl" id="ex-description"/></div>
+    <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ex-notes"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-expense-modal')">Cancel</button><button class="btn btn-primary" onclick="saveExpense()">Save</button></div>
+  </div>
+</div>
+
 <div class="modal-bd" id="reel-add-modal">
   <div class="modal" style="max-width:580px">
     <div class="modal-hdr"><div class="modal-title">Add Reel / Video</div><button class="modal-close" onclick="closeModal('reel-add-modal')">✕</button></div>
@@ -831,6 +1010,7 @@ function showPage(name) {
   if(name === 'guides') loadGuides();
   if(name === 'addons') loadAddons();
   if(name === 'blog') loadBlogPosts();
+  if(name === 'operations') { loadOpsProps(); showOpsTab('ops-dashboard'); }
 }
 
 function showModal(id)  { document.getElementById(id).classList.add('open'); }
@@ -1431,6 +1611,322 @@ async function saveReel() {
 }
 async function deleteReel(id) { if (!confirm('Are you sure you want to permanently delete this reel?')) return; try { await api.deleteReel(id); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Delete failed: ' + err.message); } }
 async function toggleReelActive(id, active) { const fd = new FormData(); fd.append('active', active); try { await api.updateReel(id, fd); const d = await api.listAllReels().catch(()=>({reels:[]})); reels = d.reels || []; renderReels(); showPage('reels'); } catch (err) { alert('Update failed: ' + err.message); } }
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  OPERATIONS / PMS                                    ║
+// ╚══════════════════════════════════════════════════════╝
+let opsProperties = [];
+let opsSelectedProperty = '';
+let opsPlatformSettings = null;
+let opsBookingsLog = [];
+let opsCleaningTasks = [];
+let opsExpenses = [];
+
+const PLATFORM_LABELS = { direct: 'StayDekho Direct', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT/Goibibo', walkin: 'Walk-in' };
+function fmtMoney(n) { return '₹' + Math.round(n || 0).toLocaleString('en-IN'); }
+
+async function loadOpsProps() {
+  try {
+    if (!properties.length) { const d = await api.listProperties().catch(()=>({properties:[]})); properties = d.properties || []; }
+    opsProperties = properties;
+    const opts = '<option value="">All Properties</option>' + opsProperties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    document.getElementById('ops-prop-filter').innerHTML = opts;
+    const modalOpts = opsProperties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    document.getElementById('ob-property').innerHTML = modalOpts;
+    document.getElementById('ct-property').innerHTML = modalOpts;
+    document.getElementById('ex-property').innerHTML = '<option value="">— General —</option>' + modalOpts;
+  } catch (e) { console.error(e); }
+}
+
+function onOpsPropChange() {
+  opsSelectedProperty = document.getElementById('ops-prop-filter').value;
+  const activeTab = document.querySelector('.ops-tab-btn.active')?.dataset.tab || 'ops-dashboard';
+  showOpsTab(activeTab);
+}
+
+function showOpsTab(tabId) {
+  document.querySelectorAll('.ops-subtab').forEach(el => el.style.display = 'none');
+  document.getElementById(tabId).style.display = '';
+  document.querySelectorAll('.ops-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  if (tabId === 'ops-dashboard') loadOpsDashboard();
+  if (tabId === 'ops-bookings')  loadBookingsLog();
+  if (tabId === 'ops-cleaning')  loadCleaningTasks();
+  if (tabId === 'ops-expenses')  loadExpenses();
+  if (tabId === 'ops-payout')    loadPayoutSummary();
+  if (tabId === 'ops-settings')  loadOpsSettings();
+}
+
+// ── DASHBOARD ──
+async function loadOpsDashboard() {
+  try {
+    const params = opsSelectedProperty ? { property_id: opsSelectedProperty } : {};
+    const d = await api.opsDashboard(params);
+    document.getElementById('ops-kpi-bookings').textContent  = d.total_bookings;
+    document.getElementById('ops-kpi-revenue').textContent   = fmtMoney(d.total_revenue);
+    document.getElementById('ops-kpi-occupancy').textContent = d.occupancy_pct + '%';
+    document.getElementById('ops-kpi-adr').textContent       = fmtMoney(d.adr);
+    document.getElementById('ops-kpi-checkins').textContent  = d.upcoming_checkins;
+    document.getElementById('ops-kpi-checkouts').textContent = d.upcoming_checkouts;
+    document.getElementById('ops-kpi-pending').textContent   = fmtMoney(d.pending_balance);
+    document.getElementById('ops-kpi-nights').textContent    = d.total_nights;
+
+    const rows = Object.entries(d.by_platform || {}).map(([p, v]) =>
+      `<tr><td>${PLATFORM_LABELS[p] || p}</td><td>${v.bookings}</td><td>${fmtMoney(v.revenue)}</td><td>${fmtMoney(v.net_payout)}</td></tr>`
+    ).join('');
+    document.getElementById('ops-platform-tbody').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400)">No bookings yet</td></tr>';
+
+    const rep = await api.opsMonthlyReport(opsSelectedProperty);
+    const repRows = (rep.report || []).map(m =>
+      `<tr><td>${m.month}</td><td>${m.total_bookings}</td><td>${fmtMoney(m.total_revenue)}</td><td>${m.total_nights}</td></tr>`
+    ).join('');
+    document.getElementById('ops-monthly-tbody').innerHTML = repRows || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400)">No data yet</td></tr>';
+  } catch (e) { console.error(e); }
+}
+
+// ── BOOKINGS LOG ──
+async function loadBookingsLog() {
+  try {
+    const params = opsSelectedProperty ? { property_id: opsSelectedProperty } : {};
+    const d = await api.listBookingsLog(params);
+    opsBookingsLog = d.bookings || [];
+    renderBookingsLog();
+  } catch (e) { console.error(e); }
+}
+function renderBookingsLog() {
+  const rows = opsBookingsLog.map(b => `
+    <tr>
+      <td><strong>${b.guest_name}</strong></td>
+      <td>${b.property_name || '—'}</td>
+      <td>${fmtDate(b.checkin)}</td>
+      <td>${fmtDate(b.checkout)}</td>
+      <td><span class="badge">${PLATFORM_LABELS[b.platform] || b.platform}</span></td>
+      <td>${fmtMoney(b.total_amount)}</td>
+      <td>${fmtMoney(b.amount)}</td>
+      <td>${fmtMoney(b.balance_amount)}</td>
+      <td>${fmtMoney(b.net_payout)}</td>
+      <td><span class="badge b-${b.status}">${b.status}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="openEditBookingLog('${b._id || b.id}')">Edit</button> <button class="btn btn-outline btn-sm" onclick="deleteBookingLogRow('${b._id || b.id}')">Delete</button></td>
+    </tr>`).join('');
+  document.getElementById('ops-bookings-tbody').innerHTML = rows || '<tr><td colspan="11" style="text-align:center;color:var(--gray-400)">No bookings logged yet</td></tr>';
+}
+let obEditId = null;
+async function ensureOpsSettingsLoaded() {
+  if (!opsPlatformSettings) { try { const d = await api.getPlatformSettings(); opsPlatformSettings = d.settings; } catch (e) {} }
+}
+async function openAddBookingLog() {
+  await ensureOpsSettingsLoaded();
+  obEditId = null;
+  document.getElementById('ops-booking-modal-title').textContent = 'Add Booking';
+  ['ob-guest-name','ob-guest-phone','ob-checkin','ob-checkout','ob-total','ob-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ob-advance').value = 0;
+  document.getElementById('ob-platform').value = 'direct';
+  document.getElementById('ob-status').value = 'confirmed';
+  document.getElementById('ob-payout-preview').textContent = '';
+  showModal('ops-booking-modal');
+}
+async function openEditBookingLog(id) {
+  await ensureOpsSettingsLoaded();
+  const b = opsBookingsLog.find(x => String(x._id || x.id) === String(id));
+  if (!b) return;
+  obEditId = id;
+  document.getElementById('ops-booking-modal-title').textContent = 'Edit Booking';
+  document.getElementById('ob-property').value = b.property_id?._id || b.property_id;
+  document.getElementById('ob-platform').value = b.platform;
+  document.getElementById('ob-guest-name').value = b.guest_name;
+  document.getElementById('ob-guest-phone').value = b.guest_phone || '';
+  document.getElementById('ob-checkin').value = (b.checkin || '').slice(0,10);
+  document.getElementById('ob-checkout').value = (b.checkout || '').slice(0,10);
+  document.getElementById('ob-total').value = b.total_amount;
+  document.getElementById('ob-advance').value = b.amount;
+  document.getElementById('ob-status').value = b.status;
+  document.getElementById('ob-notes').value = b.notes || '';
+  updateBookingLogPreview();
+  showModal('ops-booking-modal');
+}
+function updateBookingLogPreview() {
+  const total = Number(document.getElementById('ob-total').value) || 0;
+  const platform = document.getElementById('ob-platform').value;
+  if (!opsPlatformSettings) { document.getElementById('ob-payout-preview').textContent = ''; return; }
+  const cfg = (opsPlatformSettings.platforms || {})[platform] || {};
+  const commission = total * ((cfg.commission_pct || 0) / 100);
+  const gst = commission * ((cfg.gst_pct || 0) / 100);
+  const tds = total * ((cfg.tds_pct || 0) / 100);
+  const net = Math.round(total - commission - gst - tds);
+  document.getElementById('ob-payout-preview').innerHTML = `Commission: ${fmtMoney(commission)} · GST on commission: ${fmtMoney(gst)} · TDS: ${fmtMoney(tds)} → <strong>Net Payout: ${fmtMoney(net)}</strong>`;
+}
+async function saveBookingLog() {
+  const body = {
+    property_id: document.getElementById('ob-property').value,
+    platform:    document.getElementById('ob-platform').value,
+    guest_name:  document.getElementById('ob-guest-name').value.trim(),
+    guest_phone: document.getElementById('ob-guest-phone').value.trim(),
+    checkin:     document.getElementById('ob-checkin').value,
+    checkout:    document.getElementById('ob-checkout').value,
+    total_amount:Number(document.getElementById('ob-total').value),
+    advance_amount: Number(document.getElementById('ob-advance').value) || 0,
+    status:      document.getElementById('ob-status').value,
+    notes:       document.getElementById('ob-notes').value.trim(),
+  };
+  if (!body.property_id || !body.guest_name || !body.checkin || !body.checkout || !body.total_amount) {
+    alert('Property, guest name, dates aur total amount required hain!'); return;
+  }
+  try {
+    if (obEditId) await api.updateBookingLog(obEditId, body);
+    else await api.createBookingLog(body);
+    closeModal('ops-booking-modal');
+    loadBookingsLog();
+  } catch (err) { alert('Error: ' + err.message); }
+}
+async function deleteBookingLogRow(id) {
+  if (!confirm('Delete this booking entry?')) return;
+  try { await api.deleteBookingLog(id); loadBookingsLog(); } catch (err) { alert('Delete failed: ' + err.message); }
+}
+
+// ── CLEANING TRACKER ──
+async function loadCleaningTasks() {
+  try {
+    const d = await api.listCleaningTasks(opsSelectedProperty);
+    opsCleaningTasks = d.tasks || [];
+    renderCleaningTasks();
+  } catch (e) { console.error(e); }
+}
+function renderCleaningTasks() {
+  const rows = opsCleaningTasks.map(t => {
+    const prop = opsProperties.find(p => String(p.id) === String(t.property_id?._id || t.property_id));
+    return `<tr>
+      <td>${fmtDate(t.date)}</td>
+      <td>${prop?.name || '—'}</td>
+      <td>${t.checkout_today ? 'Yes' : 'No'}</td>
+      <td><span class="badge">${t.status}</span></td>
+      <td>${t.cleaned_by || '—'}</td>
+      <td>${t.notes || '—'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="deleteCleaningTaskRow('${t._id || t.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ops-cleaning-tbody').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;color:var(--gray-400)">No cleaning tasks yet</td></tr>';
+}
+function openAddCleaning() {
+  ['ct-date','ct-cleaned-by','ct-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ct-checkout').checked = false;
+  document.getElementById('ct-status').value = 'pending';
+  showModal('ops-cleaning-modal');
+}
+async function saveCleaningTask() {
+  const body = {
+    property_id: document.getElementById('ct-property').value,
+    date: document.getElementById('ct-date').value,
+    checkout_today: document.getElementById('ct-checkout').checked,
+    status: document.getElementById('ct-status').value,
+    cleaned_by: document.getElementById('ct-cleaned-by').value.trim(),
+    notes: document.getElementById('ct-notes').value.trim(),
+  };
+  if (!body.property_id || !body.date) { alert('Property aur date required hain!'); return; }
+  try { await api.saveCleaningTask(body); closeModal('ops-cleaning-modal'); loadCleaningTasks(); }
+  catch (err) { alert('Error: ' + err.message); }
+}
+async function deleteCleaningTaskRow(id) {
+  if (!confirm('Delete this task?')) return;
+  try { await api.deleteCleaningTask(id); loadCleaningTasks(); } catch (err) { alert('Delete failed: ' + err.message); }
+}
+
+// ── EXPENSES ──
+async function loadExpenses() {
+  try {
+    const d = await api.listExpenses(opsSelectedProperty);
+    opsExpenses = d.expenses || [];
+    renderExpenses();
+  } catch (e) { console.error(e); }
+}
+function renderExpenses() {
+  const rows = opsExpenses.map(x => {
+    const prop = opsProperties.find(p => String(p.id) === String(x.property_id?._id || x.property_id));
+    return `<tr>
+      <td>${fmtDate(x.date)}</td>
+      <td>${prop?.name || 'General'}</td>
+      <td>${x.category}</td>
+      <td>${x.description || '—'}</td>
+      <td>${fmtMoney(x.amount)}</td>
+      <td>${x.paid_by || '—'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="deleteExpenseRow('${x._id || x.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ops-expenses-tbody').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;color:var(--gray-400)">No expenses logged yet</td></tr>';
+}
+function openAddExpense() {
+  ['ex-date','ex-amount','ex-description','ex-paid-by','ex-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ex-category').value = 'Cleaning';
+  showModal('ops-expense-modal');
+}
+async function saveExpense() {
+  const body = {
+    property_id: document.getElementById('ex-property').value || null,
+    date: document.getElementById('ex-date').value,
+    amount: Number(document.getElementById('ex-amount').value),
+    category: document.getElementById('ex-category').value,
+    description: document.getElementById('ex-description').value.trim(),
+    paid_by: document.getElementById('ex-paid-by').value.trim(),
+    notes: document.getElementById('ex-notes').value.trim(),
+  };
+  if (!body.date || !body.amount) { alert('Date aur amount required hain!'); return; }
+  try { await api.createExpense(body); closeModal('ops-expense-modal'); loadExpenses(); }
+  catch (err) { alert('Error: ' + err.message); }
+}
+async function deleteExpenseRow(id) {
+  if (!confirm('Delete this expense?')) return;
+  try { await api.deleteExpense(id); loadExpenses(); } catch (err) { alert('Delete failed: ' + err.message); }
+}
+
+// ── PAYOUT SUMMARY ──
+async function loadPayoutSummary() {
+  try {
+    const d = await api.opsPayoutSummary(opsSelectedProperty);
+    const rows = (d.summary || []).map(s => `
+      <tr><td>${PLATFORM_LABELS[s.platform] || s.platform}</td><td>${s.commission_pct}%</td><td>${s.bookings}</td><td>${fmtMoney(s.gross_revenue)}</td><td>${fmtMoney(s.net_payout)}</td></tr>
+    `).join('');
+    document.getElementById('ops-payout-tbody').innerHTML = rows || '<tr><td colspan="5" style="text-align:center;color:var(--gray-400)">No data yet</td></tr>';
+  } catch (e) { console.error(e); }
+}
+
+// ── PLATFORM SETTINGS ──
+async function loadOpsSettings() {
+  try {
+    const d = await api.getPlatformSettings();
+    opsPlatformSettings = d.settings;
+    document.getElementById('ops-base-price').value = opsPlatformSettings.default_base_price || 4000;
+    renderPlatformSettingsGrid();
+  } catch (e) { console.error(e); }
+}
+function renderPlatformSettingsGrid() {
+  const platforms = opsPlatformSettings.platforms || {};
+  const keys = ['airbnb','booking_com','agoda','mmt_goibibo','direct'];
+  const html = keys.map(k => {
+    const cfg = platforms[k] || {};
+    return `
+    <div style="border:1px solid var(--gray-100);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:700;margin-bottom:10px">${PLATFORM_LABELS[k] || k}</div>
+      <div class="form-row">
+        <div class="form-grp"><label class="form-lbl">Commission %</label><input class="form-ctrl ops-cfg" data-platform="${k}" data-field="commission_pct" type="number" step="0.1" value="${cfg.commission_pct || 0}"/></div>
+        <div class="form-grp"><label class="form-lbl">GST on Commission %</label><input class="form-ctrl ops-cfg" data-platform="${k}" data-field="gst_pct" type="number" step="0.1" value="${cfg.gst_pct || 0}"/></div>
+        <div class="form-grp"><label class="form-lbl">TDS %</label><input class="form-ctrl ops-cfg" data-platform="${k}" data-field="tds_pct" type="number" step="0.1" value="${cfg.tds_pct || 0}"/></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('ops-platform-settings-grid').innerHTML = html;
+}
+async function saveOpsSettings() {
+  const platforms = JSON.parse(JSON.stringify(opsPlatformSettings.platforms || {}));
+  document.querySelectorAll('.ops-cfg').forEach(inp => {
+    const p = inp.dataset.platform, f = inp.dataset.field;
+    if (!platforms[p]) platforms[p] = {};
+    platforms[p][f] = Number(inp.value) || 0;
+  });
+  const default_base_price = Number(document.getElementById('ops-base-price').value) || 4000;
+  try {
+    const d = await api.updatePlatformSettings({ platforms, default_base_price });
+    opsPlatformSettings = d.settings;
+    alert('Settings saved!');
+  } catch (err) { alert('Error: ' + err.message); }
+}
 
 // ── TODAY (admin) ──
 async function loadToday() {

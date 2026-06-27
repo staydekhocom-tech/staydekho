@@ -51,10 +51,10 @@ const propertySchema = new Schema({
 
 // ── 3. Booking ─────────────────────────────────────────
 const bookingSchema = new Schema({
-  user_id:             { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  user_id:             { type: Schema.Types.ObjectId, ref: 'User', required: false, default: null },
   property_id:         { type: Schema.Types.ObjectId, ref: 'Property', required: true },
   guest_name:          { type: String, required: true },
-  guest_email:         { type: String, required: true },
+  guest_email:         { type: String, default: '' },
   guest_phone:         { type: String, default: '' },
   checkin:             { type: String, required: true },
   checkout:            { type: String, required: true },
@@ -68,6 +68,13 @@ const bookingSchema = new Schema({
   status:              { type: String, default: 'pending', enum: ['pending', 'confirmed', 'cancelled', 'checked_in', 'checked_out'] },
   razorpay_order_id:   { type: String, default: null },
   razorpay_payment_id: { type: String, default: null },
+  // ── Multi-channel (OTA) booking log fields ──
+  platform:            { type: String, default: 'direct', enum: ['direct', 'airbnb', 'booking_com', 'agoda', 'mmt_goibibo', 'walkin'] },
+  commission_pct:      { type: Number, default: 0 },   // platform commission % snapshot
+  gst_on_commission_pct:{ type: Number, default: 0 },  // GST on commission %
+  tds_pct:             { type: Number, default: 0 },   // TDS %
+  net_payout:          { type: Number, default: null }, // we-received amount after commission/GST/TDS
+  notes:               { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 // ── 4. Payment ─────────────────────────────────────────
@@ -201,6 +208,45 @@ const blogPostSchema = new Schema({
   published_at: { type: Date, default: null },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }, toJSON });
 
+// ── 17. Expense ────────────────────────────────────────
+const expenseSchema = new Schema({
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', default: null },
+  date:        { type: String, required: true },
+  category:    { type: String, default: 'General' },
+  description: { type: String, default: '' },
+  amount:      { type: Number, required: true },
+  paid_by:     { type: String, default: '' },
+  notes:       { type: String, default: '' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 18. CleaningTask ───────────────────────────────────
+const cleaningTaskSchema = new Schema({
+  property_id:     { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  date:            { type: String, required: true },
+  checkout_today:  { type: Boolean, default: false },
+  status:          { type: String, default: 'pending', enum: ['pending', 'in_progress', 'done'] },
+  cleaned_by:      { type: String, default: '' },
+  notes:           { type: String, default: '' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+cleaningTaskSchema.index({ property_id: 1, date: 1 }, { unique: true });
+
+// ── 19. PlatformSetting ────────────────────────────────
+// One doc per property_id (or null = global default). Stores commission/GST/TDS % per OTA platform.
+const platformSettingSchema = new Schema({
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', default: null },
+  platforms: {
+    type: Object,
+    default: () => ({
+      airbnb:      { commission_pct: 15.5, gst_pct: 18, tds_pct: 0.1, discount_pct: 0 },
+      booking_com: { commission_pct: 18,   gst_pct: 18, tds_pct: 0,   discount_pct: 0 },
+      agoda:       { commission_pct: 18,   gst_pct: 18, tds_pct: 5,   discount_pct: 0 },
+      mmt_goibibo: { commission_pct: 18,   gst_pct: 18, tds_pct: 5,   discount_pct: 0 },
+      direct:      { commission_pct: 0,    gst_pct: 0,  tds_pct: 0,   markup_pct: 0 },
+    }),
+  },
+  default_base_price: { type: Number, default: 4000 },
+}, { toJSON });
+
 module.exports = {
   User:         mongoose.model('User',         userSchema),
   Property:     mongoose.model('Property',     propertySchema),
@@ -218,4 +264,7 @@ module.exports = {
   AddonRequest: mongoose.model('AddonRequest', addonRequestSchema),
   DatePrice:    mongoose.model('DatePrice',    datePriceSchema),
   BlogPost:     mongoose.model('BlogPost',     blogPostSchema),
+  Expense:        mongoose.model('Expense',        expenseSchema),
+  CleaningTask:   mongoose.model('CleaningTask',   cleaningTaskSchema),
+  PlatformSetting:mongoose.model('PlatformSetting',platformSettingSchema),
 };
