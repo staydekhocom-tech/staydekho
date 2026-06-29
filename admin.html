@@ -480,10 +480,10 @@
     </div>
   </div>
 
-  <!-- 🧾 OPERATIONS / PMS PAGE -->
+  <!-- 🧾 OPERATIONS HUB — single-page systematic flow, everything automatic -->
   <div class="page-view" id="page-operations">
     <div class="topbar">
-      <div><div class="page-title">Operations / PMS</div><div class="page-subtitle">Multi-channel bookings, pricing, cleaning, expenses &amp; payouts</div></div>
+      <div><div class="page-title">Operations Hub</div><div class="page-subtitle">Ek booking add karo — calendar, cleaning, bill, payout sab automatic update ho jaate hain</div></div>
       <div class="topbar-right">
         <select class="search-inp" id="ops-prop-filter" style="width:220px" onchange="onOpsPropChange()">
           <option value="">All Properties</option>
@@ -491,130 +491,83 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-dashboard" onclick="showOpsTab('ops-dashboard')">📊 Dashboard</button>
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-pricing" onclick="showOpsTab('ops-pricing')" style="display:none">💰 Pricing Calendar</button>
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-bookings" onclick="showOpsTab('ops-bookings')">📋 Bookings Log</button>
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-cleaning" onclick="showOpsTab('ops-cleaning')">🧹 Cleaning Tracker</button>
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-expenses" onclick="showOpsTab('ops-expenses')">💸 Expenses</button>
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-payout" onclick="showOpsTab('ops-payout')">🏦 Payout Summary</button>
-      <button class="btn btn-outline ops-tab-btn" data-tab="ops-settings" onclick="showOpsTab('ops-settings')">⚙️ Platform Settings</button>
+    <!-- 1. TODAY'S SNAPSHOT -->
+    <div class="sec-hdr" style="margin-bottom:10px"><div class="sec-title">📍 Today's Snapshot</div></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px" id="ops-today-row">
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-ins Today</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-checkins">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-outs Today</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-checkouts">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Cleaning Pending</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-cleaning">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">This Month Revenue</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-revenue">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Occupancy %</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-occupancy">—</div></div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div class="ops-subtab" id="ops-dashboard">
-      <div class="stats-row" id="ops-stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Bookings</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-bookings">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Revenue</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-revenue">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Occupancy %</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-occupancy">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">ADR (₹)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-adr">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Upcoming Check-ins (7d)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-checkins">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Upcoming Check-outs (7d)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-checkouts">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Pending Balance (₹)</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-pending">—</div></div>
-        <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Nights</div><div style="font-size:1.6rem;font-weight:800" id="ops-kpi-nights">—</div></div>
+    <!-- 2. CALENDAR -->
+    <div class="sec-hdr" style="margin-bottom:10px"><div class="sec-title">📅 Calendar</div></div>
+    <div class="card" style="padding:18px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="font-size:13px;color:var(--gray-500)">Bookings yahan <strong>automatically block</strong> ho jaati hain. Price set karne ya manually block/unblock karne ke liye calendar kholo.</div>
+      <button class="btn btn-primary" onclick="showPage('calendar')">Open Calendar →</button>
+    </div>
+
+    <!-- 3. BOOKINGS -->
+    <div class="sec-hdr" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <div class="sec-title">📋 Bookings (sabhi platforms)</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddBookingLog()">+ Add Booking</button>
+    </div>
+    <div class="card" style="margin-bottom:24px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Guest</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Platform</th><th>Total</th><th>Advance</th><th>Balance</th><th>Net Payout</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="ops-bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. CLEANING (auto-created on checkout, editable) -->
+    <div class="sec-hdr" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <div class="sec-title">🧹 Cleaning Tracker</div>
+      <button class="btn btn-outline btn-sm" onclick="openAddCleaning()">+ Add Manually</button>
+    </div>
+    <div class="card" style="margin-bottom:24px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Property</th><th>Checkout Today?</th><th>Status</th><th>Cleaned By</th><th>Notes</th><th>Actions</th></tr></thead>
+          <tbody id="ops-cleaning-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 5. MONEY — revenue + expenses + payout, all in one place -->
+    <div class="sec-hdr" style="margin-bottom:10px"><div class="sec-title">💰 Money</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+          <span>Revenue by Platform</span>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Bookings</th><th>Gross</th><th>Net Payout</th></tr></thead><tbody id="ops-platform-tbody"></tbody></table></div>
       </div>
       <div class="card">
-        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100)">Revenue by Platform</div>
-        <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Bookings</th><th>Gross Revenue</th><th>Net Payout</th></tr></thead><tbody id="ops-platform-tbody"></tbody></table></div>
-      </div>
-      <div class="card" style="margin-top:16px">
-        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100)">Monthly Revenue Report</div>
-        <div class="table-wrap"><table><thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th><th>Nights</th></tr></thead><tbody id="ops-monthly-tbody"></tbody></table></div>
+        <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+          <span>Expenses</span>
+          <button class="btn btn-outline btn-sm" onclick="openAddExpense()">+ Add</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th></th></tr></thead><tbody id="ops-expenses-tbody"></tbody></table></div>
       </div>
     </div>
-
-    <!-- PRICING CALENDAR -->
-    <div class="ops-subtab" id="ops-pricing" style="display:none">
-      <div id="ops-pricing-noprop" style="padding:40px;text-align:center;color:var(--gray-400)">Select a property from the dropdown above to view/edit its Pricing Calendar.</div>
-      <div id="ops-pricing-content" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <label style="font-size:13px;font-weight:600">Default Base Price (₹)</label>
-            <input class="form-ctrl" id="pc-base-price" type="number" style="width:120px" onchange="pcApplyDefaultBase()"/>
-            <span style="font-size:12px;color:var(--gray-400)">Applies to days with no custom price</span>
-          </div>
-          <button class="btn btn-primary" onclick="savePricingCalendar()">💾 Save Pricing Calendar</button>
-        </div>
-        <div class="card" style="overflow-x:auto">
-          <table style="font-size:12px;white-space:nowrap">
-            <thead>
-              <tr>
-                <th>Date</th><th>Day</th><th>Month</th><th>Holiday/Festival</th><th>Weekend</th>
-                <th>Base Price (₹)</th><th>Hike %</th><th>Final Price (₹)</th>
-                <th style="background:#fdecea">Airbnb Target We Receive</th><th style="background:#fdecea">Airbnb Suggested Base Rate</th><th style="background:#fdecea">Airbnb Base Rate</th><th style="background:#fdecea">Airbnb Discount</th><th style="background:#fdecea">Airbnb Net Rate</th><th style="background:#fdecea">Airbnb GST %</th><th style="background:#fdecea">Airbnb Guest Paid</th><th style="background:#fdecea">Airbnb Hosting+TDS %</th><th style="background:#fdecea">Airbnb We Receive</th>
-                <th style="background:#eaf2fd">Booking.com Target We Receive</th><th style="background:#eaf2fd">Booking.com Suggested Base Rate</th><th style="background:#eaf2fd">Booking.com Base Rate</th><th style="background:#eaf2fd">Booking.com Discount</th><th style="background:#eaf2fd">Booking.com Net Rate</th><th style="background:#eaf2fd">Booking.com Guest Paid</th><th style="background:#eaf2fd">Booking.com Commission+GST %</th><th style="background:#eaf2fd">Booking.com We Receive</th>
-                <th style="background:#eafaf0">Agoda Target We Receive</th><th style="background:#eafaf0">Agoda Suggested Base Rate</th><th style="background:#eafaf0">Agoda Base Rate</th><th style="background:#eafaf0">Agoda Discount</th><th style="background:#eafaf0">Agoda Net Rate</th><th style="background:#eafaf0">Agoda GST %</th><th style="background:#eafaf0">Agoda Guest Paid</th><th style="background:#eafaf0">Agoda Commission+GST+TDS %</th><th style="background:#eafaf0">Agoda We Receive</th>
-                <th style="background:#fff8e1">MMT/Goibibo Target We Receive</th><th style="background:#fff8e1">MMT/Goibibo Suggested Base Rate</th><th style="background:#fff8e1">MMT/Goibibo Base Rate</th><th style="background:#fff8e1">MMT/Goibibo Discount</th><th style="background:#fff8e1">MMT/Goibibo Net Rate</th><th style="background:#fff8e1">MMT/Goibibo GST %</th><th style="background:#fff8e1">MMT/Goibibo Guest Paid</th><th style="background:#fff8e1">MMT/Goibibo Commission+GST+TDS %</th><th style="background:#fff8e1">MMT/Goibibo We Receive</th>
-                <th style="background:#f3eafd">StayDekho Direct Price</th>
-                <th>Availability</th><th>Booked Via / Notes</th>
-              </tr>
-            </thead>
-            <tbody id="ops-pricing-tbody"></tbody>
-          </table>
-        </div>
-      </div>
+    <div class="card" style="margin-bottom:24px">
+      <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100)">Monthly Revenue Report</div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th><th>Nights</th></tr></thead><tbody id="ops-monthly-tbody"></tbody></table></div>
     </div>
 
-    <!-- BOOKINGS LOG -->
-    <div class="ops-subtab" id="ops-bookings" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="openAddBookingLog()">+ Add Booking</button></div>
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Guest</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Platform</th><th>Total</th><th>Advance</th><th>Balance</th><th>Net Payout</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="ops-bookings-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- CLEANING TRACKER -->
-    <div class="ops-subtab" id="ops-cleaning" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="openAddCleaning()">+ Add Cleaning Task</button></div>
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Property</th><th>Checkout Today?</th><th>Status</th><th>Cleaned By</th><th>Notes</th><th>Actions</th></tr></thead>
-            <tbody id="ops-cleaning-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- EXPENSES -->
-    <div class="ops-subtab" id="ops-expenses" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="openAddExpense()">+ Add Expense</button></div>
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th><th>Paid By</th><th>Actions</th></tr></thead>
-            <tbody id="ops-expenses-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- PAYOUT SUMMARY -->
-    <div class="ops-subtab" id="ops-payout" style="display:none">
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Platform</th><th>Commission %</th><th>Bookings</th><th>Gross Revenue</th><th>Net Payout</th></tr></thead>
-            <tbody id="ops-payout-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- PLATFORM SETTINGS -->
-    <div class="ops-subtab" id="ops-settings" style="display:none">
-      <div class="card" style="padding:20px;max-width:760px">
+    <!-- 6. SETTINGS — platform commission % (collapsed by default) -->
+    <details style="margin-bottom:24px">
+      <summary style="cursor:pointer;font-weight:700;font-size:14px;padding:10px 0;color:var(--gray-600)">⚙️ Platform Commission Settings (Airbnb/Booking.com/Agoda/MMT %)</summary>
+      <div class="card" style="padding:20px;max-width:760px;margin-top:10px">
         <div style="font-weight:700;margin-bottom:14px">Default Base Price (₹)</div>
         <input class="form-ctrl" id="ops-base-price" type="number" style="max-width:200px;margin-bottom:24px"/>
         <div id="ops-platform-settings-grid"></div>
         <button class="btn btn-primary" style="margin-top:16px" onclick="saveOpsSettings()">Save Settings</button>
       </div>
-    </div>
+    </details>
   </div>
 
   <div class="page-view" id="page-users">
@@ -1043,7 +996,7 @@ function showPage(name) {
   if(name === 'guides') loadGuides();
   if(name === 'addons') loadAddons();
   if(name === 'blog') loadBlogPosts();
-  if(name === 'operations') { loadOpsProps(); showOpsTab('ops-dashboard'); }
+  if(name === 'operations') { loadOpsProps().then(loadOperationsHub); }
 }
 
 function showModal(id)  { document.getElementById(id).classList.add('open'); }
@@ -1230,7 +1183,7 @@ async function loadDatePricesForProp() {
     if (!calendarModifications[selectedProp]) calendarModifications[selectedProp] = {};
     date_prices.forEach(r => {
       calendarModifications[selectedProp][r.date] = {
-        blocked:     r.blocked === 1,
+        blocked:     r.blocked === true || r.blocked === 1,
         customPrice: r.price   || null,
         note:        r.note    || '',
       };
@@ -1673,36 +1626,32 @@ async function loadOpsProps() {
 
 function onOpsPropChange() {
   opsSelectedProperty = document.getElementById('ops-prop-filter').value;
-  const activeTab = document.querySelector('.ops-tab-btn.active')?.dataset.tab || 'ops-dashboard';
-  showOpsTab(activeTab);
+  loadOperationsHub();
 }
 
-function showOpsTab(tabId) {
-  document.querySelectorAll('.ops-subtab').forEach(el => el.style.display = 'none');
-  document.getElementById(tabId).style.display = '';
-  document.querySelectorAll('.ops-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-  if (tabId === 'ops-dashboard') loadOpsDashboard();
-  if (tabId === 'ops-pricing')   loadPricingCalendar();
-  if (tabId === 'ops-bookings')  loadBookingsLog();
-  if (tabId === 'ops-cleaning')  loadCleaningTasks();
-  if (tabId === 'ops-expenses')  loadExpenses();
-  if (tabId === 'ops-payout')    loadPayoutSummary();
-  if (tabId === 'ops-settings')  loadOpsSettings();
+// Single entry point — loads every section of the Operations Hub in one go
+async function loadOperationsHub() {
+  await Promise.all([loadOpsDashboard(), loadBookingsLog(), loadCleaningTasks(), loadExpenses(), loadOpsSettings()]);
+  updateTodaySnapshot();
 }
 
-// ── DASHBOARD ──
+function updateTodaySnapshot() {
+  const today = new Date().toISOString().split('T')[0];
+  const checkinsToday  = opsBookingsLog.filter(b => (b.checkin  || '').slice(0,10) === today && b.status !== 'cancelled').length;
+  const checkoutsToday = opsBookingsLog.filter(b => (b.checkout || '').slice(0,10) === today && b.status !== 'cancelled').length;
+  const cleaningPending = opsCleaningTasks.filter(t => t.status !== 'done').length;
+  document.getElementById('ops-today-checkins').textContent  = checkinsToday;
+  document.getElementById('ops-today-checkouts').textContent = checkoutsToday;
+  document.getElementById('ops-today-cleaning').textContent  = cleaningPending;
+}
+
+// ── DASHBOARD (feeds revenue/occupancy snapshot + Revenue by Platform + Monthly Report) ──
 async function loadOpsDashboard() {
   try {
     const params = opsSelectedProperty ? { property_id: opsSelectedProperty } : {};
     const d = await api.opsDashboard(params);
-    document.getElementById('ops-kpi-bookings').textContent  = d.total_bookings;
-    document.getElementById('ops-kpi-revenue').textContent   = fmtMoney(d.total_revenue);
-    document.getElementById('ops-kpi-occupancy').textContent = d.occupancy_pct + '%';
-    document.getElementById('ops-kpi-adr').textContent       = fmtMoney(d.adr);
-    document.getElementById('ops-kpi-checkins').textContent  = d.upcoming_checkins;
-    document.getElementById('ops-kpi-checkouts').textContent = d.upcoming_checkouts;
-    document.getElementById('ops-kpi-pending').textContent   = fmtMoney(d.pending_balance);
-    document.getElementById('ops-kpi-nights').textContent    = d.total_nights;
+    document.getElementById('ops-today-revenue').textContent   = fmtMoney(d.total_revenue);
+    document.getElementById('ops-today-occupancy').textContent = d.occupancy_pct + '%';
 
     const rows = Object.entries(d.by_platform || {}).map(([p, v]) =>
       `<tr><td>${PLATFORM_LABELS[p] || p}</td><td>${v.bookings}</td><td>${fmtMoney(v.revenue)}</td><td>${fmtMoney(v.net_payout)}</td></tr>`
@@ -2104,19 +2053,13 @@ async function loadExpenses() {
   } catch (e) { console.error(e); }
 }
 function renderExpenses() {
-  const rows = opsExpenses.map(x => {
-    const prop = opsProperties.find(p => String(p.id) === String(x.property_id?._id || x.property_id));
-    return `<tr>
+  const rows = opsExpenses.slice(0, 12).map(x => `<tr>
       <td>${fmtDate(x.date)}</td>
-      <td>${prop?.name || 'General'}</td>
       <td>${x.category}</td>
-      <td>${x.description || '—'}</td>
       <td>${fmtMoney(x.amount)}</td>
-      <td>${x.paid_by || '—'}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="deleteExpenseRow('${x._id || x.id}')">Delete</button></td>
-    </tr>`;
-  }).join('');
-  document.getElementById('ops-expenses-tbody').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;color:var(--gray-400)">No expenses logged yet</td></tr>';
+      <td><button class="btn-icon" title="Delete" onclick="deleteExpenseRow('${x._id || x.id}')">✕</button></td>
+    </tr>`).join('');
+  document.getElementById('ops-expenses-tbody').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400)">No expenses logged yet</td></tr>';
 }
 function openAddExpense() {
   ['ex-date','ex-amount','ex-description','ex-paid-by','ex-notes'].forEach(id => document.getElementById(id).value = '');
