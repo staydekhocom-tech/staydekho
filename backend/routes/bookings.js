@@ -3,6 +3,7 @@ const Razorpay  = require('razorpay');
 const { Booking, Property, Payment, DatePrice } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
+const { blockCalendarForBooking, unblockCalendarIfFree, createCleaningTaskForCheckout, notifyGuestBookingCancelled } = require('../services/bookingAutomation');
 
 function getRazorpay() {
   const key_id     = process.env.RAZORPAY_KEY_ID;
@@ -204,6 +205,18 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
     let refund = null;
     if (status === 'cancelled' && prev && prev.status === 'confirmed') {
       refund = await initiateRefund(req.params.id);
+    }
+
+    // ── Automation chain ──
+    if (prev) {
+      if (status === 'cancelled') {
+        unblockCalendarIfFree(prev.property_id, prev.checkin, prev.checkout, prev._id).catch(e => console.error(e.message));
+        const prop = await Property.findById(prev.property_id).lean().catch(() => null);
+        notifyGuestBookingCancelled(prev, prop?.name || '').catch(e => console.error(e.message));
+      } else if (status === 'confirmed') {
+        blockCalendarForBooking(prev.property_id, prev.checkin, prev.checkout).catch(e => console.error(e.message));
+        createCleaningTaskForCheckout(prev.property_id, prev.checkout).catch(e => console.error(e.message));
+      }
     }
 
     res.json({ message: 'Status updated', status, refund_initiated: !!refund });
@@ -529,6 +542,10 @@ router.delete('/:id', protect, async (req, res) => {
         `Booking Cancelled — #${emailData.id}`,
         bookingCancelledHtml(emailData)
       ).catch(e => console.error('Cancel email error:', e.message));
+
+      // ── Automation: free up the calendar dates if no other booking covers them ──
+      unblockCalendarIfFree(cancelled.property_id._id, cancelled.checkin, cancelled.checkout, cancelled._id)
+        .catch(e => console.error('Calendar unblock error:', e.message));
     }
 
     res.json({ message: 'Booking cancelled' });

@@ -1,6 +1,10 @@
 const router = require('express').Router();
 const { Booking, Property, Expense, CleaningTask, PlatformSetting } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
+const {
+  blockCalendarForBooking, unblockCalendarIfFree,
+  createCleaningTaskForCheckout, notifyGuestBookingCreated, notifyGuestBookingCancelled,
+} = require('../services/bookingAutomation');
 
 router.use(protect, adminOnly);
 
@@ -89,6 +93,16 @@ router.post('/bookings-log', async (req, res) => {
       notes: notes || '',
     });
 
+    // ── Automation chain: calendar auto-block + auto cleaning task + guest notify ──
+    if ((status || 'confirmed') !== 'cancelled') {
+      blockCalendarForBooking(property_id, checkin, checkout).catch(e => console.error('Calendar block error:', e.message));
+      createCleaningTaskForCheckout(property_id, checkout).catch(e => console.error('Cleaning task error:', e.message));
+      if (guest_phone) {
+        const prop = await Property.findById(property_id).lean().catch(() => null);
+        notifyGuestBookingCreated(booking.toObject(), prop?.name || '').catch(e => console.error('Notify error:', e.message));
+      }
+    }
+
     res.status(201).json({ booking: booking.toObject(), payout: { commission, gst, tds, net } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -111,12 +125,33 @@ router.put('/bookings-log/:id', async (req, res) => {
       body.tds_pct = pCfg.tds_pct || 0;
     }
     const updated = await Booking.findByIdAndUpdate(req.params.id, { ...body, net_payout }, { new: true }).lean();
+
+    // ── Automation chain: dates changed → unblock old + block new; status → cancelled → unblock + notify ──
+    const newCheckin  = body.checkin  || existing.checkin;
+    const newCheckout = body.checkout || existing.checkout;
+    const datesChanged = newCheckin !== existing.checkin || newCheckout !== existing.checkout;
+    if (updated.status === 'cancelled') {
+      unblockCalendarIfFree(existing.property_id, existing.checkin, existing.checkout, existing._id).catch(e => console.error(e.message));
+      if (updated.guest_phone) {
+        const prop = await Property.findById(existing.property_id).lean().catch(() => null);
+        notifyGuestBookingCancelled(updated, prop?.name || '').catch(e => console.error(e.message));
+      }
+    } else {
+      if (datesChanged) unblockCalendarIfFree(existing.property_id, existing.checkin, existing.checkout, existing._id).catch(e => console.error(e.message));
+      blockCalendarForBooking(updated.property_id, newCheckin, newCheckout).catch(e => console.error(e.message));
+      createCleaningTaskForCheckout(updated.property_id, newCheckout).catch(e => console.error(e.message));
+    }
+
     res.json({ booking: updated });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/bookings-log/:id', async (req, res) => {
   try {
+    const existing = await Booking.findById(req.params.id).lean();
+    if (existing) {
+      unblockCalendarIfFree(existing.property_id, existing.checkin, existing.checkout, existing._id).catch(e => console.error(e.message));
+    }
     await Booking.findByIdAndDelete(req.params.id);
     res.json({ message: 'Booking deleted' });
   } catch (err) { res.status(500).json({ error: err.message }); }

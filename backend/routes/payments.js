@@ -3,7 +3,7 @@ const crypto   = require('crypto');
 const Razorpay = require('razorpay');
 const { Booking, Payment, Property } = require('../db/models');
 const { protect } = require('../middleware/auth');
-const { sendEmail, bookingConfirmedHtml } = require('../services/email');
+const { blockCalendarForBooking, createCleaningTaskForCheckout, notifyGuestBookingCreated } = require('../services/bookingAutomation');
 
 // Lazy init — reads env vars at call time, not at module load
 function getRazorpay() {
@@ -122,11 +122,13 @@ router.post('/verify', protect, async (req, res) => {
         property_name: confirmed.property_id?.name,
         id:            confirmed._id.toString(),
       };
-      sendEmail(
-        confirmed.guest_email,
-        `Booking Confirmed — #${emailData.id} | StayDekho`,
-        bookingConfirmedHtml(emailData)
-      ).catch(e => console.error('Confirmation email error:', e.message));
+      // ── Automation chain: email + SMS notify, calendar auto-block, auto cleaning task ──
+      notifyGuestBookingCreated(emailData, emailData.property_name)
+        .catch(e => console.error('Notify error:', e.message));
+      blockCalendarForBooking(confirmed.property_id._id, confirmed.checkin, confirmed.checkout)
+        .catch(e => console.error('Calendar block error:', e.message));
+      createCleaningTaskForCheckout(confirmed.property_id._id, confirmed.checkout)
+        .catch(e => console.error('Cleaning task error:', e.message));
     }
 
     res.json({
