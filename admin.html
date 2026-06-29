@@ -1758,7 +1758,7 @@ function pcCalcPlatformFull(finalPrice, cfg, mode) {
   }
   weReceive = Math.round(weReceive);
   return {
-    target: weReceive, suggestedBaseRate: Math.round(suggestedBaseRate), baseRate: Math.round(baseRate),
+    suggestedBaseRate: Math.round(suggestedBaseRate), baseRate: Math.round(baseRate),
     discount: Math.round(discount), netRate: Math.round(netRate), gstPct,
     guestPaid: Math.round(guestPaid), combinedPct, weReceive,
   };
@@ -1767,8 +1767,9 @@ function pcCalcDirect(finalPrice, cfg) {
   cfg = cfg || {};
   return Math.round(finalPrice * (1 + ((cfg.markup_pct || 0) / 100)));
 }
+// "Target We Receive" is a manual free-type field (like in the Excel template) — NOT computed, no formula
 function pcRowCells(r, hasGst) {
-  const cells = [r.target, r.suggestedBaseRate, r.baseRate, r.discount, r.netRate];
+  const cells = [r.suggestedBaseRate, r.baseRate, r.discount, r.netRate];
   if (hasGst) cells.push(r.gstPct + '%');
   cells.push(r.guestPaid);
   cells.push(r.combinedPct + '%');
@@ -1801,7 +1802,7 @@ function pcFlatCells(i, v) {
     ...pcRowCells(v.agoda, true), ...pcRowCells(v.mmt, true), v.direct];
   const ids = ['pc-final-'+i];
   ['air','bk','ag','mm'].forEach((p, pi) => {
-    const n = (p === 'bk') ? 8 : 9;
+    const n = (p === 'bk') ? 7 : 8;
     for (let k = 0; k < n; k++) ids.push(`pc-${p}-${i}-${k}`);
   });
   ids.push('pc-direct-'+i);
@@ -1856,6 +1857,7 @@ async function loadPricingCalendar() {
         holiday_note: existing ? (existing.holiday_note || '') : '',
         blocked: existing ? existing.blocked : false,
         bookedVia: bookedRow ? (PLATFORM_LABELS[bookedRow.platform] || bookedRow.platform) + ' — ' + bookedRow.guest_name : '',
+        targets: (existing && existing.targets) ? existing.targets : { airbnb: '', booking_com: '', agoda: '', mmt_goibibo: '' },
       });
     }
     renderPricingCalendar();
@@ -1882,10 +1884,11 @@ function renderPricingCalendarRows() {
     const hike = d.hike_pct || 0;
     const monthName = MONTH_NAMES[new Date(d.date).getMonth()];
     const rowColor = d.blocked ? 'background:#fde8e8' : (d.bookedVia ? 'background:#fff8e1' : '');
-    const airIds = []; for (let k=0;k<9;k++) airIds.push(`pc-air-${i}-${k}`);
-    const bkIds  = []; for (let k=0;k<8;k++) bkIds.push(`pc-bk-${i}-${k}`);
-    const agIds  = []; for (let k=0;k<9;k++) agIds.push(`pc-ag-${i}-${k}`);
-    const mmIds  = []; for (let k=0;k<9;k++) mmIds.push(`pc-mm-${i}-${k}`);
+    const airIds = []; for (let k=0;k<8;k++) airIds.push(`pc-air-${i}-${k}`);
+    const bkIds  = []; for (let k=0;k<7;k++) bkIds.push(`pc-bk-${i}-${k}`);
+    const agIds  = []; for (let k=0;k<8;k++) agIds.push(`pc-ag-${i}-${k}`);
+    const mmIds  = []; for (let k=0;k<8;k++) mmIds.push(`pc-mm-${i}-${k}`);
+    const targetInp = (platformKey, bg) => `<td style="background:${bg}"><input class="form-ctrl pc-target-input" data-i="${i}" data-field="target-${platformKey}" value="${d.targets[platformKey] || ''}" placeholder="type target" style="width:80px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>`;
     return `<tr style="${rowColor}">
       <td>${fmtDate(d.date)}</td>
       <td>${d.day}</td>
@@ -1895,10 +1898,10 @@ function renderPricingCalendarRows() {
       <td><input class="form-ctrl pc-base-input" data-i="${i}" data-field="base" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:75px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
       <td><input class="form-ctrl pc-hike-input" data-i="${i}" data-field="hike" type="number" value="${hike}" style="width:55px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
       <td id="pc-final-${i}" style="font-weight:700">${fmtMoney(v.final)}</td>
-      ${pcTdsWithIds(pcRowCells(v.airbnb, true), airIds, '#fdecea')}
-      ${pcTdsWithIds(pcRowCells(v.booking, false), bkIds, '#eaf2fd')}
-      ${pcTdsWithIds(pcRowCells(v.agoda, true), agIds, '#eafaf0')}
-      ${pcTdsWithIds(pcRowCells(v.mmt, true), mmIds, '#fff8e1')}
+      ${targetInp('airbnb', '#fdecea')}${pcTdsWithIds(pcRowCells(v.airbnb, true), airIds, '#fdecea')}
+      ${targetInp('booking_com', '#eaf2fd')}${pcTdsWithIds(pcRowCells(v.booking, false), bkIds, '#eaf2fd')}
+      ${targetInp('agoda', '#eafaf0')}${pcTdsWithIds(pcRowCells(v.agoda, true), agIds, '#eafaf0')}
+      ${targetInp('mmt_goibibo', '#fff8e1')}${pcTdsWithIds(pcRowCells(v.mmt, true), mmIds, '#fff8e1')}
       <td id="pc-direct-${i}" style="background:#f3eafd">${fmtMoney(v.direct)}</td>
       <td>${d.blocked ? '<span class="badge b-cancelled">Blocked</span>' : (d.bookedVia ? '<span class="badge b-confirmed">Booked</span>' : '<span class="badge b-confirmed">Available</span>')}</td>
       <td>${d.bookedVia || '—'}</td>
@@ -1910,23 +1913,30 @@ function renderPricingCalendarRows() {
 function pcOnEdit(i, el) {
   const row = pcDays[i];
   const field = el.dataset.field;
-  if (field === 'base')    row.price = el.value === '' ? null : Number(el.value);
-  if (field === 'hike')    row.hike_pct = Number(el.value) || 0;
+  if (field === 'base')    { row.price = el.value === '' ? null : Number(el.value); pcUpdateRowDisplay(i); return; }
+  if (field === 'hike')    { row.hike_pct = Number(el.value) || 0; pcUpdateRowDisplay(i); return; }
   if (field === 'holiday') return; // text field doesn't affect calculations, nothing to recompute
-
-  // Only update this row's calculated cells — input itself is never touched, so focus/cursor stays put
-  pcUpdateRowDisplay(i);
+  if (field && field.startsWith('target-')) {
+    // Manual free-type field (exactly like the Excel template) — no formula, doesn't affect any other cell
+    row.targets[field.slice(7)] = el.value;
+    return;
+  }
 }
 
 async function savePricingCalendar() {
   document.querySelectorAll('.pc-holiday-input').forEach(inp => { pcDays[Number(inp.dataset.i)].holiday_note = inp.value.trim(); });
   document.querySelectorAll('.pc-base-input').forEach(inp => { const i = Number(inp.dataset.i); pcDays[i].price = inp.value === '' ? null : Number(inp.value); });
   document.querySelectorAll('.pc-hike-input').forEach(inp => { pcDays[Number(inp.dataset.i)].hike_pct = Number(inp.value) || 0; });
+  document.querySelectorAll('.pc-target-input').forEach(inp => {
+    const i = Number(inp.dataset.i), platform = inp.dataset.field.slice(7);
+    pcDays[i].targets[platform] = inp.value;
+  });
 
   const defaultBase = Number(document.getElementById('pc-base-price').value) || 4000;
+  const hasTargets = (t) => t && Object.values(t).some(v => v !== '' && v != null);
   const prices = pcDays
-    .filter(d => d.price != null || d.hike_pct || d.holiday_note || d.blocked)
-    .map(d => ({ date: d.date, price: d.price, hike_pct: d.hike_pct, holiday_note: d.holiday_note, blocked: d.blocked }));
+    .filter(d => d.price != null || d.hike_pct || d.holiday_note || d.blocked || hasTargets(d.targets))
+    .map(d => ({ date: d.date, price: d.price, hike_pct: d.hike_pct, holiday_note: d.holiday_note, blocked: d.blocked, targets: d.targets }));
 
   try {
     await api.saveDatePrices(opsSelectedProperty, prices);

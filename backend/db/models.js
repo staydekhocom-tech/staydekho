@@ -194,6 +194,7 @@ const datePriceSchema = new Schema({
   note:         { type: String, default: '' },
   hike_pct:     { type: Number, default: 0 },   // % hike over base price (festival/weekend)
   holiday_note: { type: String, default: '' },  // National Holiday / Festival label
+  targets:      { type: Object, default: {} },  // manual "Target We Receive" per platform — free-type, no formula (matches Excel template)
 }, { toJSON });
 datePriceSchema.index({ property_id: 1, date: 1 }, { unique: true });
 
