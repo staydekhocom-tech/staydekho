@@ -135,7 +135,7 @@ router.post('/', protect, async (req, res) => {
     }
 
     const avgNight = base / nights;
-    const gstRate  = avgNight > 7500 ? 0.18 : avgNight > 1000 ? 0.12 : 0;
+    const gstRate  = avgNight > 7500 ? 0.18 : 0.05;
     const gst      = Math.round(base * gstRate);
     const svc      = Math.round(base * 0.05);
     const total    = base + gst + svc;
@@ -248,7 +248,7 @@ router.get('/:id/invoice', (req, res, next) => {
     const nights_   = row.nights || 1;
     const totalAmt  = row.amount || 0;
     const avgPpn    = totalAmt / nights_ / 1.23;
-    const gstRate   = avgPpn > 7500 ? 0.18 : avgPpn > 1000 ? 0.12 : 0;
+    const gstRate   = avgPpn > 7500 ? 0.18 : 0.05;
     const gstPct    = Math.round(gstRate * 100);
     const divisor   = 1 + 0.05 + gstRate;
     const baseAmt   = Math.round(totalAmt / divisor);
