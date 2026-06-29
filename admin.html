@@ -1776,6 +1776,48 @@ function pcRowCells(r, hasGst) {
   return cells;
 }
 
+// Compute all derived values for row i — used by both full render and live single-row update
+function pcComputeRow(i) {
+  const d = pcDays[i];
+  const defaultBase = Number(document.getElementById('pc-base-price').value) || 4000;
+  const base = d.price != null ? d.price : defaultBase;
+  const hike = d.hike_pct || 0;
+  const final = Math.round(base * (1 + hike / 100));
+  const platforms = (opsPlatformSettings && opsPlatformSettings.platforms) || {};
+  return {
+    final,
+    airbnb:  pcCalcPlatformFull(final, platforms.airbnb, 'airbnb'),
+    booking: pcCalcPlatformFull(final, platforms.booking_com, 'booking'),
+    agoda:   pcCalcPlatformFull(final, platforms.agoda, 'otaGst'),
+    mmt:     pcCalcPlatformFull(final, platforms.mmt_goibibo, 'otaGst'),
+    direct:  pcCalcDirect(final, platforms.direct),
+  };
+}
+
+// Flat ordered [value, ...] + matching [id, ...] for a row's CALCULATED cells only (no inputs)
+function pcFlatCells(i, v) {
+  const vals = [v.final,
+    ...pcRowCells(v.airbnb, true), ...pcRowCells(v.booking, false),
+    ...pcRowCells(v.agoda, true), ...pcRowCells(v.mmt, true), v.direct];
+  const ids = ['pc-final-'+i];
+  ['air','bk','ag','mm'].forEach((p, pi) => {
+    const n = (p === 'bk') ? 8 : 9;
+    for (let k = 0; k < n; k++) ids.push(`pc-${p}-${i}-${k}`);
+  });
+  ids.push('pc-direct-'+i);
+  return { vals, ids };
+}
+
+// Live update — only touches the calculated <td> text, never re-renders inputs (no focus loss, no lag)
+function pcUpdateRowDisplay(i) {
+  const v = pcComputeRow(i);
+  const { vals, ids } = pcFlatCells(i, v);
+  for (let k = 0; k < ids.length; k++) {
+    const el = document.getElementById(ids[k]);
+    if (el) el.textContent = (typeof vals[k] === 'number') ? fmtMoney(vals[k]) : vals[k];
+  }
+}
+
 async function loadPricingCalendar() {
   if (!opsSelectedProperty) {
     document.getElementById('ops-pricing-noprop').style.display = '';
@@ -1829,22 +1871,21 @@ function pcApplyDefaultBase() {
 function renderPricingCalendar() { renderPricingCalendarRows(); }
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function pcTds(cells, bg) { return cells.map(v => `<td style="background:${bg}">${typeof v === 'number' ? fmtMoney(v) : v}</td>`).join(''); }
+function pcTdsWithIds(cells, ids, bg) {
+  return cells.map((v, k) => `<td id="${ids[k]}" style="background:${bg}">${typeof v === 'number' ? fmtMoney(v) : v}</td>`).join('');
+}
 
 function renderPricingCalendarRows() {
   const defaultBase = Number(document.getElementById('pc-base-price').value) || 4000;
-  const platforms = (opsPlatformSettings && opsPlatformSettings.platforms) || {};
   const rows = pcDays.map((d, i) => {
-    const base = d.price != null ? d.price : defaultBase;
+    const v = pcComputeRow(i);
     const hike = d.hike_pct || 0;
-    const final = Math.round(base * (1 + hike / 100));
-    const airbnb  = pcCalcPlatformFull(final, platforms.airbnb, 'airbnb');
-    const booking = pcCalcPlatformFull(final, platforms.booking_com, 'booking');
-    const agoda   = pcCalcPlatformFull(final, platforms.agoda, 'otaGst');
-    const mmt      = pcCalcPlatformFull(final, platforms.mmt_goibibo, 'otaGst');
-    const direct   = pcCalcDirect(final, platforms.direct);
     const monthName = MONTH_NAMES[new Date(d.date).getMonth()];
     const rowColor = d.blocked ? 'background:#fde8e8' : (d.bookedVia ? 'background:#fff8e1' : '');
+    const airIds = []; for (let k=0;k<9;k++) airIds.push(`pc-air-${i}-${k}`);
+    const bkIds  = []; for (let k=0;k<8;k++) bkIds.push(`pc-bk-${i}-${k}`);
+    const agIds  = []; for (let k=0;k<9;k++) agIds.push(`pc-ag-${i}-${k}`);
+    const mmIds  = []; for (let k=0;k<9;k++) mmIds.push(`pc-mm-${i}-${k}`);
     return `<tr style="${rowColor}">
       <td>${fmtDate(d.date)}</td>
       <td>${d.day}</td>
@@ -1853,12 +1894,12 @@ function renderPricingCalendarRows() {
       <td>${d.isWeekend ? 'Weekend' : ''}</td>
       <td><input class="form-ctrl pc-base-input" data-i="${i}" data-field="base" type="number" value="${d.price != null ? d.price : ''}" placeholder="${defaultBase}" style="width:75px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
       <td><input class="form-ctrl pc-hike-input" data-i="${i}" data-field="hike" type="number" value="${hike}" style="width:55px;padding:4px 6px;font-size:12px" oninput="pcOnEdit(${i}, this)"/></td>
-      <td><strong>${fmtMoney(final)}</strong></td>
-      ${pcTds(pcRowCells(airbnb, true), '#fdecea')}
-      ${pcTds(pcRowCells(booking, false), '#eaf2fd')}
-      ${pcTds(pcRowCells(agoda, true), '#eafaf0')}
-      ${pcTds(pcRowCells(mmt, true), '#fff8e1')}
-      <td style="background:#f3eafd">${fmtMoney(direct)}</td>
+      <td id="pc-final-${i}" style="font-weight:700">${fmtMoney(v.final)}</td>
+      ${pcTdsWithIds(pcRowCells(v.airbnb, true), airIds, '#fdecea')}
+      ${pcTdsWithIds(pcRowCells(v.booking, false), bkIds, '#eaf2fd')}
+      ${pcTdsWithIds(pcRowCells(v.agoda, true), agIds, '#eafaf0')}
+      ${pcTdsWithIds(pcRowCells(v.mmt, true), mmIds, '#fff8e1')}
+      <td id="pc-direct-${i}" style="background:#f3eafd">${fmtMoney(v.direct)}</td>
       <td>${d.blocked ? '<span class="badge b-cancelled">Blocked</span>' : (d.bookedVia ? '<span class="badge b-confirmed">Booked</span>' : '<span class="badge b-confirmed">Available</span>')}</td>
       <td>${d.bookedVia || '—'}</td>
     </tr>`;
@@ -1871,18 +1912,10 @@ function pcOnEdit(i, el) {
   const field = el.dataset.field;
   if (field === 'base')    row.price = el.value === '' ? null : Number(el.value);
   if (field === 'hike')    row.hike_pct = Number(el.value) || 0;
-  if (field === 'holiday') row.holiday_note = el.value;
+  if (field === 'holiday') return; // text field doesn't affect calculations, nothing to recompute
 
-  // Re-render but keep focus + cursor position on the input being typed in
-  const selStart = el.selectionStart, selEnd = el.selectionEnd;
-  renderPricingCalendarRows();
-  const newEl = document.querySelector(`[data-i="${i}"][data-field="${field}"]`);
-  if (newEl) {
-    newEl.focus();
-    if (newEl.setSelectionRange && (newEl.type === 'text' || newEl.type === undefined)) {
-      try { newEl.setSelectionRange(selStart, selEnd); } catch (e) {}
-    }
-  }
+  // Only update this row's calculated cells — input itself is never touched, so focus/cursor stays put
+  pcUpdateRowDisplay(i);
 }
 
 async function savePricingCalendar() {
