@@ -1729,13 +1729,16 @@ const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 //       'booking' → guest paid = net rate (tax-inclusive), GST charged only on commission
 function pcCalcPlatformFull(finalPrice, cfg, mode) {
   cfg = cfg || {};
-  const commissionPct = cfg.commission_pct || 0, gstPct = cfg.gst_pct || 0, tdsPct = cfg.tds_pct || 0, discountPct = cfg.discount_pct || 0;
+  const commissionPct = cfg.commission_pct || 0, tdsPct = cfg.tds_pct || 0, discountPct = cfg.discount_pct || 0;
   const suggestedBaseRate = finalPrice;
   const baseRate           = finalPrice;
   const discount            = baseRate * (discountPct / 100);
   const netRate             = baseRate - discount;
   const commission          = netRate * (commissionPct / 100);
   const tds                  = netRate * (tdsPct / 100);
+
+  // Airbnb GST slab: net rate > ₹7,500/night → 18%, else 5% (per-night GST rule)
+  const gstPct = (mode === 'airbnb') ? (netRate > 7500 ? 18 : 5) : (cfg.gst_pct || 0);
 
   let guestPaid, commGst = 0, combinedPct, weReceive;
   if (mode === 'booking') {
