@@ -558,19 +558,6 @@
       <div class="table-wrap"><table><thead><tr><th>Month</th><th>Bookings</th><th>Revenue</th><th>Nights</th></tr></thead><tbody id="ops-monthly-tbody"></tbody></table></div>
     </div>
 
-    <!-- 6. SETTINGS — platform commission % (collapsed by default) -->
-    <details style="margin-bottom:24px">
-      <summary style="cursor:pointer;font-weight:700;font-size:14px;padding:10px 0;color:var(--gray-600)">⚙️ Platform Commission Settings (Airbnb/Booking.com/Agoda/MMT %)</summary>
-      <div class="card" style="padding:20px;max-width:760px;margin-top:10px">
-        <div style="font-weight:700;margin-bottom:14px">Default Base Price (₹)</div>
-        <input class="form-ctrl" id="ops-base-price" type="number" style="max-width:200px;margin-bottom:24px"/>
-        <div id="ops-platform-settings-grid"></div>
-        <div style="display:flex;gap:10px;margin-top:16px">
-          <button class="btn btn-primary" onclick="saveOpsSettings()">Save Settings</button>
-          <button class="btn btn-outline" onclick="resetOpsSettingsToExcel()">↺ Reset to Excel Values</button>
-        </div>
-      </div>
-    </details>
   </div>
 
   <div class="page-view" id="page-users">
@@ -859,7 +846,7 @@
     <div class="form-row">
       <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="ob-property"></select></div>
       <div class="form-grp"><label class="form-lbl">Platform *</label>
-        <select class="form-ctrl" id="ob-platform" onchange="updateBookingLogPreview()">
+        <select class="form-ctrl" id="ob-platform">
           <option value="direct">StayDekho Direct</option>
           <option value="airbnb">Airbnb</option>
           <option value="booking_com">Booking.com</option>
@@ -878,16 +865,16 @@
       <div class="form-grp"><label class="form-lbl">Check-out *</label><input class="form-ctrl" id="ob-checkout" type="date"/></div>
     </div>
     <div class="form-row">
-      <div class="form-grp"><label class="form-lbl">Total Amount (₹) *</label><input class="form-ctrl" id="ob-total" type="number" oninput="updateBookingLogPreview()"/></div>
-      <div class="form-grp"><label class="form-lbl">Advance Received (₹)</label><input class="form-ctrl" id="ob-advance" type="number" value="0" oninput="updateBookingLogPreview()"/></div>
+      <div class="form-grp"><label class="form-lbl">Total Amount (₹) *</label><input class="form-ctrl" id="ob-total" type="number"/></div>
+      <div class="form-grp"><label class="form-lbl">Advance Received (₹)</label><input class="form-ctrl" id="ob-advance" type="number" value="0"/></div>
     </div>
     <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Net Payout (₹) <span style="font-weight:400;color:var(--gray-400)">— jo amount tumhe milega, after platform commission</span></label><input class="form-ctrl" id="ob-net-payout" type="number" placeholder="e.g. same as Total for Direct"/></div>
       <div class="form-grp"><label class="form-lbl">Status</label>
         <select class="form-ctrl" id="ob-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="checked_in">Checked In</option><option value="checked_out">Checked Out</option><option value="cancelled">Cancelled</option></select>
       </div>
-      <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ob-notes"/></div>
     </div>
-    <div id="ob-payout-preview" style="background:var(--gray-50);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--gray-600);margin-bottom:6px"></div>
+    <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ob-notes"/></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-booking-modal')">Cancel</button><button class="btn btn-primary" id="ob-save-btn" onclick="saveBookingLog()">Save Booking</button></div>
   </div>
 </div>
@@ -1634,7 +1621,7 @@ function onOpsPropChange() {
 
 // Single entry point — loads every section of the Operations Hub in one go
 async function loadOperationsHub() {
-  await Promise.all([loadOpsDashboard(), loadBookingsLog(), loadCleaningTasks(), loadExpenses(), loadOpsSettings()]);
+  await Promise.all([loadOpsDashboard(), loadBookingsLog(), loadCleaningTasks(), loadExpenses()]);
   updateTodaySnapshot();
 }
 
@@ -1928,22 +1915,16 @@ function renderBookingsLog() {
   document.getElementById('ops-bookings-tbody').innerHTML = rows || '<tr><td colspan="11" style="text-align:center;color:var(--gray-400)">No bookings logged yet</td></tr>';
 }
 let obEditId = null;
-async function ensureOpsSettingsLoaded() {
-  if (!opsPlatformSettings) { try { const d = await api.getPlatformSettings(); opsPlatformSettings = d.settings; } catch (e) {} }
-}
-async function openAddBookingLog() {
-  await ensureOpsSettingsLoaded();
+function openAddBookingLog() {
   obEditId = null;
   document.getElementById('ops-booking-modal-title').textContent = 'Add Booking';
-  ['ob-guest-name','ob-guest-phone','ob-checkin','ob-checkout','ob-total','ob-notes'].forEach(id => document.getElementById(id).value = '');
+  ['ob-guest-name','ob-guest-phone','ob-checkin','ob-checkout','ob-total','ob-net-payout','ob-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ob-advance').value = 0;
   document.getElementById('ob-platform').value = 'direct';
   document.getElementById('ob-status').value = 'confirmed';
-  document.getElementById('ob-payout-preview').textContent = '';
   showModal('ops-booking-modal');
 }
-async function openEditBookingLog(id) {
-  await ensureOpsSettingsLoaded();
+function openEditBookingLog(id) {
   const b = opsBookingsLog.find(x => String(x._id || x.id) === String(id));
   if (!b) return;
   obEditId = id;
@@ -1956,23 +1937,14 @@ async function openEditBookingLog(id) {
   document.getElementById('ob-checkout').value = (b.checkout || '').slice(0,10);
   document.getElementById('ob-total').value = b.total_amount;
   document.getElementById('ob-advance').value = b.amount;
+  document.getElementById('ob-net-payout').value = b.net_payout != null ? b.net_payout : '';
   document.getElementById('ob-status').value = b.status;
   document.getElementById('ob-notes').value = b.notes || '';
-  updateBookingLogPreview();
   showModal('ops-booking-modal');
 }
-function updateBookingLogPreview() {
-  const total = Number(document.getElementById('ob-total').value) || 0;
-  const platform = document.getElementById('ob-platform').value;
-  if (!opsPlatformSettings) { document.getElementById('ob-payout-preview').textContent = ''; return; }
-  const cfg = (opsPlatformSettings.platforms || {})[platform] || {};
-  const commission = total * ((cfg.commission_pct || 0) / 100);
-  const gst = commission * ((cfg.gst_pct || 0) / 100);
-  const tds = total * ((cfg.tds_pct || 0) / 100);
-  const net = Math.round(total - commission - gst - tds);
-  document.getElementById('ob-payout-preview').innerHTML = `Commission: ${fmtMoney(commission)} · GST on commission: ${fmtMoney(gst)} · TDS: ${fmtMoney(tds)} → <strong>Net Payout: ${fmtMoney(net)}</strong>`;
-}
 async function saveBookingLog() {
+  const total = Number(document.getElementById('ob-total').value);
+  const netPayoutInput = document.getElementById('ob-net-payout').value;
   const body = {
     property_id: document.getElementById('ob-property').value,
     platform:    document.getElementById('ob-platform').value,
@@ -1980,8 +1952,9 @@ async function saveBookingLog() {
     guest_phone: document.getElementById('ob-guest-phone').value.trim(),
     checkin:     document.getElementById('ob-checkin').value,
     checkout:    document.getElementById('ob-checkout').value,
-    total_amount:Number(document.getElementById('ob-total').value),
+    total_amount:total,
     advance_amount: Number(document.getElementById('ob-advance').value) || 0,
+    net_payout:  netPayoutInput !== '' ? Number(netPayoutInput) : total,
     status:      document.getElementById('ob-status').value,
     notes:       document.getElementById('ob-notes').value.trim(),
   };

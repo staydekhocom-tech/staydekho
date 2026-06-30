@@ -8,37 +8,8 @@ const {
 
 router.use(protect, adminOnly);
 
-// ── Platform Settings (commission/GST/TDS config) ─────
-router.get('/platform-settings', async (req, res) => {
-  try {
-    let doc = await PlatformSetting.findOne({ property_id: null }).lean();
-    if (!doc) doc = (await PlatformSetting.create({ property_id: null })).toObject();
-    res.json({ settings: doc });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-router.put('/platform-settings', async (req, res) => {
-  try {
-    const { platforms, default_base_price } = req.body;
-    const doc = await PlatformSetting.findOneAndUpdate(
-      { property_id: null },
-      { platforms, default_base_price },
-      { new: true, upsert: true }
-    ).lean();
-    res.json({ settings: doc });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // ── Bookings Log (multi-platform — manual OTA entries) ─
-// Computes net_payout = total - commission - gst_on_commission - tds
-function calcPayout(total, p) {
-  const commission = total * ((p.commission_pct || 0) / 100);
-  const gst         = commission * ((p.gst_pct || 0) / 100);
-  const tds          = total * ((p.tds_pct || 0) / 100);
-  const net          = total - commission - gst - tds;
-  return { commission, gst, tds, net: Math.round(net) };
-}
-
+// Net Payout is entered manually by the admin (no auto commission formula — too error-prone with varying OTA deals)
 router.get('/bookings-log', async (req, res) => {
   try {
     const { platform, property_id } = req.query;
@@ -62,7 +33,7 @@ router.post('/bookings-log', async (req, res) => {
   try {
     const {
       property_id, guest_name, guest_phone, checkin, checkout,
-      platform, total_amount, advance_amount, status, notes,
+      platform, total_amount, advance_amount, net_payout, status, notes,
     } = req.body;
     if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
       return res.status(400).json({ error: 'Property, guest name, dates and total amount required hain' });
@@ -70,10 +41,6 @@ router.post('/bookings-log', async (req, res) => {
     const cin  = new Date(checkin);
     const cout = new Date(checkout);
     const nights = Math.max(1, Math.ceil((cout - cin) / (1000 * 60 * 60 * 24)));
-
-    const settingsDoc = await PlatformSetting.findOne({ property_id: null }).lean();
-    const pCfg = (settingsDoc?.platforms || {})[platform] || {};
-    const { commission, gst, tds, net } = calcPayout(Number(total_amount), pCfg);
 
     const advance = Number(advance_amount) || 0;
     const balance = Number(total_amount) - advance;
@@ -86,10 +53,7 @@ router.post('/bookings-log', async (req, res) => {
       payment_type: advance >= Number(total_amount) ? 'full' : 'partial',
       status: status || 'confirmed',
       platform: platform || 'direct',
-      commission_pct: pCfg.commission_pct || 0,
-      gst_on_commission_pct: pCfg.gst_pct || 0,
-      tds_pct: pCfg.tds_pct || 0,
-      net_payout: net,
+      net_payout: net_payout !== undefined && net_payout !== '' ? Number(net_payout) : Number(total_amount),
       notes: notes || '',
     });
 
@@ -103,7 +67,7 @@ router.post('/bookings-log', async (req, res) => {
       }
     }
 
-    res.status(201).json({ booking: booking.toObject(), payout: { commission, gst, tds, net } });
+    res.status(201).json({ booking: booking.toObject() });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -113,18 +77,7 @@ router.put('/bookings-log/:id', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Booking nahi mili' });
 
     const body = req.body;
-    let net_payout = existing.net_payout;
-    if (body.total_amount !== undefined || body.platform !== undefined) {
-      const settingsDoc = await PlatformSetting.findOne({ property_id: null }).lean();
-      const platform = body.platform || existing.platform;
-      const pCfg = (settingsDoc?.platforms || {})[platform] || {};
-      const total = body.total_amount !== undefined ? Number(body.total_amount) : existing.total_amount;
-      net_payout = calcPayout(total, pCfg).net;
-      body.commission_pct = pCfg.commission_pct || 0;
-      body.gst_on_commission_pct = pCfg.gst_pct || 0;
-      body.tds_pct = pCfg.tds_pct || 0;
-    }
-    const updated = await Booking.findByIdAndUpdate(req.params.id, { ...body, net_payout }, { new: true }).lean();
+    const updated = await Booking.findByIdAndUpdate(req.params.id, body, { new: true }).lean();
 
     // ── Automation chain: dates changed → unblock old + block new; status → cancelled → unblock + notify ──
     const newCheckin  = body.checkin  || existing.checkin;
