@@ -260,18 +260,16 @@ router.get('/:id/invoice', (req, res, next) => {
       prop_guests:   booking.property_id?.guests,
     };
 
-    // ── GST + Service Fee — based on total_amount (full booking value)
+    // ── GST calculation — no service fee, pure accommodation + GST
     const nights_    = row.nights || 1;
     const totalAmt   = row.total_amount || row.amount || 0;
-    const avgPpn     = totalAmt / nights_ / 1.23;
-    const gstRate    = avgPpn > 7500 ? 0.18 : 0.05;
-    const gstPct     = Math.round(gstRate * 100);
-    const divisor    = 1 + 0.05 + gstRate;
-    const baseAmt    = Math.round(totalAmt / divisor);
-    const svcAmt     = Math.round(baseAmt * 0.05);
-    const gstAmt     = totalAmt - baseAmt - svcAmt;
-    const halfGst    = Math.round(gstAmt / 2);
-    const pricePn    = nights_ > 0 ? Math.round(baseAmt / nights_) : baseAmt;
+    // Slab: try 5% first; if back-calculated per-night base > ₹7500 → 18%
+    let gstRate = 0.05;
+    if ((totalAmt / nights_) / 1.05 > 7500) gstRate = 0.18;
+    const gstPct    = Math.round(gstRate * 100);
+    const preGstAmt = Math.round(totalAmt / (1 + gstRate));
+    const gstAmt    = totalAmt - preGstAmt;
+    const halfGst   = Math.round(gstAmt / 2);
 
     // ── Payment info ──────────────────────────────────────
     const payment = await Payment.findOne({
@@ -294,8 +292,12 @@ router.get('/:id/invoice', (req, res, next) => {
       : `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`;
     const invoiceDate = (() => { try { return new Date(row.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return '—'; } })();
     const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
-    const statusColor = { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', checked_in: '#2563eb', checked_out: '#6b7280' }[row.status] || '#6b7280';
-    const statusLabel = (row.status || 'pending').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const statusColor = !isProforma && (row.balance_paid || row.status === 'checked_out')
+      ? '#16a34a'
+      : { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', checked_in: '#2563eb', checked_out: '#6b7280' }[row.status] || '#6b7280';
+    const statusLabel = !isProforma && (row.balance_paid || row.status === 'checked_out')
+      ? 'Fully Paid'
+      : (row.status || 'pending').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
     const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
     const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
     const gstin = process.env.BUSINESS_GSTIN || 'GSTIN: 08XXXXX0000X1ZX';
