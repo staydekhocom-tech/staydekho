@@ -38,9 +38,10 @@ router.post('/bookings-log', async (req, res) => {
     if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
       return res.status(400).json({ error: 'Property, guest name, dates and total amount required hain' });
 
-    const cin  = new Date(checkin);
-    const cout = new Date(checkout);
-    const nights = Math.max(1, Math.ceil((cout - cin) / (1000 * 60 * 60 * 24)));
+    // T12:00:00 avoids timezone midnight boundary off-by-one
+    const cin  = new Date((checkin + '').slice(0,10) + 'T12:00:00');
+    const cout = new Date((checkout + '').slice(0,10) + 'T12:00:00');
+    const nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
 
     const advance = Number(advance_amount) || 0;
     const balance = Number(total_amount) - advance;
@@ -76,7 +77,13 @@ router.put('/bookings-log/:id', async (req, res) => {
     const existing = await Booking.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Booking nahi mili' });
 
-    const body = req.body;
+    const body = { ...req.body };
+    // Recalculate nights if dates changed
+    if (body.checkin || body.checkout) {
+      const cin  = new Date(((body.checkin  || existing.checkin)  + '').slice(0,10) + 'T12:00:00');
+      const cout = new Date(((body.checkout || existing.checkout) + '').slice(0,10) + 'T12:00:00');
+      body.nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
+    }
     const updated = await Booking.findByIdAndUpdate(req.params.id, body, { new: true }).lean();
 
     // ── Automation chain: dates changed → unblock old + block new; status → cancelled → unblock + notify ──

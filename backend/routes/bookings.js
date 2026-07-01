@@ -105,8 +105,9 @@ router.post('/', protect, async (req, res) => {
     const property = await Property.findOne({ _id: property_id, status: 'Active' }).lean();
     if (!property) return res.status(404).json({ error: 'Property not found or inactive' });
 
-    const cin  = new Date(checkin);
-    const cout = new Date(checkout);
+    // T12:00:00 avoids timezone midnight boundary off-by-one
+    const cin  = new Date((checkin + '').slice(0,10) + 'T12:00:00');
+    const cout = new Date((checkout + '').slice(0,10) + 'T12:00:00');
     if (cout <= cin) return res.status(400).json({ error: 'Check-out must be after check-in' });
 
     // Double-booking check
@@ -118,7 +119,7 @@ router.post('/', protect, async (req, res) => {
     }).lean();
     if (overlap) return res.status(409).json({ error: 'These dates are already booked. Please choose different dates.' });
 
-    const nights = Math.ceil((cout - cin) / (1000 * 60 * 60 * 24));
+    const nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
 
     // Build per-night prices from DatePrice, fallback to property.price
     let base = 0;
@@ -505,7 +506,14 @@ router.get('/:id/invoice', (req, res, next) => {
     </div>
   </div>
 
-  <!-- ── NOTES ── -->
+  ${row.notes ? `
+  <!-- ── BOOKING NOTES ── -->
+  <div class="notes" style="margin-top:12px;background:#fffbeb;border-color:#fde68a">
+    <h4 style="color:#92400e">Booking Notes</h4>
+    ${String(row.notes).replace(/\n/g, '<br/>')}
+  </div>` : ''}
+
+  <!-- ── TERMS ── -->
   <div class="notes">
     <h4>Terms & Conditions</h4>
     Check-in time: 2:00 PM onwards · Check-out time: 11:00 AM sharp<br/>
