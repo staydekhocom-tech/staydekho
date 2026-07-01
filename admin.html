@@ -879,6 +879,10 @@
       </div>
     </div>
     <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ob-notes"/></div>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;cursor:pointer;margin-bottom:4px">
+      <input type="checkbox" id="ob-balance-paid" style="width:18px;height:18px;accent-color:#16a34a"/>
+      <span style="font-weight:600;color:#15803d;font-size:13px">✓ Full Payment Received (Balance Paid)</span>
+    </label>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-booking-modal')">Cancel</button><button class="btn btn-primary" id="ob-save-btn" onclick="saveBookingLog()">Save Booking</button></div>
   </div>
 </div>
@@ -1959,6 +1963,7 @@ function openAddBookingLog() {
   document.getElementById('ob-advance').value = 0;
   document.getElementById('ob-platform').value = 'direct';
   document.getElementById('ob-status').value = 'confirmed';
+  document.getElementById('ob-balance-paid').checked = false;
   document.getElementById('ob-remaining-bar').style.display = 'none';
   showModal('ops-booking-modal');
 }
@@ -1978,6 +1983,7 @@ function openEditBookingLog(id) {
   document.getElementById('ob-net-payout').value = b.net_payout != null ? b.net_payout : '';
   document.getElementById('ob-status').value = b.status;
   document.getElementById('ob-notes').value = b.notes || '';
+  document.getElementById('ob-balance-paid').checked = !!(b.balance_paid);
   calcObRemaining();
   showModal('ops-booking-modal');
 }
@@ -1993,9 +1999,10 @@ async function saveBookingLog() {
     checkout:    document.getElementById('ob-checkout').value,
     total_amount:total,
     advance_amount: Number(document.getElementById('ob-advance').value) || 0,
-    net_payout:  netPayoutInput !== '' ? Number(netPayoutInput) : total,
-    status:      document.getElementById('ob-status').value,
-    notes:       document.getElementById('ob-notes').value.trim(),
+    net_payout:   netPayoutInput !== '' ? Number(netPayoutInput) : total,
+    status:       document.getElementById('ob-status').value,
+    notes:        document.getElementById('ob-notes').value.trim(),
+    balance_paid: document.getElementById('ob-balance-paid').checked,
   };
   if (!body.property_id || !body.guest_name || !body.checkin || !body.checkout || !body.total_amount) {
     alert('Property, guest name, dates aur total amount required hain!'); return;

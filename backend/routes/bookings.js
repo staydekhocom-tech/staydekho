@@ -277,26 +277,25 @@ router.get('/:id/invoice', (req, res, next) => {
       status:     'captured',
     }).sort({ created_at: -1 }).lean();
 
-    const advanceAmt = row.amount || 0;
-    const balanceAmt = row.balance_amount || Math.max(0, totalAmt - advanceAmt);
-    const amtPaid    = payment ? Math.round(payment.amount / 100) : advanceAmt;
-    const balDue     = row.balance_paid ? 0 : balanceAmt;
+    const advanceAmt  = row.amount || 0;
+    const balanceAmt  = row.balance_amount || Math.max(0, totalAmt - advanceAmt);
+    const fullyPaid   = row.balance_paid || row.status === 'checked_out';
+    const amtPaid     = fullyPaid ? totalAmt : (payment ? Math.round(payment.amount / 100) : advanceAmt);
+    const balDue      = fullyPaid ? 0 : balanceAmt;
 
     // ── Proforma vs Final Tax Invoice ─────────────────────
     const forceType  = req.query.type;
-    const isProforma = forceType === 'proforma' || (!forceType && !row.balance_paid && row.status !== 'checked_out');
-    const docType    = isProforma ? 'PROFORMA INVOICE' : 'TAX INVOICE';
-    const docColor   = isProforma ? '#d97706' : '#8B1717';  // orange for proforma, red for final
-    const invoiceNo  = isProforma
+    const isProforma  = forceType === 'proforma' || (!forceType && !fullyPaid);
+    const docType     = isProforma ? 'PROFORMA INVOICE' : 'TAX INVOICE';
+    const docColor    = isProforma ? '#d97706' : '#8B1717';
+    const invoiceNo   = isProforma
       ? `PRO-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`
       : `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`;
     const invoiceDate = (() => { try { return new Date(row.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return '—'; } })();
-    const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
-    const statusColor = !isProforma && (row.balance_paid || row.status === 'checked_out')
-      ? '#16a34a'
+    const fmtD        = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
+    const statusColor = fullyPaid && !isProforma ? '#16a34a'
       : { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', checked_in: '#2563eb', checked_out: '#6b7280' }[row.status] || '#6b7280';
-    const statusLabel = !isProforma && (row.balance_paid || row.status === 'checked_out')
-      ? 'Fully Paid'
+    const statusLabel = fullyPaid && !isProforma ? 'Fully Paid ✓'
       : (row.status || 'pending').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
     const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
     const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
