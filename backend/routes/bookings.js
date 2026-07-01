@@ -441,21 +441,27 @@ router.get('/:id/invoice', (req, res, next) => {
           <strong>${row.prop_name || 'Accommodation'}</strong>
           <div class="desc-sub">${row.prop_location || ''} · ${row.prop_beds || '—'} Beds · Up to ${row.prop_guests || '—'} Guests</div>
         </td>
-        <td>${INR(pricePn)}/night</td>
+        <td>${INR(isProforma ? Math.round(totalAmt / nights_) : pricePn)}/night</td>
         <td>${row.nights}</td>
-        <td>${INR(baseAmt)}</td>
+        <td>${INR(isProforma ? totalAmt : baseAmt)}</td>
       </tr>
-      <tr>
+      ${!isProforma ? `<tr>
         <td><strong>Platform Service Fee</strong><div class="desc-sub">5% of accommodation charges</div></td>
         <td>5%</td>
         <td>—</td>
         <td>${INR(svcAmt)}</td>
-      </tr>
+      </tr>` : ''}
     </tbody>
   </table>
 
   <!-- ── TOTALS ── -->
   <div class="totals">
+    ${isProforma ? `
+    <div class="tot-row grand" style="background:${docColor}">
+      <span>Total Amount</span>
+      <span>${INR(totalAmt)}</span>
+    </div>
+    ` : `
     <div class="tot-row subtotal">
       <span class="lbl">Accommodation (${row.nights} night${row.nights > 1 ? 's' : ''})</span>
       <span>${INR(baseAmt)}</span>
@@ -480,6 +486,7 @@ router.get('/:id/invoice', (req, res, next) => {
       <span>Grand Total</span>
       <span>${INR(totalAmt)}</span>
     </div>
+    `}
   </div>
 
   <!-- ── PAYMENT SUMMARY ── -->
