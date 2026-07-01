@@ -225,10 +225,12 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
   }
 });
 
-// GET /api/bookings/:id/invoice  — printable HTML tax invoice
-// Supports ?token=JWT for direct browser tab opening (no auth header possible)
+// GET /api/bookings/:id/invoice
+// ?type=proforma → Proforma Invoice (advance payment)
+// ?type=final    → Final Tax Invoice (full payment)
+// Auto-detects if ?type not provided: balance_paid=false → Proforma, else Final
+// Supports ?token=JWT for direct browser tab opening
 router.get('/:id/invoice', (req, res, next) => {
-  // Allow token via query param for this route only
   if (req.query.token && !req.headers.authorization) {
     req.headers.authorization = `Bearer ${req.query.token}`;
   }
@@ -241,7 +243,7 @@ router.get('/:id/invoice', (req, res, next) => {
       .lean();
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (req.user.role !== 'admin' && booking.user_id._id.toString() !== req.user.id)
+    if (req.user.role !== 'admin' && booking.user_id?._id?.toString() !== req.user.id)
       return res.status(403).json({ error: 'Not authorized' });
 
     const row = {
@@ -257,18 +259,18 @@ router.get('/:id/invoice', (req, res, next) => {
       prop_guests:   booking.property_id?.guests,
     };
 
-    // ── GST + Service Fee — derive from stored booking.amount (source of truth)
-    const nights_   = row.nights || 1;
-    const totalAmt  = row.amount || 0;
-    const avgPpn    = totalAmt / nights_ / 1.23;
-    const gstRate   = avgPpn > 7500 ? 0.18 : 0.05;
-    const gstPct    = Math.round(gstRate * 100);
-    const divisor   = 1 + 0.05 + gstRate;
-    const baseAmt   = Math.round(totalAmt / divisor);
-    const svcAmt    = Math.round(baseAmt * 0.05);
-    const gstAmt    = totalAmt - baseAmt - svcAmt;
-    const halfGst   = Math.round(gstAmt / 2);
-    const pricePn   = nights_ > 0 ? Math.round(baseAmt / nights_) : baseAmt;
+    // ── GST + Service Fee — based on total_amount (full booking value)
+    const nights_    = row.nights || 1;
+    const totalAmt   = row.total_amount || row.amount || 0;
+    const avgPpn     = totalAmt / nights_ / 1.23;
+    const gstRate    = avgPpn > 7500 ? 0.18 : 0.05;
+    const gstPct     = Math.round(gstRate * 100);
+    const divisor    = 1 + 0.05 + gstRate;
+    const baseAmt    = Math.round(totalAmt / divisor);
+    const svcAmt     = Math.round(baseAmt * 0.05);
+    const gstAmt     = totalAmt - baseAmt - svcAmt;
+    const halfGst    = Math.round(gstAmt / 2);
+    const pricePn    = nights_ > 0 ? Math.round(baseAmt / nights_) : baseAmt;
 
     // ── Payment info ──────────────────────────────────────
     const payment = await Payment.findOne({
@@ -276,41 +278,50 @@ router.get('/:id/invoice', (req, res, next) => {
       status:     'captured',
     }).sort({ created_at: -1 }).lean();
 
-    const amtPaid = payment
-      ? Math.round(payment.amount / 100)
-      : (['confirmed', 'checked_in', 'checked_out'].includes(row.status) ? row.amount : 0);
-    const balDue = Math.max(0, row.amount - amtPaid);
+    const advanceAmt = row.amount || 0;
+    const balanceAmt = row.balance_amount || Math.max(0, totalAmt - advanceAmt);
+    const amtPaid    = payment ? Math.round(payment.amount / 100) : advanceAmt;
+    const balDue     = row.balance_paid ? 0 : balanceAmt;
 
-    // ── Helpers ───────────────────────────────────────────
-    const INR  = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0 });
+    // ── Proforma vs Final Tax Invoice ─────────────────────
+    const forceType  = req.query.type;
+    const isProforma = forceType === 'proforma' || (!forceType && !row.balance_paid && row.status !== 'checked_out');
+    const docType    = isProforma ? 'PROFORMA INVOICE' : 'TAX INVOICE';
+    const docColor   = isProforma ? '#d97706' : '#8B1717';  // orange for proforma, red for final
+    const invoiceNo  = isProforma
+      ? `PRO-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`
+      : `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`;
+    const invoiceDate = (() => { try { return new Date(row.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return '—'; } })();
     const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
-    const invoiceNo   = `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).padStart(4, '0')}`;
-    const invoiceDate = fmtD(row.created_at);
     const statusColor = { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', checked_in: '#2563eb', checked_out: '#6b7280' }[row.status] || '#6b7280';
     const statusLabel = (row.status || 'pending').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
     const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
     const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
     const gstin = process.env.BUSINESS_GSTIN || 'GSTIN: 08XXXXX0000X1ZX';
+    const INR   = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0 });
 
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Invoice ${invoiceNo} — StayDekho</title>
+<title>${docType} ${invoiceNo} — StayDekho</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f4f4f4}
   .page{max-width:760px;margin:24px auto;background:#fff;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,.1)}
   /* Header */
-  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #8B1717}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid ${docColor}}
   .logo{font-size:22px;font-weight:800;color:#8B1717;letter-spacing:-.5px}
   .logo span{color:#1a1a1a}
   .company-info{font-size:11px;color:#555;margin-top:4px;line-height:1.7}
   .inv-meta{text-align:right}
-  .inv-title{font-size:20px;font-weight:800;color:#8B1717;letter-spacing:.05em;text-transform:uppercase}
+  .inv-title{font-size:20px;font-weight:800;color:${docColor};letter-spacing:.05em;text-transform:uppercase}
   .inv-no{font-size:13px;font-weight:700;color:#1a1a1a;margin-top:4px}
   .inv-date{font-size:11px;color:#777;margin-top:2px}
+  /* Proforma notice banner */
+  .proforma-notice{background:#fff8e1;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#92400e;line-height:1.6}
+  .proforma-notice strong{display:block;font-size:13px;margin-bottom:3px}
   /* Status badge */
   .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;margin-top:8px;background:${statusColor}}
   /* Info grid */
@@ -379,12 +390,22 @@ router.get('/:id/invoice', (req, res, next) => {
       </div>
     </div>
     <div class="inv-meta">
-      <div class="inv-title">Tax Invoice</div>
+      <div class="inv-title">${docType}</div>
       <div class="inv-no">${invoiceNo}</div>
       <div class="inv-date">Date: ${invoiceDate}</div>
       <div><span class="badge">${statusLabel}</span></div>
     </div>
   </div>
+
+  ${isProforma ? `
+  <!-- ── PROFORMA NOTICE ── -->
+  <div class="proforma-notice">
+    <strong>⚠️ This is a Proforma Invoice (Advance Receipt)</strong>
+    This document confirms your advance payment of ${INR(amtPaid)} (${Math.round(amtPaid/totalAmt*100)}% of total).
+    A Final Tax Invoice will be issued after full payment at check-in.
+    Balance due at check-in: <strong>${INR(balDue)}</strong>
+  </div>
+  ` : ''}
 
   <!-- ── BILL TO + BOOKING DETAILS ── -->
   <div class="info-grid">
@@ -400,14 +421,14 @@ router.get('/:id/invoice', (req, res, next) => {
       <div class="info-row"><span class="lbl">Check-in</span><span class="val">${fmtD(row.checkin)}</span></div>
       <div class="info-row"><span class="lbl">Check-out</span><span class="val">${fmtD(row.checkout)}</span></div>
       <div class="info-row"><span class="lbl">Duration</span><span class="val">${row.nights} Night${row.nights > 1 ? 's' : ''}</span></div>
-      <div class="info-row highlight"><span class="lbl">Guests</span><span class="val">${row.guests} Guest${row.guests > 1 ? 's' : ''}</span></div>
+      <div class="info-row highlight"><span class="lbl">Guests</span><span class="val">${row.guests || 1} Guest${(row.guests || 1) > 1 ? 's' : ''}</span></div>
     </div>
   </div>
 
   <!-- ── CHARGES TABLE ── -->
   <table>
     <thead>
-      <tr>
+      <tr style="background:${docColor}">
         <th style="width:50%">Description</th>
         <th>Rate</th>
         <th>Nights</th>
@@ -417,8 +438,8 @@ router.get('/:id/invoice', (req, res, next) => {
     <tbody>
       <tr>
         <td>
-          <strong>${row.prop_name}</strong>
-          <div class="desc-sub">${row.prop_location} · ${row.prop_beds || '—'} Beds · Up to ${row.prop_guests || '—'} Guests</div>
+          <strong>${row.prop_name || 'Accommodation'}</strong>
+          <div class="desc-sub">${row.prop_location || ''} · ${row.prop_beds || '—'} Beds · Up to ${row.prop_guests || '—'} Guests</div>
         </td>
         <td>${INR(pricePn)}/night</td>
         <td>${row.nights}</td>
@@ -443,7 +464,6 @@ router.get('/:id/invoice', (req, res, next) => {
       <span class="lbl">Service Fee (5%)</span>
       <span>${INR(svcAmt)}</span>
     </div>
-    ${gstRate > 0 ? `
     <div class="tot-row gst-row">
       <span class="lbl">CGST @ ${gstPct / 2}%</span>
       <span>${INR(halfGst)}</span>
@@ -456,31 +476,25 @@ router.get('/:id/invoice', (req, res, next) => {
       <span class="lbl">Total GST (${gstPct}%)</span>
       <span>${INR(gstAmt)}</span>
     </div>
-    ` : `
-    <div class="tot-row gst-row">
-      <span class="lbl">GST</span>
-      <span>Nil (≤ ₹1000/night)</span>
-    </div>
-    `}
-    <div class="tot-row grand">
+    <div class="tot-row grand" style="background:${docColor}">
       <span>Grand Total</span>
-      <span>${INR(row.amount)}</span>
+      <span>${INR(totalAmt)}</span>
     </div>
   </div>
 
   <!-- ── PAYMENT SUMMARY ── -->
   <div class="pay-summary">
     <div class="pay-box">
-      <div class="amt">${INR(row.amount)}</div>
+      <div class="amt">${INR(totalAmt)}</div>
       <div class="lbl">Total Amount</div>
     </div>
     <div class="pay-box paid">
       <div class="amt">${INR(amtPaid)}</div>
-      <div class="lbl">Amount Paid</div>
+      <div class="lbl">${isProforma ? 'Advance Paid' : 'Amount Paid'}</div>
     </div>
     <div class="pay-box due">
       <div class="amt">${INR(balDue)}</div>
-      <div class="lbl">${balDue > 0 ? 'Balance Due' : 'Fully Paid ✓'}</div>
+      <div class="lbl">${balDue > 0 ? (isProforma ? 'Due at Check-in' : 'Balance Due') : 'Fully Paid ✓'}</div>
     </div>
   </div>
 
@@ -488,9 +502,13 @@ router.get('/:id/invoice', (req, res, next) => {
   <div class="notes">
     <h4>Terms & Conditions</h4>
     Check-in time: 2:00 PM onwards · Check-out time: 11:00 AM sharp<br/>
-    This is a computer-generated invoice and does not require a physical signature.<br/>
-    For cancellations and refunds, please refer to our Cancellation Policy at staydekho.com/cancellation.<br/>
-    GST calculated as per prevailing Indian hotel accommodation tax rates.
+    ${isProforma
+      ? `This Proforma Invoice is valid for the booking period only. Final Tax Invoice will be issued upon full payment at check-in.<br/>
+    Advance payment is non-refundable as per cancellation policy.`
+      : `This is a computer-generated Final Tax Invoice and does not require a physical signature.<br/>
+    Payment received in full. Thank you for staying with StayDekho.`
+    }<br/>
+    GST calculated as per prevailing Indian hotel accommodation tax rates (SAC: 996311).
   </div>
 
   <!-- ── FOOTER ── -->
