@@ -1902,7 +1902,16 @@ async function loadBookingsLog() {
   } catch (e) { console.error(e); }
 }
 function renderBookingsLog() {
-  const rows = opsBookingsLog.map(b => `
+  const rows = opsBookingsLog.map(b => {
+    const bid = b._id || b.id;
+    const token = localStorage.getItem('sd_token');
+    const base = getApiBase();
+    const isFullyPaid = b.balance_paid || b.status === 'checked_out' || !b.balance_amount || b.balance_amount <= 0;
+    const proformaBtn = `<button class="btn btn-outline btn-sm" style="color:#c2410c;border-color:#fed7aa" onclick="window.open('${base}/bookings/${bid}/invoice?type=proforma&token=${token ? "'+token+'" : ''}','_blank')">📋 Proforma</button>`;
+    const finalBtn = isFullyPaid
+      ? `<button class="btn btn-outline btn-sm" style="color:#15803d;border-color:#86efac" onclick="window.open('${base}/bookings/${bid}/invoice?type=final&token=${token ? "'+token+'" : ''}','_blank')">🧾 Final Bill</button>`
+      : '';
+    return `
     <tr>
       <td><strong>${b.guest_name}</strong></td>
       <td>${b.property_name || '—'}</td>
@@ -1911,11 +1920,17 @@ function renderBookingsLog() {
       <td><span class="badge">${PLATFORM_LABELS[b.platform] || b.platform}</span></td>
       <td>${fmtMoney(b.total_amount)}</td>
       <td>${fmtMoney(b.amount)}</td>
-      <td>${fmtMoney(b.balance_amount)}</td>
+      <td style="color:${isFullyPaid ? '#16a34a' : '#dc2626'};font-weight:600">${isFullyPaid ? '✓ Paid' : fmtMoney(b.balance_amount)}</td>
       <td>${fmtMoney(b.net_payout)}</td>
       <td><span class="badge b-${b.status}">${b.status}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="openEditBookingLog('${b._id || b.id}')">Edit</button> <button class="btn btn-outline btn-sm" onclick="deleteBookingLogRow('${b._id || b.id}')">Delete</button></td>
-    </tr>`).join('');
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="openEditBookingLog('${bid}')">Edit</button>
+        <button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteBookingLogRow('${bid}')">Delete</button>
+        ${proformaBtn}
+        ${finalBtn}
+      </td>
+    </tr>`;
+  }).join('');
   document.getElementById('ops-bookings-tbody').innerHTML = rows || '<tr><td colspan="11" style="text-align:center;color:var(--gray-400)">No bookings logged yet</td></tr>';
 }
 function calcObRemaining() {
@@ -1989,7 +2004,7 @@ async function saveBookingLog() {
     if (obEditId) await api.updateBookingLog(obEditId, body);
     else await api.createBookingLog(body);
     closeModal('ops-booking-modal');
-    loadBookingsLog();
+    loadOperationsHub();
   } catch (err) { alert('Error: ' + err.message); }
 }
 async function deleteBookingLogRow(id) {

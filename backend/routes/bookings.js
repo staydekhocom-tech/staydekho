@@ -442,16 +442,10 @@ router.get('/:id/invoice', (req, res, next) => {
           <strong>${row.prop_name || 'Accommodation'}</strong>
           <div class="desc-sub">${row.prop_location || ''} · ${row.prop_beds || '—'} Beds · Up to ${row.prop_guests || '—'} Guests</div>
         </td>
-        <td>${INR(isProforma ? Math.round(totalAmt / nights_) : pricePn)}/night</td>
+        <td>${INR(Math.round(totalAmt / nights_))}/night</td>
         <td>${row.nights}</td>
-        <td>${INR(isProforma ? totalAmt : baseAmt)}</td>
+        <td>${INR(isProforma ? totalAmt : (totalAmt - gstAmt))}</td>
       </tr>
-      ${!isProforma ? `<tr>
-        <td><strong>Platform Service Fee</strong><div class="desc-sub">5% of accommodation charges</div></td>
-        <td>5%</td>
-        <td>—</td>
-        <td>${INR(svcAmt)}</td>
-      </tr>` : ''}
     </tbody>
   </table>
 
@@ -465,11 +459,7 @@ router.get('/:id/invoice', (req, res, next) => {
     ` : `
     <div class="tot-row subtotal">
       <span class="lbl">Accommodation (${row.nights} night${row.nights > 1 ? 's' : ''})</span>
-      <span>${INR(baseAmt)}</span>
-    </div>
-    <div class="tot-row gst-row">
-      <span class="lbl">Service Fee (5%)</span>
-      <span>${INR(svcAmt)}</span>
+      <span>${INR(totalAmt - gstAmt)}</span>
     </div>
     <div class="tot-row gst-row">
       <span class="lbl">CGST @ ${gstPct / 2}%</span>
