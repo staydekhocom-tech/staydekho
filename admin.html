@@ -2004,8 +2004,24 @@ async function saveBookingLog() {
     if (obEditId) await api.updateBookingLog(obEditId, body);
     else await api.createBookingLog(body);
     closeModal('ops-booking-modal');
+    // Refresh ops hub + main bookings list + recent bookings on dashboard
     loadOperationsHub();
+    refreshMainBookings();
   } catch (err) { alert('Error: ' + err.message); }
+}
+async function refreshMainBookings() {
+  try {
+    const d = await api.listBookings().catch(() => ({ bookings: [] }));
+    bookings = (d.bookings || []).map(b => ({
+      id: b.id || b._id, guest: b.guest_name || b.user_name || '—',
+      property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout,
+      guests: b.guests || 1, amount: b.amount || 0, total_amount: b.total_amount || b.amount || 0,
+      balance_amount: b.balance_amount || 0, balance_paid: b.balance_paid || false,
+      status: b.status || 'pending', propId: (b.property_id?._id || b.property_id || '').toString(),
+    }));
+    renderBookings(bookings);
+    renderRecentBookings(bookings.slice(0, 5));
+  } catch (e) { console.error('refreshMainBookings error:', e); }
 }
 async function deleteBookingLogRow(id) {
   if (!confirm('Delete this booking entry?')) return;
