@@ -75,6 +75,25 @@ router.get('/stats', async (req, res) => {
       property_name: b.property_id?.name,
     }));
 
+    // Property-wise revenue (booked value + received, non-cancelled)
+    const propertyRevenue = await Booking.aggregate([
+      { $match: { status: { $in: ['confirmed', 'checked_in', 'checked_out'] } } },
+      { $group: {
+          _id:      '$property_id',
+          booked:   { $sum: { $ifNull: ['$total_amount', '$amount'] } },
+          received: { $sum: '$amount' },
+          bookings: { $sum: 1 },
+      } },
+      { $lookup: { from: 'properties', localField: '_id', foreignField: '_id', as: 'prop' } },
+      { $project: {
+          _id: 0,
+          property_id:   '$_id',
+          property_name: { $ifNull: [{ $arrayElemAt: ['$prop.name', 0] }, 'Unknown'] },
+          booked: 1, received: 1, bookings: 1,
+      } },
+      { $sort: { booked: -1 } },
+    ]);
+
     // Monthly revenue chart (last 6 months)
     const monthlyRevenue = await Booking.aggregate([
       { $match: { status: 'confirmed' } },
@@ -109,6 +128,7 @@ router.get('/stats', async (req, res) => {
       },
       recentBookings,
       monthlyRevenue,
+      propertyRevenue,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
