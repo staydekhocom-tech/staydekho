@@ -286,7 +286,7 @@
       <div class="stat-card"><div class="stat-icon si-red">🏡</div><div><div class="stat-val" id="stat-props">—</div><div class="stat-lbl">Total Properties</div><div class="stat-chg up" id="stat-props-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-green">📋</div><div><div class="stat-val" id="stat-books">—</div><div class="stat-lbl">Total Bookings</div><div class="stat-chg up" id="stat-books-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-val" id="stat-users-count">—</div><div class="stat-lbl">Registered Users</div><div class="stat-chg up" id="stat-users-sub">Loading…</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl">Revenue (This Month)</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl">Total Booked (This Month)</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
     </div>
 
     <div class="dash-grid">
@@ -1034,7 +1034,10 @@ async function initAdmin() {
     document.getElementById('stat-props').textContent = s.totalProperties || 0;
     document.getElementById('stat-books').textContent = s.totalBookings || 0;
     document.getElementById('stat-users-count').textContent = s.totalUsers || 0;
-    document.getElementById('stat-rev').textContent = (s.monthRevenue || 0) >= 100000 ? '₹' + ((s.monthRevenue || 0)/100000).toFixed(1) + 'L' : '₹' + (s.monthRevenue || 0).toLocaleString('en-IN');
+    const fmtRev = v => v >= 100000 ? '₹' + (v/100000).toFixed(1) + 'L' : '₹' + v.toLocaleString('en-IN');
+    document.getElementById('stat-rev').textContent = fmtRev(s.monthBookedValue || s.monthRevenue || 0);
+    const revSub = document.getElementById('stat-rev-sub');
+    if (revSub) revSub.textContent = 'StayDekho Received: ' + fmtRev(s.monthRevenue || 0);
 
     properties = (propsRes.properties || []).map(p => ({
       id: p.id || p._id, name: p.name || p.title, location: p.location, price: p.price, guests: p.guests || p.max_guests || 10, beds: p.beds || 4, amenities: Array.isArray(p.amenities) ? p.amenities.join(', ') : (p.amenities || ''), desc: p.description || '', status: p.status || 'Active', images: p.images && p.images.length ? p.images : (p.main_image ? [p.main_image] : []),

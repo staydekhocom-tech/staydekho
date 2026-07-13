@@ -34,22 +34,32 @@ router.get('/stats', async (req, res) => {
       Booking.countDocuments({ status: { $in: ['confirmed', 'checked_in'] } }),
       User.countDocuments({ role: 'user' }),
       Booking.aggregate([
-        { $match: { status: 'confirmed' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $match: { status: { $in: ['confirmed', 'checked_in', 'checked_out'] } } },
+        { $group: {
+            _id: null,
+            received: { $sum: '$amount' },
+            booked:   { $sum: { $ifNull: ['$total_amount', '$amount'] } },
+        } },
       ]),
       Booking.aggregate([
         {
           $match: {
-            status:     'confirmed',
+            status:     { $in: ['confirmed', 'checked_in', 'checked_out'] },
             created_at: { $gte: startOfMonth, $lt: startOfNextMonth },
           },
         },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $group: {
+            _id: null,
+            received: { $sum: '$amount' },
+            booked:   { $sum: { $ifNull: ['$total_amount', '$amount'] } },
+        } },
       ]),
     ]);
 
-    const totalRevenue = revenueAgg[0]?.total || 0;
-    const monthRevenue = monthRevenueAgg[0]?.total || 0;
+    const totalRevenue     = revenueAgg[0]?.received || 0;      // StayDekho received (advance)
+    const totalBookedValue = revenueAgg[0]?.booked   || 0;      // full booking value
+    const monthRevenue     = monthRevenueAgg[0]?.received || 0;
+    const monthBookedValue = monthRevenueAgg[0]?.booked   || 0;
 
     // Recent bookings
     const recentBookingsDocs = await Booking.find()
@@ -93,7 +103,9 @@ router.get('/stats', async (req, res) => {
         activeBookings,
         totalUsers,
         totalRevenue,
+        totalBookedValue,
         monthRevenue,
+        monthBookedValue,
       },
       recentBookings,
       monthlyRevenue,
