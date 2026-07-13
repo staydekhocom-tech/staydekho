@@ -1108,7 +1108,7 @@ async function initAdmin() {
             if (data && data.blocks) {
               const p = properties[idx];
               data.blocks.forEach(blk => { bookings.push({ id: 'ext-' + blk.id, guest: '🗓️ ' + (blk.summary || 'Airbnb Block'), property: p.name, checkin: blk.start_date, checkout: blk.end_date, status: 'confirmed', isExternal: true }); });
-              renderBookings(bookings);
+              applyBookingFilters();
             }
           }).catch(() => {});
         }
@@ -2086,7 +2086,7 @@ async function refreshMainBookings() {
       balance_amount: b.balance_amount || 0, balance_paid: b.balance_paid || false,
       status: b.status || 'pending', propId: (b.property_id?._id || b.property_id || '').toString(),
     }));
-    renderBookings(bookings);
+    applyBookingFilters();
     renderRecentBookings(bookings.slice(0, 5));
   } catch (e) { console.error('refreshMainBookings error:', e); }
 }
@@ -2650,8 +2650,18 @@ async function pdashAddIcal(propId) {
   try { await api.addIcalSource(propId, { url, label }); openPropDash(propId); }
   catch(e) { alert(e.message); }
 }
-function filterBookings(q) { renderBookings(bookings.filter(b => !b.isExternal && ((b.guest || '').toLowerCase().includes(q.toLowerCase()) || (b.property || '').toLowerCase().includes(q.toLowerCase())))); }
-function filterByStatus(s) { renderBookings(s ? bookings.filter(b => b.status === s && !b.isExternal) : bookings); }
+let bookingSearchQ = '', bookingStatusQ = '';
+function applyBookingFilters() {
+  let list = bookings;
+  if (bookingSearchQ) {
+    const q = bookingSearchQ.toLowerCase();
+    list = list.filter(b => (b.guest || '').toLowerCase().includes(q) || (b.property || '').toLowerCase().includes(q));
+  }
+  if (bookingStatusQ) list = list.filter(b => b.status === bookingStatusQ);
+  renderBookings(list);
+}
+function filterBookings(q) { bookingSearchQ = (q || '').trim(); applyBookingFilters(); }
+function filterByStatus(s) { bookingStatusQ = s || ''; applyBookingFilters(); }
 function filterUsers(q) { renderUsers(users.filter(u => (u.name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase()))); }
 
 function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-primary btn-sm" style="flex:1" onclick="openPropDash('${p.id}')">📊 Details</button><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp('${p.id}')">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteProp('${p.id}')">🗑</button></div></div></div>`; }).join(''); }
