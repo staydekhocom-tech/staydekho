@@ -855,6 +855,13 @@
   </div>
 </div>
 
+<div class="modal-bd" id="cal-booking-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hdr"><div class="modal-title">Bookings on <span id="cal-booking-date"></span></div><button class="modal-close" onclick="closeModal('cal-booking-modal')">✕</button></div>
+    <div id="cal-booking-body"></div>
+  </div>
+</div>
+
 <div class="modal-bd" id="ops-booking-modal">
   <div class="modal" style="max-width:600px">
     <div class="modal-hdr"><div class="modal-title" id="ops-booking-modal-title">Add Booking</div><button class="modal-close" onclick="closeModal('ops-booking-modal')">✕</button></div>
@@ -1224,39 +1231,72 @@ function renderAdvCalendar() {
   if(!calendarModifications[selectedProp]) calendarModifications[selectedProp] = {};
   const mods = calendarModifications[selectedProp];
 
-  const bookedDates = [];
+  // Map: dateStr → [bookings covering that date] (checkout day included so back-to-back is visible)
+  calBookedMap = {};
   bookings.forEach(b => {
     if(b.property === selectedProp && b.status !== 'cancelled') {
       let d = new Date(b.checkin); let end = new Date(b.checkout);
-      while(d <= end) { bookedDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); d.setDate(d.getDate()+1); }
+      while(d <= end) {
+        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        (calBookedMap[ds] = calBookedMap[ds] || []).push(b);
+        d.setDate(d.getDate()+1);
+      }
     }
   });
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isBooked = bookedDates.includes(dateStr);
+    const dayBookings = calBookedMap[dateStr] || [];
+    const isBooked = dayBookings.length > 0;
     const modData = mods[dateStr] || {};
     const isBlocked = modData.blocked === true;
     const customPrice = modData.customPrice;
     const isSelected = selectedDates.has(dateStr);
-    
+
     let cls = 'adv-day';
     if(isBooked) cls += ' booked'; if(isBlocked) cls += ' blocked'; if(customPrice) cls += ' has-custom'; if(isSelected) cls += ' selected';
-    
+
     let priceHtml = `₹${(bPrice/1000).toFixed(1)}K`;
     if(customPrice) priceHtml = `<strike>₹${(bPrice/1000).toFixed(1)}K</strike> ₹${(customPrice/1000).toFixed(1)}K`;
-    
-    h += `<div class="${cls}" data-date="${dateStr}" onclick="toggleDateSelection('${dateStr}', ${isBooked})">
+    if(isBooked) {
+      const names = dayBookings.map(x => (x.guest || '—').replace('🗓️ ','').split(' ')[0]).join(' / ');
+      priceHtml = `<span style="font-size:10px;font-weight:700;color:#8B1717;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${names}</span>`;
+    }
+
+    h += `<div class="${cls}" data-date="${dateStr}" title="${isBooked ? dayBookings.map(x=>`${x.guest}: ${x.checkin} → ${x.checkout}`).join(' | ') : ''}" onclick="toggleDateSelection('${dateStr}', ${isBooked})">
         <span class="day-num">${d}</span><span class="day-price">${priceHtml}</span>
       </div>`;
   }
   grid.innerHTML = h; updateSidebarUI();
 }
 
+let calBookedMap = {};
 function toggleDateSelection(dateStr, isBooked) {
-  if(isBooked) return;
+  if(isBooked) { openCalBookingPopup(dateStr); return; }
   if(selectedDates.has(dateStr)) selectedDates.delete(dateStr); else selectedDates.add(dateStr);
   renderAdvCalendar();
+}
+function openCalBookingPopup(dateStr) {
+  const bks = calBookedMap[dateStr] || [];
+  if (!bks.length) return;
+  const money = v => '₹' + Number(v || 0).toLocaleString('en-IN');
+  document.getElementById('cal-booking-date').textContent = fmtDate(dateStr);
+  document.getElementById('cal-booking-body').innerHTML = bks.map(b => `
+    <div style="border:1px solid var(--gray-100);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong style="font-size:15px">${b.guest}</strong>
+        <span class="badge b-${b.status}">${(b.status||'').replace('_',' ')}</span>
+      </div>
+      <div style="font-size:13px;color:var(--gray-600);line-height:1.9">
+        📅 ${fmtDate(b.checkin)} → ${fmtDate(b.checkout)}<br/>
+        ${b.isExternal ? '🔗 External (Airbnb iCal block)' : `👤 ${b.guests || 1} guests · 💰 ${money(b.total_amount || b.amount)}${b.balance_amount && !b.balance_paid ? ` <span style="color:#dc2626;font-weight:600">(Due: ${money(b.balance_amount)})</span>` : ''}`}
+      </div>
+      ${!b.isExternal ? `<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-outline btn-sm" onclick="closeModal('cal-booking-modal');showPage('bookings')">Open in Bookings</button>
+        <button class="btn btn-outline btn-sm" style="color:#c2410c" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')">📋 Proforma</button>
+      </div>` : ''}
+    </div>`).join('');
+  showModal('cal-booking-modal');
 }
 function clearSelection() { selectedDates.clear(); renderAdvCalendar(); }
 
