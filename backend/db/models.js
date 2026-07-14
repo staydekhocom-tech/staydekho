@@ -76,6 +76,8 @@ const bookingSchema = new Schema({
   gst_on_commission_pct:{ type: Number, default: 0 },  // GST on commission %
   tds_pct:             { type: Number, default: 0 },   // TDS %
   net_payout:          { type: Number, default: null }, // we-received amount after commission/GST/TDS
+  payout_received:     { type: Boolean, default: false }, // OTA transferred payout to our bank
+  payout_received_at:  { type: Date, default: null },
   notes:               { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 

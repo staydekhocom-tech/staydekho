@@ -33,7 +33,7 @@ router.post('/bookings-log', async (req, res) => {
   try {
     const {
       property_id, guest_name, guest_phone, checkin, checkout,
-      platform, total_amount, advance_amount, net_payout, status, notes, balance_paid,
+      platform, total_amount, advance_amount, net_payout, status, notes, balance_paid, payout_received,
     } = req.body;
     if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
       return res.status(400).json({ error: 'Property, guest name, dates and total amount required hain' });
@@ -59,6 +59,8 @@ router.post('/bookings-log', async (req, res) => {
       status: status || 'confirmed',
       platform: platform || 'direct',
       net_payout: net_payout !== undefined && net_payout !== '' ? Number(net_payout) : Number(total_amount),
+      payout_received: !!payout_received,
+      payout_received_at: payout_received ? new Date() : null,
       notes: notes || '',
     });
 
@@ -91,6 +93,9 @@ router.put('/bookings-log/:id', async (req, res) => {
     // Stamp/clear full-payment date when balance_paid flips
     if (body.balance_paid === true && !existing.balance_paid) body.balance_paid_at = new Date();
     if (body.balance_paid === false) body.balance_paid_at = null;
+    // Stamp/clear OTA payout date when payout_received flips
+    if (body.payout_received === true && !existing.payout_received) body.payout_received_at = new Date();
+    if (body.payout_received === false) body.payout_received_at = null;
     const updated = await Booking.findByIdAndUpdate(req.params.id, body, { new: true }).lean();
 
     // ── Automation chain: dates changed → unblock old + block new; status → cancelled → unblock + notify ──

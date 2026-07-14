@@ -871,7 +871,7 @@
     <div class="form-row">
       <div class="form-grp"><label class="form-lbl">Property *</label><select class="form-ctrl" id="ob-property"></select></div>
       <div class="form-grp"><label class="form-lbl">Platform *</label>
-        <select class="form-ctrl" id="ob-platform">
+        <select class="form-ctrl" id="ob-platform" onchange="toggleObPayoutRow()">
           <option value="direct">StayDekho Direct</option>
           <option value="airbnb">Airbnb</option>
           <option value="booking_com">Booking.com</option>
@@ -907,6 +907,10 @@
     <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;cursor:pointer;margin-bottom:4px">
       <input type="checkbox" id="ob-balance-paid" style="width:18px;height:18px;accent-color:#16a34a"/>
       <span style="font-weight:600;color:#15803d;font-size:13px">✓ Full Payment Received (Balance Paid)</span>
+    </label>
+    <label id="ob-payout-wrap" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;cursor:pointer;margin-bottom:4px">
+      <input type="checkbox" id="ob-payout-received" style="width:18px;height:18px;accent-color:#1d4ed8"/>
+      <span style="font-weight:600;color:#1d4ed8;font-size:13px">🏦 Platform Payout Received <span style="font-weight:400;color:var(--gray-400)">— jab Airbnb/MMT bank me paisa transfer karde</span></span>
     </label>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-booking-modal')">Cancel</button><button class="btn btn-primary" id="ob-save-btn" onclick="saveBookingLog()">Save Booking</button></div>
   </div>
@@ -1986,7 +1990,7 @@ function renderBookingsLog() {
       <td>${fmtMoney(b.total_amount)}</td>
       <td>${fmtMoney(b.amount)}</td>
       <td style="color:${isFullyPaid ? '#16a34a' : '#dc2626'};font-weight:600">${isFullyPaid ? '✓ Paid' : fmtMoney(b.balance_amount)}</td>
-      <td>${fmtMoney(b.net_payout)}</td>
+      <td>${fmtMoney(b.net_payout)}${(b.platform && b.platform !== 'direct' && b.platform !== 'walkin') ? (b.payout_received ? ' <span style="color:#16a34a;font-size:10px;font-weight:700">🏦 ✓</span>' : ' <span style="color:#d97706;font-size:10px;font-weight:700">⏳ Pending</span>') : ''}</td>
       <td><span class="badge b-${b.status}">${b.status}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="openEditBookingLog('${bid}')">Edit</button>
@@ -2017,6 +2021,12 @@ function calcObRemaining() {
     bar.style.display = 'none';
   }
 }
+function toggleObPayoutRow() {
+  const p = document.getElementById('ob-platform').value;
+  const isOta = p && p !== 'direct' && p !== 'walkin';
+  document.getElementById('ob-payout-wrap').style.display = isOta ? 'flex' : 'none';
+  if (!isOta) document.getElementById('ob-payout-received').checked = false;
+}
 let obEditId = null;
 function openAddBookingLog() {
   obEditId = null;
@@ -2026,7 +2036,9 @@ function openAddBookingLog() {
   document.getElementById('ob-platform').value = 'direct';
   document.getElementById('ob-status').value = 'confirmed';
   document.getElementById('ob-balance-paid').checked = false;
+  document.getElementById('ob-payout-received').checked = false;
   document.getElementById('ob-remaining-bar').style.display = 'none';
+  toggleObPayoutRow();
   showModal('ops-booking-modal');
 }
 function openEditBookingLog(id) {
@@ -2046,6 +2058,8 @@ function openEditBookingLog(id) {
   document.getElementById('ob-status').value = b.status;
   document.getElementById('ob-notes').value = b.notes || '';
   document.getElementById('ob-balance-paid').checked = !!(b.balance_paid);
+  document.getElementById('ob-payout-received').checked = !!(b.payout_received);
+  toggleObPayoutRow();
   calcObRemaining();
   showModal('ops-booking-modal');
 }
@@ -2065,6 +2079,7 @@ async function saveBookingLog() {
     status:       document.getElementById('ob-status').value,
     notes:        document.getElementById('ob-notes').value.trim(),
     balance_paid: document.getElementById('ob-balance-paid').checked,
+    payout_received: document.getElementById('ob-payout-received').checked,
   };
   if (!body.property_id || !body.guest_name || !body.checkin || !body.checkout || !body.total_amount) {
     alert('Property, guest name, dates aur total amount required hain!'); return;

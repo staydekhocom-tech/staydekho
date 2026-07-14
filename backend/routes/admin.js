@@ -13,6 +13,24 @@ router.get('/stats', async (req, res) => {
     const startOfMonth  = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
+    // Actually-in-hand money:
+    // direct/walkin → advance + balance (if collected)
+    // OTA → net payout, but only once platform has transferred it (payout_received)
+    const receivedExpr = {
+      $cond: [
+        { $in: [{ $ifNull: ['$platform', 'direct'] }, ['direct', 'walkin']] },
+        { $add: [
+            { $ifNull: ['$amount', 0] },
+            { $cond: [{ $eq: ['$balance_paid', true] }, { $ifNull: ['$balance_amount', 0] }, 0] },
+        ] },
+        { $cond: [
+            { $eq: ['$payout_received', true] },
+            { $ifNull: ['$net_payout', { $ifNull: ['$total_amount', '$amount'] }] },
+            0,
+        ] },
+      ],
+    };
+
     const [
       totalProperties,
       activeProperties,
@@ -37,7 +55,7 @@ router.get('/stats', async (req, res) => {
         { $match: { status: { $in: ['confirmed', 'checked_in', 'checked_out'] } } },
         { $group: {
             _id: null,
-            received: { $sum: '$amount' },
+            received: { $sum: receivedExpr },
             booked:   { $sum: { $ifNull: ['$total_amount', '$amount'] } },
         } },
       ]),
@@ -50,7 +68,7 @@ router.get('/stats', async (req, res) => {
         },
         { $group: {
             _id: null,
-            received: { $sum: '$amount' },
+            received: { $sum: receivedExpr },
             booked:   { $sum: { $ifNull: ['$total_amount', '$amount'] } },
         } },
       ]),
@@ -81,7 +99,7 @@ router.get('/stats', async (req, res) => {
       { $group: {
           _id:      '$property_id',
           booked:   { $sum: { $ifNull: ['$total_amount', '$amount'] } },
-          received: { $sum: '$amount' },
+          received: { $sum: receivedExpr },
           bookings: { $sum: 1 },
       } },
       { $lookup: { from: 'properties', localField: '_id', foreignField: '_id', as: 'prop' } },
