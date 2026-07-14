@@ -64,6 +64,8 @@ const bookingSchema = new Schema({
   total_amount:        { type: Number, default: null },   // full booking price
   balance_amount:      { type: Number, default: null },   // remaining 70%
   balance_paid:        { type: Boolean, default: false }, // collected at check-in
+  balance_paid_at:     { type: Date, default: null },     // when full payment completed
+  booking_no:          { type: Number, default: null },   // short sequential number (SD-0001)
   payment_type:        { type: String, default: 'partial', enum: ['full', 'partial'] },
   status:              { type: String, default: 'pending', enum: ['pending', 'confirmed', 'cancelled', 'checked_in', 'checked_out'] },
   razorpay_order_id:   { type: String, default: null },

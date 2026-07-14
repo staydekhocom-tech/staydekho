@@ -146,8 +146,10 @@ router.post('/', protect, async (req, res) => {
     const advance  = Math.round(total * 0.30);
     const balance  = total - advance;
 
+    const bookingNo = (await Booking.countDocuments()) + 1;
     const booking = await Booking.create({
       user_id:      req.user.id,
+      booking_no:   bookingNo,
       property_id,
       guest_name:   guest_name  || req.user.name,
       guest_email:  guest_email || req.user.email,
@@ -181,7 +183,7 @@ router.put('/:id/balance-paid', protect, adminOnly, async (req, res) => {
   try {
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
-      { balance_paid: true },
+      { balance_paid: true, balance_paid_at: new Date() },
       { new: true }
     ).lean();
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
@@ -288,10 +290,20 @@ router.get('/:id/invoice', (req, res, next) => {
     const isProforma  = forceType === 'proforma' || (!forceType && !fullyPaid);
     const docType     = isProforma ? 'PROFORMA INVOICE' : 'TAX INVOICE';
     const docColor    = isProforma ? '#d97706' : '#8B1717';
-    const invoiceNo   = isProforma
-      ? `PRO-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`
-      : `INV-${new Date(row.created_at || Date.now()).getFullYear()}-${String(row.id).slice(-6).toUpperCase()}`;
-    const invoiceDate = (() => { try { return new Date(row.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return '—'; } })();
+
+    // Systematic booking number (backfill for old bookings: position by created date)
+    let bookingNo = row.booking_no;
+    if (!bookingNo) {
+      bookingNo = await Booking.countDocuments({ created_at: { $lte: row.created_at || new Date() } });
+      Booking.findByIdAndUpdate(booking._id, { booking_no: bookingNo }).catch(() => {});
+    }
+    const bookingCode = `SD-${String(bookingNo).padStart(4, '0')}`;
+
+    // Proforma date = booking date; Final invoice date = full-payment date
+    const invDateSrc  = isProforma ? row.created_at : (row.balance_paid_at || row.created_at);
+    const invYear     = new Date(invDateSrc || Date.now()).getFullYear();
+    const invoiceNo   = `${isProforma ? 'PRO' : 'INV'}-${invYear}-${String(bookingNo).padStart(4, '0')}`;
+    const invoiceDate = (() => { try { return new Date(invDateSrc).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return '—'; } })();
     const fmtD        = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
     const statusColor = fullyPaid && !isProforma ? '#16a34a'
       : { confirmed: '#16a34a', pending: '#d97706', cancelled: '#dc2626', checked_in: '#2563eb', checked_out: '#6b7280' }[row.status] || '#6b7280';
@@ -419,7 +431,7 @@ router.get('/:id/invoice', (req, res, next) => {
     </div>
     <div class="info-box">
       <h4>Booking Details</h4>
-      <div class="info-row"><span class="lbl">Booking ID</span><span class="val">#${row.id}</span></div>
+      <div class="info-row"><span class="lbl">Booking ID</span><span class="val">${bookingCode}</span></div>
       <div class="info-row"><span class="lbl">Check-in</span><span class="val">${fmtD(row.checkin)}</span></div>
       <div class="info-row"><span class="lbl">Check-out</span><span class="val">${fmtD(row.checkout)}</span></div>
       <div class="info-row"><span class="lbl">Duration</span><span class="val">${row.nights} Night${row.nights > 1 ? 's' : ''}</span></div>

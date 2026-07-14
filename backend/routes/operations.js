@@ -33,7 +33,7 @@ router.post('/bookings-log', async (req, res) => {
   try {
     const {
       property_id, guest_name, guest_phone, checkin, checkout,
-      platform, total_amount, advance_amount, net_payout, status, notes,
+      platform, total_amount, advance_amount, net_payout, status, notes, balance_paid,
     } = req.body;
     if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
       return res.status(400).json({ error: 'Property, guest name, dates and total amount required hain' });
@@ -46,11 +46,15 @@ router.post('/bookings-log', async (req, res) => {
     const advance = Number(advance_amount) || 0;
     const balance = Number(total_amount) - advance;
 
+    const isPaid = !!balance_paid || balance <= 0;
+    const bookingNo = (await Booking.countDocuments()) + 1;
     const booking = await Booking.create({
       property_id, guest_name, guest_phone: guest_phone || '',
       guest_email: '', checkin, checkout, nights,
       amount: advance, total_amount: Number(total_amount), balance_amount: balance,
-      balance_paid: balance <= 0,
+      balance_paid: isPaid,
+      balance_paid_at: isPaid ? new Date() : null,
+      booking_no: bookingNo,
       payment_type: advance >= Number(total_amount) ? 'full' : 'partial',
       status: status || 'confirmed',
       platform: platform || 'direct',
@@ -84,6 +88,9 @@ router.put('/bookings-log/:id', async (req, res) => {
       const cout = new Date(((body.checkout || existing.checkout) + '').slice(0,10) + 'T12:00:00');
       body.nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
     }
+    // Stamp/clear full-payment date when balance_paid flips
+    if (body.balance_paid === true && !existing.balance_paid) body.balance_paid_at = new Date();
+    if (body.balance_paid === false) body.balance_paid_at = null;
     const updated = await Booking.findByIdAndUpdate(req.params.id, body, { new: true }).lean();
 
     // ── Automation chain: dates changed → unblock old + block new; status → cancelled → unblock + notify ──
