@@ -574,7 +574,7 @@ router.get('/:id/owner-bill', (req, res, next) => {
       if ((totalAmt / nights) / 1.05 > 7500) gstRate = 0.18;
       base = Math.round(totalAmt / (1 + gstRate));
       gstDeducted = totalAmt - base;
-      baseLabel = `Guest Paid − GST (${Math.round(gstRate*100)}%)`;
+      baseLabel = 'Booking Amount';
     } else {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
       baseLabel = `${PLATFORM_LABELS[platform]} Net Payout (after platform deductions)`;
