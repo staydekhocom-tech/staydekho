@@ -428,7 +428,7 @@
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#ID</th><th>Guest</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Guests</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>#ID</th><th>Guest</th><th>Property</th><th>Platform</th><th>Check-in</th><th>Check-out</th><th>Guests</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="bookings-tbody"></tbody>
         </table>
       </div>
@@ -1079,6 +1079,8 @@ async function initAdmin() {
 
     bookings = (booksRes.bookings || []).map(b => ({
       id: b.id || b._id, guest: b.guest_name || b.user_name || '—', property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout, guests: b.guests || 1, amount: b.amount || 0, status: b.status || 'pending',
+      total_amount: b.total_amount || 0, balance_amount: b.balance_amount || 0, balance_paid: b.balance_paid || false,
+      platform: b.platform || 'direct', payout_received: b.payout_received || false, owner_paid: b.owner_paid || false,
       propId: (b.property_id?._id || b.property_id || '').toString(),
     }));
 
@@ -1634,9 +1636,7 @@ async function updateBookingStatus(id, status) {
   if (!confirm(`Change booking status to "${status}"?`)) return;
   try {
     await api.updateBookingStatus(id, status);
-    const d = await api.listBookings().catch(()=>({bookings:[]}));
-    bookings = (d.bookings || []).map(b => ({ id: b.id || b._id, guest: b.guest_name || b.user_name || '—', property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout, guests: b.guests || 1, amount: b.amount || 0, status: b.status || 'pending' }));
-    renderBookings(bookings);
+    await refreshMainBookings();
   } catch (err) { alert('Failed: ' + err.message); }
 }
 
@@ -2109,6 +2109,7 @@ async function refreshMainBookings() {
       property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout,
       guests: b.guests || 1, amount: b.amount || 0, total_amount: b.total_amount || b.amount || 0,
       balance_amount: b.balance_amount || 0, balance_paid: b.balance_paid || false,
+      platform: b.platform || 'direct', payout_received: b.payout_received || false, owner_paid: b.owner_paid || false,
       status: b.status || 'pending', propId: (b.property_id?._id || b.property_id || '').toString(),
     }));
     applyBookingFilters();
@@ -2703,7 +2704,9 @@ function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); docu
   const amtDisplay = totalAmt
     ? `<div style="font-size:10px;color:var(--gray-400)">Adv: ₹${Number(b.amount||0).toLocaleString('en-IN')}</div><div style="font-weight:600">Total: ₹${Number(totalAmt).toLocaleString('en-IN')}</div>${remainingAmt > 0 ? `<div style="font-size:10px;color:#dc2626;font-weight:600">Remaining: ₹${Number(remainingAmt).toLocaleString('en-IN')}</div>` : `<div style="font-size:10px;color:#16a34a;font-weight:600">✓ Fully Paid</div>`}`
     : `<b>₹${Number(b.amount||0).toLocaleString('en-IN')}</b>`;
-  return `<tr><td style="color:var(--gray-400);font-size:12px;font-weight:600;white-space:nowrap" title="${b.id}">#${bookingSeqNo(b.id)}</td><td><b>${b.guest}</b></td><td>${b.property}</td><td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td><td>${b.guests}</td><td>${amtDisplay}</td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${actions.join('')}</div></td></tr>`; }).join(''); }
+  const PLAT_LBL = { direct: 'StayDekho Direct', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT/Goibibo', walkin: 'Walk-in' };
+  const platLbl = PLAT_LBL[b.platform] || 'StayDekho Direct';
+  return `<tr><td style="color:var(--gray-400);font-size:12px;font-weight:600;white-space:nowrap" title="${b.id}">#${bookingSeqNo(b.id)}</td><td><b>${b.guest}</b></td><td>${b.property}</td><td><span class="badge" style="font-size:10.5px">${platLbl}</span></td><td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td><td>${b.guests}</td><td>${amtDisplay}</td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${actions.join('')}</div></td></tr>`; }).join(''); }
 
 // Short sequential booking number: oldest booking = #1 (full Mongo id in hover tooltip)
 function bookingSeqNo(id) {
