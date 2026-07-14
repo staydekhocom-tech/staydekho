@@ -893,9 +893,12 @@
       <div class="form-grp"><label class="form-lbl">Total Amount (₹) *</label><input class="form-ctrl" id="ob-total" type="number" oninput="calcObRemaining()"/></div>
       <div class="form-grp"><label class="form-lbl">Advance Received (₹)</label><input class="form-ctrl" id="ob-advance" type="number" value="0" oninput="calcObRemaining()"/></div>
     </div>
-    <div id="ob-remaining-bar" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+    <div id="ob-remaining-bar" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:4px;justify-content:space-between;align-items:center;gap:10px">
       <span style="font-size:12px;color:#991b1b;font-weight:600">Remaining (Due at Check-in)</span>
-      <span id="ob-remaining-val" style="font-size:16px;font-weight:800;color:#dc2626">₹0</span>
+      <span style="display:flex;align-items:center;gap:10px">
+        <span id="ob-remaining-val" style="font-size:16px;font-weight:800;color:#dc2626">₹0</span>
+        <button type="button" id="ob-clear-btn" onclick="markObCleared()" style="display:none;background:#16a34a;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">✓ Cleared at Check-in</button>
+      </span>
     </div>
     <div class="form-row">
       <div class="form-grp"><label class="form-lbl">Net Payout (₹) <span style="font-weight:400;color:var(--gray-400)">— jo amount tumhe milega, after platform commission</span></label><input class="form-ctrl" id="ob-net-payout" type="number" placeholder="e.g. same as Total for Direct"/></div>
@@ -905,7 +908,7 @@
     </div>
     <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ob-notes"/></div>
     <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;cursor:pointer;margin-bottom:4px">
-      <input type="checkbox" id="ob-balance-paid" style="width:18px;height:18px;accent-color:#16a34a"/>
+      <input type="checkbox" id="ob-balance-paid" style="width:18px;height:18px;accent-color:#16a34a" onchange="calcObRemaining()"/>
       <span style="font-weight:600;color:#15803d;font-size:13px">✓ Full Payment Received (Balance Paid)</span>
     </label>
     <label id="ob-payout-wrap" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;cursor:pointer;margin-bottom:4px">
@@ -2009,22 +2012,32 @@ function renderBookingsLog() {
   document.getElementById('ops-bookings-tbody').innerHTML = rows || '<tr><td colspan="11" style="text-align:center;color:var(--gray-400)">No bookings logged yet</td></tr>';
 }
 function calcObRemaining() {
-  const total = Number(document.getElementById('ob-total').value) || 0;
-  const adv   = Number(document.getElementById('ob-advance').value) || 0;
-  const rem   = Math.max(0, total - adv);
-  const bar   = document.getElementById('ob-remaining-bar');
-  const val   = document.getElementById('ob-remaining-val');
+  const total   = Number(document.getElementById('ob-total').value) || 0;
+  const adv     = Number(document.getElementById('ob-advance').value) || 0;
+  const cleared = document.getElementById('ob-balance-paid').checked;
+  const rawRem  = Math.max(0, total - adv);
+  const rem     = cleared ? 0 : rawRem;
+  const bar     = document.getElementById('ob-remaining-bar');
+  const val     = document.getElementById('ob-remaining-val');
+  const btn     = document.getElementById('ob-clear-btn');
+  const lbl     = bar.querySelector('span');
   if (total > 0) {
     bar.style.display = 'flex';
     val.textContent = '₹' + rem.toLocaleString('en-IN');
     bar.style.background = rem > 0 ? '#fef2f2' : '#f0fdf4';
     bar.style.borderColor = rem > 0 ? '#fecaca' : '#86efac';
     val.style.color = rem > 0 ? '#dc2626' : '#16a34a';
-    bar.querySelector('span').style.color = rem > 0 ? '#991b1b' : '#15803d';
-    bar.querySelector('span').textContent = rem > 0 ? 'Remaining (Due at Check-in)' : '✓ Fully Paid';
+    lbl.style.color = rem > 0 ? '#991b1b' : '#15803d';
+    lbl.textContent = rem > 0 ? 'Remaining (Due at Check-in)'
+      : (cleared && rawRem > 0 ? '✓ Remaining Cleared at Check-in' : '✓ Fully Paid');
+    btn.style.display = (rem > 0) ? 'inline-block' : 'none';
   } else {
     bar.style.display = 'none';
   }
+}
+function markObCleared() {
+  document.getElementById('ob-balance-paid').checked = true;
+  calcObRemaining();
 }
 function toggleObPayoutRow() {
   const p = document.getElementById('ob-platform').value;
