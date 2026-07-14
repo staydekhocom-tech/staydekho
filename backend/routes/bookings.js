@@ -660,7 +660,6 @@ router.get('/:id/owner-bill', (req, res, next) => {
 
   <div class="split">
     <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${INR(base)}</span></div>
-    ${isDirect && gstDeducted > 0 ? `<div class="split-row" style="font-size:11.5px;color:#999"><span class="lbl">(GST ${INR(gstDeducted)} remitted separately — not part of split)</span><span></span></div>` : ''}
     <div class="split-row owner"><span class="lbl">🏠 Owner Share (70%)</span><span>${INR(ownerShare)}</span></div>
     <div class="split-row sd"><span class="lbl">StayDekho Share (30%)</span><span>${INR(sdShare)}</span></div>
   </div>
