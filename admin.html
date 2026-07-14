@@ -1970,13 +1970,12 @@ async function loadBookingsLog() {
 function renderBookingsLog() {
   const rows = opsBookingsLog.map(b => {
     const bid = b._id || b.id;
-    const token = localStorage.getItem('sd_token');
-    const base = getApiBase();
     const isFullyPaid = b.balance_paid || b.status === 'checked_out' || !b.balance_amount || b.balance_amount <= 0;
-    const proformaBtn = `<button class="btn btn-outline btn-sm" style="color:#c2410c;border-color:#fed7aa" onclick="window.open('${base}/bookings/${bid}/invoice?type=proforma&token=${token ? "'+token+'" : ''}','_blank')">📋 Proforma</button>`;
+    const proformaBtn = `<button class="btn btn-outline btn-sm" style="color:#c2410c;border-color:#fed7aa" onclick="window.open(getApiBase()+'/bookings/${bid}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')">📋 Proforma</button>`;
     const finalBtn = isFullyPaid
-      ? `<button class="btn btn-outline btn-sm" style="color:#15803d;border-color:#86efac" onclick="window.open('${base}/bookings/${bid}/invoice?type=final&token=${token ? "'+token+'" : ''}','_blank')">🧾 Final Bill</button>`
+      ? `<button class="btn btn-outline btn-sm" style="color:#15803d;border-color:#86efac" onclick="window.open(getApiBase()+'/bookings/${bid}/invoice?type=final&token='+localStorage.getItem('sd_token'),'_blank')">🧾 Final Bill</button>`
       : '';
+    const ownerBtn = `<button class="btn btn-outline btn-sm" style="color:#1d4ed8;border-color:#bfdbfe" onclick="window.open(getApiBase()+'/bookings/${bid}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')">🏠 Owner</button>`;
     return `
     <tr>
       <td><strong>${b.guest_name}</strong></td>
@@ -1994,6 +1993,7 @@ function renderBookingsLog() {
         <button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteBookingLogRow('${bid}')">Delete</button>
         ${proformaBtn}
         ${finalBtn}
+        ${ownerBtn}
       </td>
     </tr>`;
   }).join('');
@@ -2668,6 +2668,7 @@ function filterUsers(q) { renderUsers(users.filter(u => (u.name || '').toLowerCa
 
 function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-primary btn-sm" style="flex:1" onclick="openPropDash('${p.id}')">📊 Details</button><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp('${p.id}')">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteProp('${p.id}')">🗑</button></div></div></div>`; }).join(''); }
 function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="updateBookingStatus('${b.id}','confirmed')">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')" title="Proforma Invoice">📋 Proforma</button>`);
+  actions.push(`<button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')" title="Owner Payout Statement">🏠 Owner</button>`);
   // Balance pending button
   const balanceAmt = b.balance_amount || b.balanceAmount;
   const balancePaid = b.balance_paid || b.balancePaid;

@@ -546,6 +546,140 @@ router.get('/:id/invoice', (req, res, next) => {
   }
 });
 
+// GET /api/bookings/:id/owner-bill — Owner Payout Statement (admin only, printable)
+// Direct/walk-in: (total − GST) split 70% owner / 30% StayDekho
+// OTA: platform net payout split 70/30 directly — no tax lines
+router.get('/:id/owner-bill', (req, res, next) => {
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+}, protect, adminOnly, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('property_id', 'name location')
+      .lean();
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const nights   = booking.nights || 1;
+    const totalAmt = booking.total_amount || booking.amount || 0;
+    const platform = booking.platform || 'direct';
+    const isDirect = platform === 'direct' || platform === 'walkin';
+    const PLATFORM_LABELS = { direct: 'Direct (Website)', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT / Goibibo', walkin: 'Walk-in' };
+
+    // Base for the 70:30 split
+    let base, baseLabel, gstDeducted = 0;
+    if (isDirect) {
+      let gstRate = 0.05;
+      if ((totalAmt / nights) / 1.05 > 7500) gstRate = 0.18;
+      base = Math.round(totalAmt / (1 + gstRate));
+      gstDeducted = totalAmt - base;
+      baseLabel = `Guest Paid − GST (${Math.round(gstRate*100)}%)`;
+    } else {
+      base = booking.net_payout != null ? booking.net_payout : totalAmt;
+      baseLabel = `${PLATFORM_LABELS[platform]} Net Payout (after platform deductions)`;
+    }
+    const ownerShare = Math.round(base * 0.70);
+    const sdShare    = base - ownerShare;
+
+    let bookingNo = booking.booking_no;
+    if (!bookingNo) {
+      bookingNo = await Booking.countDocuments({ created_at: { $lte: booking.created_at || new Date() } });
+      Booking.findByIdAndUpdate(booking._id, { booking_no: bookingNo }).catch(() => {});
+    }
+    const bookingCode = `SD-${String(bookingNo).padStart(4, '0')}`;
+    const stmtNo      = `OWN-${new Date(booking.created_at || Date.now()).getFullYear()}-${String(bookingNo).padStart(4, '0')}`;
+
+    const fullyPaid = booking.balance_paid || booking.status === 'checked_out';
+    const INR  = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0 });
+    const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return s || '—'; } };
+    const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
+    const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Owner Statement ${stmtNo} — StayDekho</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f4f4f4}
+  .page{max-width:700px;margin:24px auto;background:#fff;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,.1)}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #1d4ed8}
+  .logo{font-size:22px;font-weight:800;color:#8B1717}.logo span{color:#1a1a1a}
+  .company-info{font-size:11px;color:#555;margin-top:4px;line-height:1.7}
+  .inv-title{font-size:18px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em}
+  .inv-no{font-size:13px;font-weight:700;margin-top:4px}.inv-date{font-size:11px;color:#777;margin-top:2px}
+  .info-box{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:16px;margin-bottom:20px}
+  .info-box h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1d4ed8;margin-bottom:10px}
+  .info-row{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;gap:8px}
+  .info-row .lbl{color:#777}.info-row .val{font-weight:600;text-align:right}
+  .split{margin-top:20px}
+  .split-row{display:flex;justify-content:space-between;padding:10px 14px;font-size:13px;border-bottom:1px solid #f0f0f0}
+  .split-row .lbl{color:#555}
+  .split-row.base{background:#f8fafc;font-weight:700;border-radius:8px 8px 0 0}
+  .split-row.owner{background:#f0fdf4;font-weight:800;font-size:15px;color:#15803d}
+  .split-row.sd{background:#fef2f2;font-weight:700;color:#8B1717}
+  .paid-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${fullyPaid ? '#16a34a' : '#d97706'};margin-top:8px}
+  .footer{margin-top:28px;padding-top:16px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:11px;color:#aaa}
+  .print-btn{position:fixed;bottom:24px;right:24px;background:#1d4ed8;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;z-index:99}
+  @media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:28px}.print-btn{display:none}
+    .split-row,.paid-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+<div class="page">
+  <div class="hdr">
+    <div>
+      <div class="logo">StayDekh<span>o</span></div>
+      <div class="company-info">Premium Group Stays · Udaipur, Rajasthan<br/>${phone} · ${email}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="inv-title">Owner Payout Statement</div>
+      <div class="inv-no">${stmtNo}</div>
+      <div class="inv-date">Booking: ${bookingCode}</div>
+      <div><span class="paid-badge">${fullyPaid ? 'Guest Fully Paid ✓' : 'Payment Pending'}</span></div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <h4>Booking Details</h4>
+    <div class="info-row"><span class="lbl">Property</span><span class="val">${booking.property_id?.name || '—'}</span></div>
+    <div class="info-row"><span class="lbl">Guest Name</span><span class="val">${booking.guest_name || '—'}</span></div>
+    <div class="info-row"><span class="lbl">Check-in</span><span class="val">${fmtD(booking.checkin)}</span></div>
+    <div class="info-row"><span class="lbl">Check-out</span><span class="val">${fmtD(booking.checkout)}</span></div>
+    <div class="info-row"><span class="lbl">Nights</span><span class="val">${nights}</span></div>
+    <div class="info-row"><span class="lbl">Booking Source</span><span class="val">${PLATFORM_LABELS[platform] || platform}</span></div>
+    <div class="info-row"><span class="lbl">Guest Paid (Total)</span><span class="val">${INR(totalAmt)}</span></div>
+    ${isDirect
+      ? `<div class="info-row"><span class="lbl">Advance (Online)</span><span class="val">${INR(booking.amount || 0)}</span></div>
+         <div class="info-row"><span class="lbl">Balance (At Check-in)</span><span class="val">${INR(booking.balance_amount || 0)} ${booking.balance_paid ? '✓ Received' : '(Pending)'}</span></div>`
+      : `<div class="info-row"><span class="lbl">Platform Net Payout</span><span class="val">${INR(base)}</span></div>`}
+  </div>
+
+  <div class="split">
+    <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${INR(base)}</span></div>
+    ${isDirect && gstDeducted > 0 ? `<div class="split-row" style="font-size:11.5px;color:#999"><span class="lbl">(GST ${INR(gstDeducted)} remitted separately — not part of split)</span><span></span></div>` : ''}
+    <div class="split-row owner"><span class="lbl">🏠 Owner Share (70%)</span><span>${INR(ownerShare)}</span></div>
+    <div class="split-row sd"><span class="lbl">StayDekho Share (30%)</span><span>${INR(sdShare)}</span></div>
+  </div>
+
+  <div class="footer">
+    <span>StayDekho · Udaipur, Rajasthan · ${phone}</span>
+    <span>${stmtNo} · Generated ${new Date().toLocaleDateString('en-IN')}</span>
+  </div>
+</div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/bookings/:id  — cancel booking (guest or admin)
 router.delete('/:id', protect, async (req, res) => {
   try {
