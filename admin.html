@@ -912,6 +912,10 @@
       <input type="checkbox" id="ob-payout-received" style="width:18px;height:18px;accent-color:#1d4ed8"/>
       <span style="font-weight:600;color:#1d4ed8;font-size:13px">🏦 Platform Payout Received <span style="font-weight:400;color:var(--gray-400)">— jab Airbnb/MMT bank me paisa transfer karde</span></span>
     </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;cursor:pointer;margin-bottom:4px">
+      <input type="checkbox" id="ob-owner-paid" style="width:18px;height:18px;accent-color:#9333ea"/>
+      <span style="font-weight:600;color:#7e22ce;font-size:13px">🏠 Owner Paid <span style="font-weight:400;color:var(--gray-400)">— owner ko 70% share transfer ho gaya</span></span>
+    </label>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn btn-outline" onclick="closeModal('ops-booking-modal')">Cancel</button><button class="btn btn-primary" id="ob-save-btn" onclick="saveBookingLog()">Save Booking</button></div>
   </div>
 </div>
@@ -1066,7 +1070,8 @@ async function initAdmin() {
     const fmtRev = v => v >= 100000 ? '₹' + (v/100000).toFixed(1) + 'L' : '₹' + v.toLocaleString('en-IN');
     document.getElementById('stat-rev').textContent = fmtRev(s.monthBookedValue || s.monthRevenue || 0);
     const revSub = document.getElementById('stat-rev-sub');
-    if (revSub) revSub.textContent = 'StayDekho Received: ' + fmtRev(s.monthRevenue || 0);
+    if (revSub) revSub.innerHTML = 'StayDekho Received: ' + fmtRev(s.monthRevenue || 0)
+      + (s.ownerPending > 0 ? '<br/><span style="color:#9333ea">Owner Payable: ' + fmtRev(s.ownerPending) + '</span>' : '');
 
     properties = (propsRes.properties || []).map(p => ({
       id: p.id || p._id, name: p.name || p.title, location: p.location, price: p.price, guests: p.guests || p.max_guests || 10, beds: p.beds || 4, amenities: Array.isArray(p.amenities) ? p.amenities.join(', ') : (p.amenities || ''), desc: p.description || '', status: p.status || 'Active', images: p.images && p.images.length ? p.images : (p.main_image ? [p.main_image] : []),
@@ -1990,7 +1995,7 @@ function renderBookingsLog() {
       <td>${fmtMoney(b.total_amount)}</td>
       <td>${fmtMoney(b.amount)}</td>
       <td style="color:${isFullyPaid ? '#16a34a' : '#dc2626'};font-weight:600">${isFullyPaid ? '✓ Paid' : fmtMoney(b.balance_amount)}</td>
-      <td>${fmtMoney(b.net_payout)}${(b.platform && b.platform !== 'direct' && b.platform !== 'walkin') ? (b.payout_received ? ' <span style="color:#16a34a;font-size:10px;font-weight:700">🏦 ✓</span>' : ' <span style="color:#d97706;font-size:10px;font-weight:700">⏳ Pending</span>') : ''}</td>
+      <td>${fmtMoney(b.net_payout)}${(b.platform && b.platform !== 'direct' && b.platform !== 'walkin') ? (b.payout_received ? ' <span style="color:#16a34a;font-size:10px;font-weight:700">🏦 ✓</span>' : ' <span style="color:#d97706;font-size:10px;font-weight:700">⏳ Pending</span>') : ''}<br/><span style="font-size:10px;font-weight:700;color:${b.owner_paid ? '#16a34a' : '#9333ea'}">${b.owner_paid ? '🏠 Owner Paid ✓' : '🏠 Owner Due'}</span></td>
       <td><span class="badge b-${b.status}">${b.status}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="openEditBookingLog('${bid}')">Edit</button>
@@ -2037,6 +2042,7 @@ function openAddBookingLog() {
   document.getElementById('ob-status').value = 'confirmed';
   document.getElementById('ob-balance-paid').checked = false;
   document.getElementById('ob-payout-received').checked = false;
+  document.getElementById('ob-owner-paid').checked = false;
   document.getElementById('ob-remaining-bar').style.display = 'none';
   toggleObPayoutRow();
   showModal('ops-booking-modal');
@@ -2059,6 +2065,7 @@ function openEditBookingLog(id) {
   document.getElementById('ob-notes').value = b.notes || '';
   document.getElementById('ob-balance-paid').checked = !!(b.balance_paid);
   document.getElementById('ob-payout-received').checked = !!(b.payout_received);
+  document.getElementById('ob-owner-paid').checked = !!(b.owner_paid);
   toggleObPayoutRow();
   calcObRemaining();
   showModal('ops-booking-modal');
@@ -2080,6 +2087,7 @@ async function saveBookingLog() {
     notes:        document.getElementById('ob-notes').value.trim(),
     balance_paid: document.getElementById('ob-balance-paid').checked,
     payout_received: document.getElementById('ob-payout-received').checked,
+    owner_paid: document.getElementById('ob-owner-paid').checked,
   };
   if (!body.property_id || !body.guest_name || !body.checkin || !body.checkout || !body.total_amount) {
     alert('Property, guest name, dates aur total amount required hain!'); return;

@@ -112,6 +112,30 @@ router.get('/stats', async (req, res) => {
       { $sort: { booked: -1 } },
     ]);
 
+    // Owner payable tracking — only bookings from cutoff onwards (older ones settled informally)
+    const OWNER_TRACKING_START = new Date('2026-07-11T00:00:00Z');
+    const ownerRows = await Booking.find({
+      status:     { $in: ['confirmed', 'checked_in', 'checked_out'] },
+      created_at: { $gte: OWNER_TRACKING_START },
+    }).select('total_amount amount nights platform net_payout owner_paid').lean();
+
+    let ownerPending = 0, ownerPaidTotal = 0;
+    for (const b of ownerRows) {
+      const totalAmt = b.total_amount || b.amount || 0;
+      const platform = b.platform || 'direct';
+      const isDirect = platform === 'direct' || platform === 'walkin';
+      let base;
+      if (isDirect) {
+        let g = 0.05;
+        if ((totalAmt / (b.nights || 1)) / 1.05 > 7500) g = 0.18;
+        base = Math.round(totalAmt / (1 + g));
+      } else {
+        base = b.net_payout != null ? b.net_payout : totalAmt;
+      }
+      const ownerShare = Math.round(base * 0.70);
+      if (b.owner_paid) ownerPaidTotal += ownerShare; else ownerPending += ownerShare;
+    }
+
     // Monthly revenue chart (last 6 months)
     const monthlyRevenue = await Booking.aggregate([
       { $match: { status: 'confirmed' } },
@@ -143,6 +167,8 @@ router.get('/stats', async (req, res) => {
         totalBookedValue,
         monthRevenue,
         monthBookedValue,
+        ownerPending,
+        ownerPaidTotal,
       },
       recentBookings,
       monthlyRevenue,

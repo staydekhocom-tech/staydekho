@@ -78,6 +78,8 @@ const bookingSchema = new Schema({
   net_payout:          { type: Number, default: null }, // we-received amount after commission/GST/TDS
   payout_received:     { type: Boolean, default: false }, // OTA transferred payout to our bank
   payout_received_at:  { type: Date, default: null },
+  owner_paid:          { type: Boolean, default: false }, // owner's 70% share transferred
+  owner_paid_at:       { type: Date, default: null },
   notes:               { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
