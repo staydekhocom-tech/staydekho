@@ -114,7 +114,7 @@ router.post('/verify', protect, async (req, res) => {
 
     // Send confirmation email (non-blocking)
     const confirmed = await Booking.findById(booking_id)
-      .populate('property_id', 'name')
+      .populate('property_id', 'name owner_name owner_phone caretaker_name caretaker_phone')
       .lean();
     if (confirmed) {
       const emailData = {
@@ -129,6 +129,9 @@ router.post('/verify', protect, async (req, res) => {
         .catch(e => console.error('Calendar block error:', e.message));
       createCleaningTaskForCheckout(confirmed.property_id._id, confirmed.checkout)
         .catch(e => console.error('Cleaning task error:', e.message));
+      // WhatsApp: owner + caretaker + admin ko turant update
+      require('../services/whatsapp').notifyTeamNewBooking(confirmed, confirmed.property_id)
+        .catch(e => console.error('Team WhatsApp error:', e.message));
     }
 
     res.json({

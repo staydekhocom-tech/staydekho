@@ -47,6 +47,10 @@ const propertySchema = new Schema({
   lat:               { type: Number, default: null },
   lng:               { type: Number, default: null },
   nearby_attractions:{ type: String, default: '[]' },
+  owner_name:        { type: String, default: '' },
+  owner_phone:       { type: String, default: '' },   // WhatsApp notifications ke liye
+  caretaker_name:    { type: String, default: '' },
+  caretaker_phone:   { type: String, default: '' },   // WhatsApp notifications ke liye
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 // ── 3. Booking ─────────────────────────────────────────

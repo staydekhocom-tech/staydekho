@@ -901,6 +901,38 @@
     }
     .reveal.visible { opacity: 1; transform: translateY(0); }
 
+    /* Sliding entrances */
+    .slide-l {
+      opacity: 0;
+      transform: translateX(-56px);
+      transition: opacity .7s ease, transform .75s cubic-bezier(.22, 1, .36, 1);
+    }
+    .slide-l.visible { opacity: 1; transform: none; }
+    .slide-r {
+      opacity: 0;
+      transform: translateX(56px);
+      transition: opacity .7s ease, transform .75s cubic-bezier(.22, 1, .36, 1);
+    }
+    .slide-r.visible { opacity: 1; transform: none; }
+
+    /* Rolling card entrance */
+    .roll-up {
+      opacity: 0;
+      transform: translateY(40px) rotate(2.5deg) scale(.96);
+      transform-origin: bottom center;
+      transition: opacity .6s ease, transform .7s cubic-bezier(.22, 1, .36, 1);
+    }
+    .roll-up.visible { opacity: 1; transform: none; }
+
+    /* Accessibility: no motion for users who opt out */
+    @media (prefers-reduced-motion: reduce) {
+      .reveal, .reveal-left, .slide-l, .slide-r, .roll-up {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }

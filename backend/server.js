@@ -116,6 +116,30 @@ if (process.env.ICAL_SYNC_DISABLED !== '1') {
   setInterval(runIcalSync, intervalMs);
 }
 
+// ── Auto check-in / check-out by date (IST) ───────────
+// confirmed + checkin aa gaya  → checked_in
+// checked_in/confirmed + checkout aa gaya → checked_out
+async function runAutoStatusUpdate() {
+  try {
+    const { Booking } = require('./db/models');
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+
+    const rIn = await Booking.updateMany(
+      { status: 'confirmed', checkin: { $lte: today }, checkout: { $gt: today } },
+      { $set: { status: 'checked_in' } }
+    );
+    const rOut = await Booking.updateMany(
+      { status: { $in: ['confirmed', 'checked_in'] }, checkout: { $lte: today } },
+      { $set: { status: 'checked_out' } }
+    );
+    if (rIn.modifiedCount || rOut.modifiedCount) {
+      console.log(`🔄 Auto-status: ${rIn.modifiedCount} checked-in, ${rOut.modifiedCount} checked-out (${today})`);
+    }
+  } catch (e) { console.error('Auto-status error:', e.message); }
+}
+setTimeout(runAutoStatusUpdate, 15 * 1000);           // startup ke 15s baad
+setInterval(runAutoStatusUpdate, 60 * 60 * 1000);     // phir har ghante
+
 // ── Start (MongoDB connect karke phir listen) ─────────
 const PORT = process.env.PORT || 5000;
 

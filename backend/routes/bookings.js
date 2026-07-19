@@ -139,8 +139,7 @@ router.post('/', protect, async (req, res) => {
     const avgNight = base / nights;
     const gstRate  = avgNight > 7500 ? 0.18 : 0.05;
     const gst      = Math.round(base * gstRate);
-    const svc      = Math.round(base * 0.05);
-    const total    = base + gst + svc;
+    const total    = base + gst;
 
     // 30% advance at booking, 70% at check-in
     const advance  = Math.round(total * 0.30);
@@ -568,12 +567,10 @@ router.get('/:id/owner-bill', (req, res, next) => {
     const PLATFORM_LABELS = { direct: 'Direct (Website)', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT / Goibibo', walkin: 'Walk-in' };
 
     // Base for the 70:30 split
-    let base, baseLabel, gstDeducted = 0;
+    // Direct/walk-in: no GST/occupancy tax charged — FULL guest amount split 70/30
+    let base, baseLabel;
     if (isDirect) {
-      let gstRate = 0.05;
-      if ((totalAmt / nights) / 1.05 > 7500) gstRate = 0.18;
-      base = Math.round(totalAmt / (1 + gstRate));
-      gstDeducted = totalAmt - base;
+      base = totalAmt;
       baseLabel = 'Booking Amount';
     } else {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;

@@ -5,6 +5,7 @@ const {
   blockCalendarForBooking, unblockCalendarIfFree,
   createCleaningTaskForCheckout, notifyGuestBookingCreated, notifyGuestBookingCancelled,
 } = require('../services/bookingAutomation');
+const { notifyTeamNewBooking, notifyTeamBookingCancelled } = require('../services/whatsapp');
 
 router.use(protect, adminOnly);
 
@@ -43,6 +44,19 @@ router.post('/bookings-log', async (req, res) => {
     const cout = new Date((checkout + '').slice(0,10) + 'T12:00:00');
     const nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
 
+    // ── Double-booking check: same property, overlapping dates ──
+    const overlap = await Booking.findOne({
+      property_id,
+      status:   { $nin: ['cancelled'] },
+      checkin:  { $lt: (checkout + '').slice(0,10) },
+      checkout: { $gt: (checkin  + '').slice(0,10) },
+    }).lean();
+    if (overlap) {
+      return res.status(409).json({
+        error: `⚠️ Ye dates already booked hain! ${overlap.guest_name} ki booking hai ${overlap.checkin} se ${overlap.checkout} tak (status: ${overlap.status}). Pehle wo cancel karo ya dates badlo.`,
+      });
+    }
+
     const advance = Number(advance_amount) || 0;
     const balance = Number(total_amount) - advance;
 
@@ -70,10 +84,12 @@ router.post('/bookings-log', async (req, res) => {
     if ((status || 'confirmed') !== 'cancelled') {
       blockCalendarForBooking(property_id, checkin, checkout).catch(e => console.error('Calendar block error:', e.message));
       createCleaningTaskForCheckout(property_id, checkout).catch(e => console.error('Cleaning task error:', e.message));
+      const prop = await Property.findById(property_id).lean().catch(() => null);
       if (guest_phone) {
-        const prop = await Property.findById(property_id).lean().catch(() => null);
         notifyGuestBookingCreated(booking.toObject(), prop?.name || '').catch(e => console.error('Notify error:', e.message));
       }
+      // WhatsApp: owner + caretaker + admin ko turant update
+      notifyTeamNewBooking(booking.toObject(), prop).catch(e => console.error('Team WhatsApp error:', e.message));
     }
 
     res.status(201).json({ booking: booking.toObject() });
@@ -92,6 +108,34 @@ router.put('/bookings-log/:id', async (req, res) => {
       const cout = new Date(((body.checkout || existing.checkout) + '').slice(0,10) + 'T12:00:00');
       body.nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
     }
+    // ── Double-booking check on edit (khud ko chhod ke) ──
+    const effStatus = body.status || existing.status;
+    if (effStatus !== 'cancelled') {
+      const chkIn  = ((body.checkin  || existing.checkin)  + '').slice(0,10);
+      const chkOut = ((body.checkout || existing.checkout) + '').slice(0,10);
+      const propId = body.property_id || existing.property_id;
+      const overlap = await Booking.findOne({
+        _id:      { $ne: existing._id },
+        property_id: propId,
+        status:   { $nin: ['cancelled'] },
+        checkin:  { $lt: chkOut },
+        checkout: { $gt: chkIn },
+      }).lean();
+      if (overlap) {
+        return res.status(409).json({
+          error: `⚠️ Ye dates already booked hain! ${overlap.guest_name} ki booking hai ${overlap.checkin} se ${overlap.checkout} tak (status: ${overlap.status}).`,
+        });
+      }
+    }
+    // Recalculate balance whenever total or advance changes
+    if (body.total_amount != null || body.advance_amount != null) {
+      const newTotal   = body.total_amount   != null ? Number(body.total_amount)   : (existing.total_amount || existing.amount || 0);
+      const newAdvance = body.advance_amount != null ? Number(body.advance_amount) : (existing.amount || 0);
+      body.total_amount   = newTotal;
+      body.amount         = newAdvance;
+      body.balance_amount = Math.max(0, newTotal - newAdvance);
+      body.payment_type   = newAdvance >= newTotal ? 'full' : 'partial';
+    }
     // Stamp/clear full-payment date when balance_paid flips
     if (body.balance_paid === true && !existing.balance_paid) body.balance_paid_at = new Date();
     if (body.balance_paid === false) body.balance_paid_at = null;
@@ -109,9 +153,13 @@ router.put('/bookings-log/:id', async (req, res) => {
     const datesChanged = newCheckin !== existing.checkin || newCheckout !== existing.checkout;
     if (updated.status === 'cancelled') {
       unblockCalendarIfFree(existing.property_id, existing.checkin, existing.checkout, existing._id).catch(e => console.error(e.message));
+      const prop = await Property.findById(existing.property_id).lean().catch(() => null);
       if (updated.guest_phone) {
-        const prop = await Property.findById(existing.property_id).lean().catch(() => null);
         notifyGuestBookingCancelled(updated, prop?.name || '').catch(e => console.error(e.message));
+      }
+      // WhatsApp: cancel hone pe bhi team ko batao (sirf pehli baar)
+      if (existing.status !== 'cancelled') {
+        notifyTeamBookingCancelled(updated, prop).catch(e => console.error('Team WhatsApp error:', e.message));
       }
     } else {
       if (datesChanged) unblockCalendarIfFree(existing.property_id, existing.checkin, existing.checkout, existing._id).catch(e => console.error(e.message));

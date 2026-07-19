@@ -443,6 +443,33 @@ function buildForm() {
     <div class="section">
       <div class="section-header">
         <div class="section-icon">${ICON_INFO}</div>
+        <span class="section-title">👥 Owner & Caretaker <span class="hint" style="font-weight:400">(booking aate hi WhatsApp update jayega)</span></span>
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>Owner Name</label>
+            <input type="text" id="f-owner-name" value="${esc(p.owner_name || '')}" placeholder="e.g. Ramesh ji"/>
+          </div>
+          <div class="field">
+            <label>Owner WhatsApp Number</label>
+            <input type="tel" id="f-owner-phone" value="${esc(p.owner_phone || '')}" placeholder="e.g. 9876543210"/>
+          </div>
+          <div class="field">
+            <label>Caretaker Name</label>
+            <input type="text" id="f-caretaker-name" value="${esc(p.caretaker_name || '')}" placeholder="e.g. Suresh"/>
+          </div>
+          <div class="field">
+            <label>Caretaker WhatsApp Number</label>
+            <input type="tel" id="f-caretaker-phone" value="${esc(p.caretaker_phone || '')}" placeholder="e.g. 9876543210"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon">${ICON_INFO}</div>
         <span class="section-title">Map & FOMO controls</span>
       </div>
       <div class="section-body">
@@ -964,6 +991,10 @@ async function saveAll() {
     lat: document.getElementById('f-lat')?.value ? parseFloat(document.getElementById('f-lat').value) : null,
     lng: document.getElementById('f-lng')?.value ? parseFloat(document.getElementById('f-lng').value) : null,
     nearby_attractions: JSON.stringify(getNearbyAttractions()),
+    owner_name:      document.getElementById('f-owner-name')?.value.trim()      || '',
+    owner_phone:     document.getElementById('f-owner-phone')?.value.trim()     || '',
+    caretaker_name:  document.getElementById('f-caretaker-name')?.value.trim()  || '',
+    caretaker_phone: document.getElementById('f-caretaker-phone')?.value.trim() || '',
   };
 
   try {

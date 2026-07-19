@@ -1829,8 +1829,8 @@ function calcTotal(nights, ci, co) {
   if (!PROP || !nights) return 0;
   const breakdown = (ci && co) ? nightBreakdown(ci, co) : null;
   const base = breakdown ? breakdown.reduce((s, n) => s + n.price, 0) : PROP.price * nights;
-  const gstRate = PROP.price > 7500 ? 0.18 : PROP.price > 1000 ? 0.12 : 0;
-  return base + Math.round(base * gstRate) + Math.round(base * 0.05);
+  const gstRate = (base / nights) > 7500 ? 0.18 : 0.05;   // backend jaisa hi slab
+  return base + Math.round(base * gstRate);
 }
 
 function updateBreakdown() {
@@ -1844,10 +1844,9 @@ function updateBreakdown() {
 
   const perNight = nightBreakdown(ci, co);
   const base     = perNight.reduce((s, n) => s + n.price, 0);
-  const gstRate  = PROP.price > 7500 ? 0.18 : PROP.price > 1000 ? 0.12 : 0;
+  const gstRate  = (base / nights) > 7500 ? 0.18 : 0.05;   // backend jaisa hi slab
   const gst      = Math.round(base * gstRate);
-  const svc      = Math.round(base * 0.05);
-  const total    = base + gst + svc;
+  const total    = base + gst;
 
   // Update top price display — always show avg per night of selected range
   const priceEl = document.getElementById('bk-price-display');
@@ -1881,8 +1880,7 @@ function updateBreakdown() {
 
   bd.innerHTML = `
     ${nightsHtml}
-    <div class="bk-row"><span>Service fee</span><span>₹${fmt(svc)}</span></div>
-    ${gstRate ? `<div class="bk-row"><span>GST (${gstRate*100}%)</span><span>₹${fmt(gst)}</span></div>` : ''}
+    <div class="bk-row"><span>GST (${gstRate*100}%)</span><span>₹${fmt(gst)}</span></div>
     <div class="bk-row total"><span>Total</span><span>₹${fmt(total)}</span></div>
     <div style="background:#fff8e6;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px">
       <div style="font-weight:700;color:#92400e;margin-bottom:8px">💳 Payment Schedule</div>

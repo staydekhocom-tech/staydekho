@@ -194,6 +194,10 @@ router.post('/', protect, adminOnly, upload.array('images', 70), async (req, res
       lat:                data.lat != null ? parseFloat(data.lat) : null,
       lng:                data.lng != null ? parseFloat(data.lng) : null,
       nearby_attractions: typeof data.nearby_attractions === 'string' ? data.nearby_attractions : JSON.stringify(data.nearby_attractions || []),
+      owner_name:      data.owner_name      || '',
+      owner_phone:     data.owner_phone     || '',
+      caretaker_name:  data.caretaker_name  || '',
+      caretaker_phone: data.caretaker_phone || '',
     });
 
     res.status(201).json({ property: normalize(created.toObject()) });
@@ -259,6 +263,10 @@ router.put('/:id', protect, adminOnly, upload.array('images', 70), async (req, r
       nearby_attractions: data.nearby_attractions !== undefined
         ? (typeof data.nearby_attractions === 'string' ? data.nearby_attractions : JSON.stringify(data.nearby_attractions || []))
         : (existing.nearby_attractions || '[]'),
+      owner_name:      data.owner_name      ?? existing.owner_name      ?? '',
+      owner_phone:     data.owner_phone     ?? existing.owner_phone     ?? '',
+      caretaker_name:  data.caretaker_name  ?? existing.caretaker_name  ?? '',
+      caretaker_phone: data.caretaker_phone ?? existing.caretaker_phone ?? '',
     };
 
     const updated = await Property.findByIdAndUpdate(req.params.id, updateData, { new: true }).lean();

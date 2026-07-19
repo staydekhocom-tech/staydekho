@@ -227,11 +227,40 @@ function injectFloatingCTA() {
         children.forEach((c, i) => {
           setTimeout(() => c.classList.add('visible'), i * 70);
         });
+        io.unobserve(e.target);
       }
     });
   }, { threshold: 0.1 });
 
   document.querySelectorAll('.reveal, .reveal-left, .stagger').forEach(el => io.observe(el));
+
+  // ── Sliding + rolling scroll animations (auto-applied) ──
+  // Section headers alternate slide-left/slide-right; cards roll up with stagger.
+  function sdAutoAnimate() {
+    // Alternate sliding section headers (skip ones already animated)
+    document.querySelectorAll('.section .section-header, .section-sm .section-header').forEach((el, i) => {
+      if (el.classList.contains('slide-l') || el.classList.contains('slide-r')) return;
+      el.classList.remove('reveal');
+      el.classList.add(i % 2 === 0 ? 'slide-l' : 'slide-r');
+      io.observe(el);
+    });
+    // Rolling cards — works for dynamically injected cards too
+    document.querySelectorAll(
+      '.properties-grid > *, .review-grid-new > *, .stay-types-grid > *, .why-grid > *, .reel-grid > *'
+    ).forEach((c, i) => {
+      if (c.classList.contains('roll-up')) return;
+      c.classList.add('roll-up');
+      c.style.transitionDelay = (i % 6) * 80 + 'ms';
+      io.observe(c);
+    });
+  }
+  sdAutoAnimate();
+
+  // Re-tag when dynamic content (properties/reviews) loads in
+  const sdMo = new MutationObserver(() => sdAutoAnimate());
+  document.querySelectorAll('.properties-grid, .review-grid-new, .stay-types-grid, .why-grid, .swipe-wrap').forEach(g => {
+    sdMo.observe(g, { childList: true });
+  });
 
   // Auto-close mobile drawer when window is resized to desktop width
   window.addEventListener('resize', () => {
