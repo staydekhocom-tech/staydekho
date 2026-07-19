@@ -423,6 +423,7 @@
           <option value="checked_out">Checked Out</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <button class="btn btn-primary btn-sm" onclick="exportBookingsExcel()" style="white-space:nowrap">📊 Export Excel</button>
       </div>
     </div>
     <div class="card">
@@ -2132,6 +2133,41 @@ async function refreshMainBookings() {
 async function deleteBookingLogRow(id) {
   if (!confirm('Delete this booking entry?')) return;
   try { await api.deleteBookingLog(id); loadBookingsLog(); } catch (err) { alert('Delete failed: ' + err.message); }
+}
+
+// ── EXPORT BOOKINGS TO EXCEL (CSV) ──
+function exportBookingsExcel() {
+  if (!bookings || !bookings.length) { alert('Koi bookings nahi hain export karne ke liye'); return; }
+
+  const PLATFORM_LABELS = { direct: 'StayDekho Direct', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT/Goibibo', walkin: 'Walk-in' };
+  const esc = v => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  const headers = ['Booking ID','Guest','Property','Platform','Check-in','Check-out','Guests','Total Amount','Advance','Balance','Balance Paid','Owner Paid','Status'];
+  const rows = bookings.map(b => [
+    b.id, b.guest, b.property,
+    PLATFORM_LABELS[b.platform] || b.platform,
+    b.checkin, b.checkout, b.guests,
+    b.total_amount, b.amount, b.balance_amount,
+    b.balance_paid ? 'Yes' : 'No',
+    b.owner_paid ? 'Yes' : 'No',
+    (b.status || '').replace('_', ' '),
+  ].map(esc).join(','));
+
+  // BOM — isse Excel Hindi/₹ characters sahi dikhata hai
+  const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `staydekho-bookings-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast ? showToast(`${bookings.length} bookings export ho gayi!`, 'success') : null;
 }
 
 // ── CLEANING TRACKER ──
