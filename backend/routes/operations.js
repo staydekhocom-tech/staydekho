@@ -34,7 +34,7 @@ router.post('/bookings-log', async (req, res) => {
   try {
     const {
       property_id, guest_name, guest_phone, checkin, checkout,
-      platform, total_amount, advance_amount, net_payout, status, notes, balance_paid, payout_received, owner_paid,
+      platform, total_amount, advance_amount, net_payout, remitted_tax, status, notes, balance_paid, payout_received, owner_paid,
     } = req.body;
     if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
       return res.status(400).json({ error: 'Property, guest name, dates and total amount required hain' });
@@ -66,6 +66,8 @@ router.post('/bookings-log', async (req, res) => {
     const finalNetPayout = isDirectPlatform
       ? Number(total_amount)
       : (net_payout !== undefined && net_payout !== '' ? Number(net_payout) : Number(total_amount));
+    // Remitted occupancy tax (Airbnb jaisa): sirf OTA pe lagu — direct pe hamesha 0
+    const finalRemittedTax = isDirectPlatform ? 0 : (Number(remitted_tax) || 0);
 
     const isPaid = !!balance_paid || balance <= 0;
     const bookingNo = (await Booking.countDocuments()) + 1;
@@ -80,6 +82,7 @@ router.post('/bookings-log', async (req, res) => {
       status: status || 'confirmed',
       platform: plat,
       net_payout: finalNetPayout,
+      remitted_tax: finalRemittedTax,
       payout_received: !!payout_received,
       payout_received_at: payout_received ? new Date() : null,
       owner_paid: !!owner_paid,
@@ -142,14 +145,21 @@ router.put('/bookings-log/:id', async (req, res) => {
       body.amount         = newAdvance;
       body.balance_amount = Math.max(0, newTotal - newAdvance);
       body.payment_type   = newAdvance >= newTotal ? 'full' : 'partial';
-      // Direct/walk-in: koi commission nahi katta — Net Payout hamesha Total ke barabar rakho
+      // Direct/walk-in: koi commission nahi katta — Net Payout hamesha Total ke barabar rakho, Remitted Tax bhi 0
       const effPlatform = body.platform || existing.platform || 'direct';
       if (effPlatform === 'direct' || effPlatform === 'walkin') {
-        body.net_payout = newTotal;
+        body.net_payout   = newTotal;
+        body.remitted_tax = 0;
       }
     } else if (body.platform && (body.platform === 'direct' || body.platform === 'walkin')) {
       // Sirf platform badla Direct/Walk-in mein, amount touch nahi hui — phir bhi Net Payout ko Total ke barabar karo
-      body.net_payout = existing.total_amount || existing.amount || 0;
+      body.net_payout   = existing.total_amount || existing.amount || 0;
+      body.remitted_tax = 0;
+    }
+    // Remitted tax OTA pe hi valid hai
+    if (body.remitted_tax != null) {
+      const effPlatform2 = body.platform || existing.platform || 'direct';
+      body.remitted_tax = (effPlatform2 === 'direct' || effPlatform2 === 'walkin') ? 0 : (Number(body.remitted_tax) || 0);
     }
     // Stamp/clear full-payment date when balance_paid flips
     if (body.balance_paid === true && !existing.balance_paid) body.balance_paid_at = new Date();
@@ -281,13 +291,30 @@ router.get('/dashboard', async (req, res) => {
     const upcomingCheckins  = bookings.filter(b => b.checkin  >= fmt(today) && b.checkin  <= fmt(in7)).length;
     const upcomingCheckouts = bookings.filter(b => b.checkout >= fmt(today) && b.checkout <= fmt(in7)).length;
 
+    // Owner/StayDekho split — 70/30, lekin Remitted Occupancy Tax (agar hai) split se bahar,
+    // pura StayDekho ke paas jaata hai (kyunki wahi govt ko aage jama karta hai)
     const byPlatform = {};
+    let totalOwnerPayout = 0, totalStaydekhoPayout = 0, totalRemittedTax = 0;
     for (const b of bookings) {
       const p = b.platform || 'direct';
-      if (!byPlatform[p]) byPlatform[p] = { bookings: 0, revenue: 0, net_payout: 0 };
+      if (!byPlatform[p]) byPlatform[p] = { bookings: 0, revenue: 0, net_payout: 0, remitted_tax: 0, owner_payout: 0, staydekho_payout: 0 };
+
+      const netPayout = b.net_payout != null ? b.net_payout : (b.total_amount || b.amount || 0);
+      const remitted  = b.remitted_tax || 0;
+      const splittable = Math.max(0, netPayout - remitted);
+      const ownerShare = Math.round(splittable * 0.70);
+      const sdShare     = (splittable - ownerShare) + remitted;
+
       byPlatform[p].bookings += 1;
       byPlatform[p].revenue  += (b.total_amount || b.amount || 0);
-      byPlatform[p].net_payout += (b.net_payout != null ? b.net_payout : (b.total_amount || b.amount || 0));
+      byPlatform[p].net_payout += netPayout;
+      byPlatform[p].remitted_tax += remitted;
+      byPlatform[p].owner_payout += ownerShare;
+      byPlatform[p].staydekho_payout += sdShare;
+
+      totalOwnerPayout     += ownerShare;
+      totalStaydekhoPayout += sdShare;
+      totalRemittedTax     += remitted;
     }
 
     // occupancy: needs a date-range; default to 90 days if not given
@@ -305,6 +332,9 @@ router.get('/dashboard', async (req, res) => {
       upcoming_checkins:  upcomingCheckins,
       upcoming_checkouts: upcomingCheckouts,
       pending_balance: pendingBalance,
+      total_owner_payout:     totalOwnerPayout,
+      total_staydekho_payout: totalStaydekhoPayout,
+      total_remitted_tax:     totalRemittedTax,
       by_platform: byPlatform,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }

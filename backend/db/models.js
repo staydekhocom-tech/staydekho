@@ -80,6 +80,7 @@ const bookingSchema = new Schema({
   gst_on_commission_pct:{ type: Number, default: 0 },  // GST on commission %
   tds_pct:             { type: Number, default: 0 },   // TDS %
   net_payout:          { type: Number, default: null }, // we-received amount after commission/GST/TDS
+  remitted_tax:        { type: Number, default: 0 },    // occupancy tax platform (Airbnb etc.) ne khud govt ko remit kiya — 70/30 split se bahar, pura StayDekho ke paas rehta hai (govt ko aage jama karne ke liye)
   payout_received:     { type: Boolean, default: false }, // OTA transferred payout to our bank
   payout_received_at:  { type: Date, default: null },
   owner_paid:          { type: Boolean, default: false }, // owner's 70% share transferred

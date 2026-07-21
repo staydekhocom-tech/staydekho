@@ -557,12 +557,30 @@
 
     <!-- 5. MONEY — revenue + expenses + payout, all in one place -->
     <div class="sec-hdr" style="margin-bottom:10px"><div class="sec-title">💰 Money</div></div>
+
+    <!-- 3-part summary: Gross / Owner Payout / StayDekho Payout -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:16px 18px">
+        <div style="font-size:12px;color:var(--gray-400);font-weight:600;text-transform:uppercase">Total Gross Booking</div>
+        <div id="ops-money-gross" style="font-size:24px;font-weight:800;margin-top:4px">₹0</div>
+      </div>
+      <div class="card" style="padding:16px 18px;background:#f0fdf4">
+        <div style="font-size:12px;color:#15803d;font-weight:600;text-transform:uppercase">🏠 Owner Payout (70%)</div>
+        <div id="ops-money-owner" style="font-size:24px;font-weight:800;margin-top:4px;color:#15803d">₹0</div>
+      </div>
+      <div class="card" style="padding:16px 18px;background:#fef2f2">
+        <div style="font-size:12px;color:#8B1717;font-weight:600;text-transform:uppercase">StayDekho Payout (30%)</div>
+        <div id="ops-money-staydekho" style="font-size:24px;font-weight:800;margin-top:4px;color:#8B1717">₹0</div>
+        <div id="ops-money-remitted" style="font-size:11px;color:var(--gray-400);margin-top:4px"></div>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="card">
         <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
           <span>Revenue by Platform</span>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Bookings</th><th>Gross</th><th>Net Payout</th></tr></thead><tbody id="ops-platform-tbody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Bookings</th><th>Gross</th><th>Net Payout</th><th>🏠 Owner</th><th>StayDekho</th></tr></thead><tbody id="ops-platform-tbody"></tbody></table></div>
       </div>
       <div class="card">
         <div style="padding:14px 18px;font-weight:700;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
@@ -905,6 +923,12 @@
       <div class="form-grp"><label class="form-lbl">Net Payout (₹) <span style="font-weight:400;color:var(--gray-400)">— jo amount tumhe milega, after platform commission</span></label><input class="form-ctrl" id="ob-net-payout" type="number" placeholder="e.g. same as Total for Direct"/></div>
       <div class="form-grp"><label class="form-lbl">Status</label>
         <select class="form-ctrl" id="ob-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="checked_in">Checked In</option><option value="checked_out">Checked Out</option><option value="cancelled">Cancelled</option></select>
+      </div>
+    </div>
+    <div class="form-row" id="ob-remitted-tax-row" style="display:none">
+      <div class="form-grp" style="flex:1">
+        <label class="form-lbl">Remitted Occupancy Tax (₹) <span style="font-weight:400;color:var(--gray-400)">— platform ke earnings breakdown mein "Remitted occupancy tax" line (agar ho). Ye 70/30 split se bahar hai, pura StayDekho ke paas rehta hai govt ko jama karne ke liye.</span></label>
+        <input class="form-ctrl" id="ob-remitted-tax" type="number" placeholder="0"/>
       </div>
     </div>
     <div class="form-grp"><label class="form-lbl">Notes</label><input class="form-ctrl" id="ob-notes"/></div>
@@ -1726,10 +1750,18 @@ async function loadOpsDashboard() {
     document.getElementById('ops-today-revenue').textContent   = fmtMoney(d.total_revenue);
     document.getElementById('ops-today-occupancy').textContent = d.occupancy_pct + '%';
 
+    // 3-part summary: Gross / Owner Payout / StayDekho Payout
+    document.getElementById('ops-money-gross').textContent     = fmtMoney(d.total_revenue);
+    document.getElementById('ops-money-owner').textContent     = fmtMoney(d.total_owner_payout);
+    document.getElementById('ops-money-staydekho').textContent = fmtMoney(d.total_staydekho_payout);
+    document.getElementById('ops-money-remitted').textContent  = d.total_remitted_tax > 0
+      ? `Isme ${fmtMoney(d.total_remitted_tax)} remitted tax shamil hai (govt ko jama karna hai)`
+      : '';
+
     const rows = Object.entries(d.by_platform || {}).map(([p, v]) =>
-      `<tr><td>${PLATFORM_LABELS[p] || p}</td><td>${v.bookings}</td><td>${fmtMoney(v.revenue)}</td><td>${fmtMoney(v.net_payout)}</td></tr>`
+      `<tr><td>${PLATFORM_LABELS[p] || p}</td><td>${v.bookings}</td><td>${fmtMoney(v.revenue)}</td><td>${fmtMoney(v.net_payout)}</td><td style="color:#15803d;font-weight:600">${fmtMoney(v.owner_payout)}</td><td style="color:#8B1717;font-weight:600">${fmtMoney(v.staydekho_payout)}</td></tr>`
     ).join('');
-    document.getElementById('ops-platform-tbody').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400)">No bookings yet</td></tr>';
+    document.getElementById('ops-platform-tbody').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No bookings yet</td></tr>';
 
     const rep = await api.opsMonthlyReport(opsSelectedProperty);
     const repRows = (rep.report || []).map(m =>
@@ -2044,13 +2076,17 @@ function toggleObPayoutRow() {
   const p = document.getElementById('ob-platform').value;
   const isOta = p && p !== 'direct' && p !== 'walkin';
   document.getElementById('ob-payout-wrap').style.display = isOta ? 'flex' : 'none';
-  if (!isOta) document.getElementById('ob-payout-received').checked = false;
+  document.getElementById('ob-remitted-tax-row').style.display = isOta ? 'flex' : 'none';
+  if (!isOta) {
+    document.getElementById('ob-payout-received').checked = false;
+    document.getElementById('ob-remitted-tax').value = '';
+  }
 }
 let obEditId = null;
 function openAddBookingLog() {
   obEditId = null;
   document.getElementById('ops-booking-modal-title').textContent = 'Add Booking';
-  ['ob-guest-name','ob-guest-phone','ob-checkin','ob-checkout','ob-total','ob-net-payout','ob-notes'].forEach(id => document.getElementById(id).value = '');
+  ['ob-guest-name','ob-guest-phone','ob-checkin','ob-checkout','ob-total','ob-net-payout','ob-remitted-tax','ob-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ob-advance').value = 0;
   document.getElementById('ob-platform').value = 'direct';
   document.getElementById('ob-status').value = 'confirmed';
@@ -2075,6 +2111,7 @@ function openEditBookingLog(id) {
   document.getElementById('ob-total').value = b.total_amount;
   document.getElementById('ob-advance').value = b.amount;
   document.getElementById('ob-net-payout').value = b.net_payout != null ? b.net_payout : '';
+  document.getElementById('ob-remitted-tax').value = b.remitted_tax ? b.remitted_tax : '';
   document.getElementById('ob-status').value = b.status;
   document.getElementById('ob-notes').value = b.notes || '';
   document.getElementById('ob-balance-paid').checked = !!(b.balance_paid);
@@ -2087,6 +2124,7 @@ function openEditBookingLog(id) {
 async function saveBookingLog() {
   const total = Number(document.getElementById('ob-total').value);
   const netPayoutInput = document.getElementById('ob-net-payout').value;
+  const remittedTaxInput = document.getElementById('ob-remitted-tax').value;
   const body = {
     property_id: document.getElementById('ob-property').value,
     platform:    document.getElementById('ob-platform').value,
@@ -2097,6 +2135,7 @@ async function saveBookingLog() {
     total_amount:total,
     advance_amount: Number(document.getElementById('ob-advance').value) || 0,
     net_payout:   netPayoutInput !== '' ? Number(netPayoutInput) : total,
+    remitted_tax: remittedTaxInput !== '' ? Number(remittedTaxInput) : 0,
     status:       document.getElementById('ob-status').value,
     notes:        document.getElementById('ob-notes').value.trim(),
     balance_paid: document.getElementById('ob-balance-paid').checked,

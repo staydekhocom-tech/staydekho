@@ -576,8 +576,12 @@ router.get('/:id/owner-bill', (req, res, next) => {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
       baseLabel = `${PLATFORM_LABELS[platform]} Net Payout (after platform deductions)`;
     }
-    const ownerShare = Math.round(base * 0.70);
-    const sdShare    = base - ownerShare;
+    // Remitted Occupancy Tax (Airbnb jaisa platform ye khud govt ko already de chuka hota hai) —
+    // 70/30 split se bahar rehta hai, pura StayDekho ke paas jaata hai (aage govt ko jama karne ke liye)
+    const remittedTax = isDirect ? 0 : (booking.remitted_tax || 0);
+    const splittable   = Math.max(0, base - remittedTax);
+    const ownerShare = Math.round(splittable * 0.70);
+    const sdShare    = (splittable - ownerShare) + remittedTax;
 
     let bookingNo = booking.booking_no;
     if (!bookingNo) {
@@ -657,8 +661,13 @@ router.get('/:id/owner-bill', (req, res, next) => {
 
   <div class="split">
     <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${INR(base)}</span></div>
+    ${remittedTax > 0 ? `
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (${PLATFORM_LABELS[platform]} ne govt ko already jama kiya)</span><span>− ${INR(remittedTax)}</span></div>
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Splittable Amount (70:30 base)</span><span>${INR(splittable)}</span></div>
+    ` : ''}
     <div class="split-row owner"><span class="lbl">🏠 Owner Share (70%)</span><span>${INR(ownerShare)}</span></div>
-    <div class="split-row sd"><span class="lbl">StayDekho Share (30%)</span><span>${INR(sdShare)}</span></div>
+    <div class="split-row sd"><span class="lbl">StayDekho Share (30%${remittedTax > 0 ? ' + Remitted Tax' : ''})</span><span>${INR(sdShare)}</span></div>
+    ${remittedTax > 0 ? `<div style="font-size:11px;color:#999;margin-top:6px;padding:0 14px">💡 Remitted tax StayDekho ke paas rukega — aage government ko jama karna hai, ye StayDekho ka profit nahi hai.</div>` : ''}
   </div>
 
   <div class="footer">
