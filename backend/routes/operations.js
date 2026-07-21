@@ -59,6 +59,13 @@ router.post('/bookings-log', async (req, res) => {
 
     const advance = Number(advance_amount) || 0;
     const balance = Number(total_amount) - advance;
+    const plat = platform || 'direct';
+
+    // Direct/walk-in: koi platform commission nahi katta — Net Payout hamesha full Total hi hai
+    const isDirectPlatform = plat === 'direct' || plat === 'walkin';
+    const finalNetPayout = isDirectPlatform
+      ? Number(total_amount)
+      : (net_payout !== undefined && net_payout !== '' ? Number(net_payout) : Number(total_amount));
 
     const isPaid = !!balance_paid || balance <= 0;
     const bookingNo = (await Booking.countDocuments()) + 1;
@@ -71,8 +78,8 @@ router.post('/bookings-log', async (req, res) => {
       booking_no: bookingNo,
       payment_type: advance >= Number(total_amount) ? 'full' : 'partial',
       status: status || 'confirmed',
-      platform: platform || 'direct',
-      net_payout: net_payout !== undefined && net_payout !== '' ? Number(net_payout) : Number(total_amount),
+      platform: plat,
+      net_payout: finalNetPayout,
       payout_received: !!payout_received,
       payout_received_at: payout_received ? new Date() : null,
       owner_paid: !!owner_paid,
@@ -135,6 +142,14 @@ router.put('/bookings-log/:id', async (req, res) => {
       body.amount         = newAdvance;
       body.balance_amount = Math.max(0, newTotal - newAdvance);
       body.payment_type   = newAdvance >= newTotal ? 'full' : 'partial';
+      // Direct/walk-in: koi commission nahi katta — Net Payout hamesha Total ke barabar rakho
+      const effPlatform = body.platform || existing.platform || 'direct';
+      if (effPlatform === 'direct' || effPlatform === 'walkin') {
+        body.net_payout = newTotal;
+      }
+    } else if (body.platform && (body.platform === 'direct' || body.platform === 'walkin')) {
+      // Sirf platform badla Direct/Walk-in mein, amount touch nahi hui — phir bhi Net Payout ko Total ke barabar karo
+      body.net_payout = existing.total_amount || existing.amount || 0;
     }
     // Stamp/clear full-payment date when balance_paid flips
     if (body.balance_paid === true && !existing.balance_paid) body.balance_paid_at = new Date();
