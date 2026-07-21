@@ -33,7 +33,7 @@ router.get('/bookings-log', async (req, res) => {
 router.post('/bookings-log', async (req, res) => {
   try {
     const {
-      property_id, guest_name, guest_phone, checkin, checkout,
+      property_id, guest_name, guest_phone, guest_email, guests, checkin, checkout,
       platform, total_amount, advance_amount, net_payout, remitted_tax, status, notes, balance_paid, payout_received, owner_paid,
     } = req.body;
     if (!property_id || !guest_name || !checkin || !checkout || !total_amount)
@@ -73,7 +73,7 @@ router.post('/bookings-log', async (req, res) => {
     const bookingNo = (await Booking.countDocuments()) + 1;
     const booking = await Booking.create({
       property_id, guest_name, guest_phone: guest_phone || '',
-      guest_email: '', checkin, checkout, nights,
+      guest_email: guest_email || '', guests: Number(guests) || 1, checkin, checkout, nights,
       amount: advance, total_amount: Number(total_amount), balance_amount: balance,
       balance_paid: isPaid,
       balance_paid_at: isPaid ? new Date() : null,

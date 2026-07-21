@@ -905,6 +905,10 @@
       <div class="form-grp"><label class="form-lbl">Guest Phone</label><input class="form-ctrl" id="ob-guest-phone"/></div>
     </div>
     <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Guest Email</label><input class="form-ctrl" id="ob-guest-email" type="email" placeholder="guest@email.com"/></div>
+      <div class="form-grp"><label class="form-lbl">No. of Guests</label><input class="form-ctrl" id="ob-guests" type="number" min="1" value="1"/></div>
+    </div>
+    <div class="form-row">
       <div class="form-grp"><label class="form-lbl">Check-in *</label><input class="form-ctrl" id="ob-checkin" type="date"/></div>
       <div class="form-grp"><label class="form-lbl">Check-out *</label><input class="form-ctrl" id="ob-checkout" type="date"/></div>
     </div>
@@ -2086,8 +2090,9 @@ let obEditId = null;
 function openAddBookingLog() {
   obEditId = null;
   document.getElementById('ops-booking-modal-title').textContent = 'Add Booking';
-  ['ob-guest-name','ob-guest-phone','ob-checkin','ob-checkout','ob-total','ob-net-payout','ob-remitted-tax','ob-notes'].forEach(id => document.getElementById(id).value = '');
+  ['ob-guest-name','ob-guest-phone','ob-guest-email','ob-checkin','ob-checkout','ob-total','ob-net-payout','ob-remitted-tax','ob-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ob-advance').value = 0;
+  document.getElementById('ob-guests').value = 1;
   document.getElementById('ob-platform').value = 'direct';
   document.getElementById('ob-status').value = 'confirmed';
   document.getElementById('ob-balance-paid').checked = false;
@@ -2106,6 +2111,8 @@ function openEditBookingLog(id) {
   document.getElementById('ob-platform').value = b.platform;
   document.getElementById('ob-guest-name').value = b.guest_name;
   document.getElementById('ob-guest-phone').value = b.guest_phone || '';
+  document.getElementById('ob-guest-email').value = b.guest_email || '';
+  document.getElementById('ob-guests').value = b.guests || 1;
   document.getElementById('ob-checkin').value = (b.checkin || '').slice(0,10);
   document.getElementById('ob-checkout').value = (b.checkout || '').slice(0,10);
   document.getElementById('ob-total').value = b.total_amount;
@@ -2130,6 +2137,8 @@ async function saveBookingLog() {
     platform:    document.getElementById('ob-platform').value,
     guest_name:  document.getElementById('ob-guest-name').value.trim(),
     guest_phone: document.getElementById('ob-guest-phone').value.trim(),
+    guest_email: document.getElementById('ob-guest-email').value.trim(),
+    guests:      Number(document.getElementById('ob-guests').value) || 1,
     checkin:     document.getElementById('ob-checkin').value,
     checkout:    document.getElementById('ob-checkout').value,
     total_amount:total,
