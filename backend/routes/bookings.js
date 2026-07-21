@@ -269,8 +269,10 @@ router.get('/:id/invoice', (req, res, next) => {
     if ((totalAmt / nights_) / 1.05 > 7500) gstRate = 0.18;
     const gstPct    = Math.round(gstRate * 100);
     const preGstAmt = Math.round(totalAmt / (1 + gstRate));
-    const gstAmt    = totalAmt - preGstAmt;
-    const halfGst   = Math.round(gstAmt / 2);
+    // CGST aur SGST dono 2.5% (same rate) hain — isliye pehle half nikalo, phir usी se total GST banao
+    // taaki CGST = SGST hamesha ho aur "Total GST" line se bhi exact match kare
+    const halfGst   = Math.round(((totalAmt - preGstAmt) / 2) * 100) / 100;
+    const gstAmt    = halfGst * 2;
 
     // ── Payment info ──────────────────────────────────────
     const payment = await Payment.findOne({
@@ -479,7 +481,7 @@ router.get('/:id/invoice', (req, res, next) => {
     </div>
     <div class="tot-row gst-row">
       <span class="lbl">SGST @ ${gstPct / 2}%</span>
-      <span>${INR(gstAmt - halfGst)}</span>
+      <span>${INR(halfGst)}</span>
     </div>
     <div class="tot-row subtotal">
       <span class="lbl">Total GST (${gstPct}%)</span>
