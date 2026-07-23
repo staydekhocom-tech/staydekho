@@ -323,68 +323,71 @@ router.get('/:id/invoice', (req, res, next) => {
 <title>${docType} ${invoiceNo} — StayDekho</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f4f4f4}
-  .page{max-width:760px;margin:24px auto;background:#fff;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,.1)}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:12.5px;color:#1a1a1a;background:#f4f4f4}
+  .page{max-width:760px;margin:16px auto;background:#fff;padding:32px 36px;box-shadow:0 2px 20px rgba(0,0,0,.1)}
   /* Header */
-  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid ${docColor}}
-  .logo{font-size:22px;font-weight:800;color:#8B1717;letter-spacing:-.5px}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid ${docColor}}
+  .logo{font-size:21px;font-weight:800;color:#8B1717;letter-spacing:-.5px}
   .logo span{color:#1a1a1a}
-  .company-info{font-size:11px;color:#555;margin-top:4px;line-height:1.7}
+  .company-info{font-size:10.5px;color:#555;margin-top:4px;line-height:1.6}
   .inv-meta{text-align:right}
-  .inv-title{font-size:20px;font-weight:800;color:${docColor};letter-spacing:.05em;text-transform:uppercase}
-  .inv-no{font-size:13px;font-weight:700;color:#1a1a1a;margin-top:4px}
+  .inv-title{font-size:19px;font-weight:800;color:${docColor};letter-spacing:.05em;text-transform:uppercase}
+  .inv-no{font-size:13px;font-weight:700;color:#1a1a1a;margin-top:3px}
   .inv-date{font-size:11px;color:#777;margin-top:2px}
   /* Proforma notice banner */
-  .proforma-notice{background:#fff8e1;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#92400e;line-height:1.6}
-  .proforma-notice strong{display:block;font-size:13px;margin-bottom:3px}
+  .proforma-notice{background:#fff8e1;border:1px solid #f59e0b;border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:11.5px;color:#92400e;line-height:1.5}
+  .proforma-notice strong{display:block;font-size:12.5px;margin-bottom:2px}
   /* Status badge */
-  .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;margin-top:8px;background:${statusColor}}
+  .badge{display:inline-block;padding:3px 11px;border-radius:20px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;margin-top:6px;background:${statusColor}}
   /* Info grid */
-  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
-  .info-box{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:16px}
-  .info-box h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8B1717;margin-bottom:10px}
-  .info-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;gap:8px}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .info-box{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:12px 14px}
+  .info-box h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8B1717;margin-bottom:7px}
+  .info-row{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px;gap:8px}
   .info-row .lbl{color:#777;flex-shrink:0}
   .info-row .val{font-weight:600;text-align:right}
-  .info-row.highlight .val{color:#8B1717;font-size:13px}
+  .info-row.highlight .val{color:#8B1717;font-size:12.5px}
   /* Table */
-  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12.5px}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
   thead tr{background:#8B1717;color:#fff}
-  thead th{padding:10px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  thead th{padding:8px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
   thead th:last-child{text-align:right}
   tbody tr{border-bottom:1px solid #f0f0f0}
-  tbody tr:hover{background:#fafafa}
-  tbody td{padding:11px 12px;vertical-align:top}
+  tbody td{padding:9px 12px;vertical-align:top}
   tbody td:last-child{text-align:right;font-weight:600}
-  .desc-sub{font-size:11px;color:#888;margin-top:2px}
+  .desc-sub{font-size:10.5px;color:#888;margin-top:2px}
   /* Totals */
   .totals{margin-left:auto;width:280px}
-  .tot-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px;border-bottom:1px solid #f0f0f0}
+  .tot-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #f0f0f0}
   .tot-row .lbl{color:#555}
   .tot-row.subtotal{font-weight:600}
-  .tot-row.gst-row{color:#777;font-size:11.5px}
-  .tot-row.grand{background:#8B1717;color:#fff;font-weight:800;font-size:14px;padding:10px 12px;border-radius:6px;margin-top:6px;border:none}
+  .tot-row.gst-row{color:#777;font-size:11px}
+  .tot-row.grand{background:#8B1717;color:#fff;font-weight:800;font-size:14px;padding:9px 12px;border-radius:6px;margin-top:5px;border:none}
   /* Payment summary */
-  .pay-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0;padding:16px;background:#f9f5f5;border-radius:8px;border:1px solid #f0e0e0}
+  .pay-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0;padding:14px;background:#f9f5f5;border-radius:8px;border:1px solid #f0e0e0}
   .pay-box{text-align:center}
-  .pay-box .amt{font-size:18px;font-weight:800;color:#8B1717}
-  .pay-box .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+  .pay-box .amt{font-size:17px;font-weight:800;color:#8B1717}
+  .pay-box .lbl{font-size:9.5px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
   .pay-box.paid .amt{color:#16a34a}
   .pay-box.due  .amt{color:${balDue > 0 ? '#dc2626' : '#16a34a'}}
-  /* Notes */
-  .notes{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:16px;margin-top:20px;font-size:11px;color:#666;line-height:1.8}
-  .notes h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#333;margin-bottom:8px}
+  /* Notes / Terms */
+  .notes{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:12px 14px;margin-top:14px;font-size:10px;color:#555;line-height:1.55}
+  .notes h4{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#333;margin-bottom:6px}
+  .terms-grid{columns:2;column-gap:22px}
+  .terms-grid p{margin-bottom:4px;break-inside:avoid}
+  .terms-grid b{color:#333}
   /* Footer */
-  .footer{margin-top:28px;padding-top:16px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#aaa}
+  .footer{margin-top:16px;padding-top:12px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:#aaa}
   /* Print */
   .print-btn{position:fixed;bottom:24px;right:24px;background:#8B1717;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(139,23,23,.4);z-index:99}
   .print-btn:hover{background:#6b1010}
   @media print{
+    @page{size:A4;margin:12mm}
     body{background:#fff}
-    .page{box-shadow:none;margin:0;padding:28px}
+    .page{box-shadow:none;margin:0;padding:0;max-width:100%}
     .print-btn{display:none}
     .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    thead tr,.tot-row.grand,.pay-summary{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
 </head>
@@ -519,15 +522,21 @@ router.get('/:id/invoice', (req, res, next) => {
 
   <!-- ── TERMS ── -->
   <div class="notes">
-    <h4>Terms & Conditions</h4>
-    Check-in time: 2:00 PM onwards · Check-out time: 11:00 AM sharp<br/>
-    ${isProforma
-      ? `This Proforma Invoice is valid for the booking period only. Final Tax Invoice will be issued upon full payment at check-in.<br/>
-    Advance payment is non-refundable as per cancellation policy.`
-      : `This is a computer-generated Final Tax Invoice and does not require a physical signature.<br/>
-    Payment received in full. Thank you for staying with StayDekho.`
-    }<br/>
-    GST calculated as per prevailing Indian hotel accommodation tax rates (SAC: 996311).
+    <h4>Terms &amp; Conditions</h4>
+    <div class="terms-grid">
+      <p><b>1. Timing:</b> Check-in 2:00 PM · Check-out 11:00 AM. Early check-in / late check-out subject to availability &amp; may incur extra charges.</p>
+      <p><b>2. ID Proof:</b> All guests must carry a valid government photo ID (Aadhaar / Passport / DL / Voter ID) at check-in. Primary guest must be 18+.</p>
+      <p><b>3. Occupancy:</b> As per booked property limit. Extra guests need prior approval &amp; may incur additional charges.</p>
+      <p><b>4. Advance Non-Refundable:</b> The advance amount is strictly non-refundable under all circumstances, including cancellation or no-show.</p>
+      <p><b>5. Cancellation:</b> Balance payments, if any, are refunded as per StayDekho's cancellation policy within 5–7 business days.</p>
+      <p><b>6. Property Care:</b> Guests are liable for any loss or damage to the property or its assets. StayDekho is not responsible for guests' personal belongings.</p>
+      <p><b>7. House Rules:</b> No smoking indoors. No loud music / parties after 10:00 PM unless pre-approved. Please respect the property &amp; neighbours.</p>
+      <p><b>8. Tax:</b> GST charged as per prevailing Indian hotel accommodation rates. SAC: 996311.</p>
+      <p><b>9. Jurisdiction:</b> All disputes subject to Udaipur, Rajasthan jurisdiction.</p>
+      <p>${isProforma
+        ? `<b>10. Note:</b> This Proforma Invoice confirms the advance only. A Final Tax Invoice will be issued after full payment at check-in.`
+        : `<b>10. Note:</b> This is a computer-generated Final Tax Invoice &amp; requires no physical signature. Payment received in full — thank you for choosing StayDekho.`}</p>
+    </div>
   </div>
 
   <!-- ── FOOTER ── -->
