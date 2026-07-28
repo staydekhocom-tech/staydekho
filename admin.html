@@ -287,6 +287,8 @@
       <div class="stat-card"><div class="stat-icon si-green">📋</div><div><div class="stat-val" id="stat-books">—</div><div class="stat-lbl">Total Bookings</div><div class="stat-chg up" id="stat-books-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-val" id="stat-users-count">—</div><div class="stat-lbl">Registered Users</div><div class="stat-chg up" id="stat-users-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl">Total Booked (This Month)</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-blue">📍</div><div><div class="stat-val" id="stat-checkin-today">—</div><div class="stat-lbl">Check-ins Today</div><div class="stat-chg up" id="stat-checkin-today-sub">—</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-orange">⏰</div><div><div class="stat-val" id="stat-checkin-tmrw">—</div><div class="stat-lbl">Check-ins Tomorrow</div><div class="stat-chg up" id="stat-checkin-tmrw-sub">—</div></div></div>
     </div>
 
     <div class="dash-grid">
@@ -512,8 +514,9 @@
 
     <!-- 1. TODAY'S SNAPSHOT -->
     <div class="sec-hdr" style="margin-bottom:10px"><div class="sec-title">📍 Today's Snapshot</div></div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px" id="ops-today-row">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:14px;margin-bottom:24px" id="ops-today-row">
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-ins Today</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-checkins">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-ins Tomorrow</div><div style="font-size:1.6rem;font-weight:800" id="ops-tmrw-checkins">—</div></div>
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-outs Today</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-checkouts">—</div></div>
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Cleaning Pending</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-cleaning">—</div></div>
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">This Month Revenue</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-revenue">—</div></div>
@@ -1113,6 +1116,7 @@ async function initAdmin() {
       id: b.id || b._id, guest: b.guest_name || b.user_name || '—', property: b.property_name || '—', checkin: b.checkin, checkout: b.checkout, guests: b.guests || 1, amount: b.amount || 0, status: b.status || 'pending',
       total_amount: b.total_amount || 0, balance_amount: b.balance_amount || 0, balance_paid: b.balance_paid || false,
       platform: b.platform || 'direct', payout_received: b.payout_received || false, owner_paid: b.owner_paid || false,
+      guest_phone: b.guest_phone || '', nights: b.nights || 1,
       propId: (b.property_id?._id || b.property_id || '').toString(),
     }));
 
@@ -1166,6 +1170,7 @@ async function initAdmin() {
     renderReviews();
     renderReels();
     renderRecentBookings(statsRes.recentBookings || bookings);
+    renderDashArrivals();
     renderChartFromData(statsRes.monthlyRevenue || []);
     renderPropertyRevenue(statsRes.propertyRevenue || []);
     
@@ -1180,6 +1185,34 @@ async function initAdmin() {
     renderMiniCal();
 
   } catch (err) { console.error("Admin init error:", err); }
+}
+
+// Local calendar date (YYYY-MM-DD). toISOString() would use UTC and read a day
+// behind in IST during the early hours — wrong day for check-in alerts.
+function sdDateStr(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ── CHECK-IN ALERTS (DASHBOARD) — today + tomorrow ──
+function renderDashArrivals() {
+  const el = id => document.getElementById(id);
+  if (!el('stat-checkin-tmrw')) return;
+
+  const pick = day => bookings.filter(b =>
+    !b.isExternal && b.status !== 'cancelled' && (b.checkin || '').slice(0, 10) === day);
+  const todayRows = pick(sdDateStr(0));
+  const tmrwRows  = pick(sdDateStr(1));
+
+  const names = rows => rows.length
+    ? rows.map(b => b.guest).slice(0, 3).join(', ') + (rows.length > 3 ? ` +${rows.length - 3}` : '')
+    : 'No arrivals';
+
+  el('stat-checkin-today').textContent = todayRows.length;
+  el('stat-checkin-today-sub').textContent = names(todayRows);
+  el('stat-checkin-tmrw').textContent = tmrwRows.length;
+  el('stat-checkin-tmrw-sub').textContent = names(tmrwRows);
 }
 
 // ── RECENT BOOKINGS & MINI CAL (DASHBOARD) ──
@@ -1805,13 +1838,19 @@ async function loadOperationsHub() {
 }
 
 function updateTodaySnapshot() {
-  const today = new Date().toISOString().split('T')[0];
-  const checkinsToday  = opsBookingsLog.filter(b => (b.checkin  || '').slice(0,10) === today && b.status !== 'cancelled').length;
-  const checkoutsToday = opsBookingsLog.filter(b => (b.checkout || '').slice(0,10) === today && b.status !== 'cancelled').length;
+  const today    = sdDateStr(0);
+  const tomorrow = sdDateStr(1);
+
+  const active = b => b.status !== 'cancelled';
+  const checkinsToday  = opsBookingsLog.filter(b => (b.checkin  || '').slice(0,10) === today && active(b)).length;
+  const checkoutsToday = opsBookingsLog.filter(b => (b.checkout || '').slice(0,10) === today && active(b)).length;
   const cleaningPending = opsCleaningTasks.filter(t => t.status !== 'done').length;
+  const checkinsTomorrow = opsBookingsLog.filter(b => (b.checkin || '').slice(0,10) === tomorrow && active(b)).length;
+
   document.getElementById('ops-today-checkins').textContent  = checkinsToday;
   document.getElementById('ops-today-checkouts').textContent = checkoutsToday;
   document.getElementById('ops-today-cleaning').textContent  = cleaningPending;
+  document.getElementById('ops-tmrw-checkins').textContent   = checkinsTomorrow;
 }
 
 // ── DASHBOARD (feeds revenue/occupancy snapshot + Revenue by Platform + Monthly Report) ──
@@ -2240,10 +2279,12 @@ async function refreshMainBookings() {
       guests: b.guests || 1, amount: b.amount || 0, total_amount: b.total_amount || b.amount || 0,
       balance_amount: b.balance_amount || 0, balance_paid: b.balance_paid || false,
       platform: b.platform || 'direct', payout_received: b.payout_received || false, owner_paid: b.owner_paid || false,
+      guest_phone: b.guest_phone || '', nights: b.nights || 1,
       status: b.status || 'pending', propId: (b.property_id?._id || b.property_id || '').toString(),
     }));
     applyBookingFilters();
     renderRecentBookings(bookings.slice(0, 5));
+    renderDashArrivals();
   } catch (e) { console.error('refreshMainBookings error:', e); }
 }
 async function deleteBookingLogRow(id) {
