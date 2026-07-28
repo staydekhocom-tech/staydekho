@@ -1587,6 +1587,71 @@ function renderThumbGrid(modalKey) {
   updateCounter(modalKey);
 }
 
+// ── Browser-side image compression ──────────────────────────
+// Cloudinary rejects images over 10 MB, and full-res phone/DSLR shots are far
+// bigger than anything the site displays. Resize + re-encode before upload.
+const SD_UPLOAD_SKIP_UNDER   = 9 * 1024 * 1024;  // only touch files that would actually be rejected
+const SD_UPLOAD_TARGET_BYTES = 9 * 1024 * 1024;  // safe margin under Cloudinary's 10 MB cap
+const SD_UPLOAD_MAX_DIM      = 4000;             // generous — well beyond any display size
+
+function sdLoadImage(file) {
+  if (window.createImageBitmap) return createImageBitmap(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image decode failed')); };
+    img.src = url;
+  });
+}
+
+async function sdCompressImage(file) {
+  const skip = !file.type.startsWith('image/')
+    || file.type === 'image/gif'
+    || (file.size <= SD_UPLOAD_SKIP_UNDER);
+  if (skip) return file;
+
+  try {
+    const img = await sdLoadImage(file);
+    const w0 = img.width, h0 = img.height;
+    const scale = Math.min(1, SD_UPLOAD_MAX_DIM / Math.max(w0, h0));
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(w0 * scale);
+    canvas.height = Math.round(h0 * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (img.close) img.close();
+
+    // Start near-lossless; only step down if a photo is unusually heavy
+    const ladder = [0.95, 0.9, 0.82, 0.7];
+    for (let i = 0; i < ladder.length; i++) {
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', ladder[i]));
+      if (!blob) break;
+      const lastTry = i === ladder.length - 1;
+      if (blob.size <= SD_UPLOAD_TARGET_BYTES || lastTry) {
+        // Never hand back something bigger than what the user picked
+        if (blob.size >= file.size) return file;
+        const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+        return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
+      }
+    }
+  } catch (e) {
+    console.warn('Image compression skipped:', e.message);
+  }
+  return file;
+}
+
+async function sdCompressAll(files, onProgress) {
+  const oversized = files.filter(f => f.size > SD_UPLOAD_SKIP_UNDER).length;
+  let done = 0;
+  const out = [];
+  for (const file of files) {
+    if (file.size > SD_UPLOAD_SKIP_UNDER && onProgress) onProgress(++done, oversized);
+    out.push(await sdCompressImage(file));
+  }
+  return out;
+}
+
 async function handleMultiUpload(input, modalKey) {
   const files = Array.from(input.files); input.value = '';
   if (!files.length) return;
@@ -1599,7 +1664,10 @@ async function handleMultiUpload(input, modalKey) {
   toUpload.forEach(() => modalImages[modalKey].push('__uploading__'));
   renderThumbGrid(modalKey);
   try {
-    const fd = new FormData(); toUpload.forEach(f => fd.append('images', f));
+    const ready = await sdCompressAll(toUpload, (n, total) =>
+      setStatus(modalKey, `🗜️ Shrinking oversized photo ${n} of ${total}…`, 'uploading'));
+    setStatus(modalKey, `⏫ Uploading ${ready.length} photo(s)…`, 'uploading');
+    const fd = new FormData(); ready.forEach(f => fd.append('images', f));
     const result = await uploadRequest('POST', '/uploads/images', fd);
     result.urls.forEach((url, i) => { modalImages[modalKey][start + i] = url; });
     renderThumbGrid(modalKey);
@@ -2440,8 +2508,12 @@ async function heroUploadImages(files) {
   if (inp) inp.disabled = true;
 
   try {
+    const ready = await sdCompressAll(imageFiles, (n, total) => {
+      statusEl.textContent = `Shrinking oversized photo ${n} of ${total}…`;
+    });
+    statusEl.textContent = `Uploading ${ready.length} photo(s)…`;
     const fd = new FormData();
-    imageFiles.forEach(f => fd.append('images', f));
+    ready.forEach(f => fd.append('images', f));
     const result = await uploadRequest('POST', '/uploads/images', fd);
     const urls = result.urls || [];
 
@@ -2472,8 +2544,12 @@ async function heroUploadMobileImages(files) {
   if (inp) inp.disabled = true;
 
   try {
+    const ready = await sdCompressAll(imageFiles, (n, total) => {
+      statusEl.textContent = `Shrinking oversized mobile photo ${n} of ${total}…`;
+    });
+    statusEl.textContent = `Uploading ${ready.length} mobile photo(s)…`;
     const fd = new FormData();
-    imageFiles.forEach(f => fd.append('images', f));
+    ready.forEach(f => fd.append('images', f));
     const result = await uploadRequest('POST', '/uploads/images', fd);
     const urls = result.urls || [];
 
