@@ -218,37 +218,56 @@ function injectFloatingCTA() {
     updateNav();
   }
 
-  // Reveal animations (IntersectionObserver)
+  // ── Scroll reveal animations ─────────────────────────────────────────
+  // These classes start at opacity:0, so anything tagged MUST eventually get
+  // .visible or the content is lost. Two safeguards below make that certain:
+  // a generous rootMargin (fires before the element reaches the viewport) and
+  // sdRevealAll(), a timer that force-reveals whatever is still hidden.
+  const SD_ANIMATED = '.reveal, .reveal-left, .stagger, .slide-l, .slide-r, .roll-up';
+
+  function sdShow(el) {
+    el.classList.add('visible');
+    el.querySelectorAll(':scope > *').forEach((c, i) => {
+      setTimeout(() => c.classList.add('visible'), i * 70);
+    });
+  }
+
   const io = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        const children = e.target.querySelectorAll(':scope > *');
-        children.forEach((c, i) => {
-          setTimeout(() => c.classList.add('visible'), i * 70);
-        });
+        sdShow(e.target);
         io.unobserve(e.target);
       }
     });
-  }, { threshold: 0.1 });
+  }, { threshold: 0, rootMargin: '120px 0px 120px 0px' });
+
+  // Safety net: nothing stays invisible, whatever the observer does or doesn't do.
+  function sdRevealAll() {
+    document.querySelectorAll(SD_ANIMATED).forEach(el => {
+      if (!el.classList.contains('visible')) sdShow(el);
+    });
+  }
+  setTimeout(sdRevealAll, 2500);
+  window.addEventListener('load', () => setTimeout(sdRevealAll, 1200));
 
   document.querySelectorAll('.reveal, .reveal-left, .stagger').forEach(el => io.observe(el));
 
   // ── Sliding + rolling scroll animations (auto-applied) ──
   // Section headers alternate slide-left/slide-right; cards roll up with stagger.
+  // Loading skeletons are skipped — hiding a placeholder defeats its purpose.
+  const SD_SKIP = '.prop-skel, .skel-card, .skel-block, .sk, .swipe-hint';
+
   function sdAutoAnimate() {
-    // Alternate sliding section headers (skip ones already animated)
     document.querySelectorAll('.section .section-header, .section-sm .section-header').forEach((el, i) => {
       if (el.classList.contains('slide-l') || el.classList.contains('slide-r')) return;
       el.classList.remove('reveal');
       el.classList.add(i % 2 === 0 ? 'slide-l' : 'slide-r');
       io.observe(el);
     });
-    // Rolling cards — works for dynamically injected cards too
     document.querySelectorAll(
       '.properties-grid > *, .review-grid-new > *, .stay-types-grid > *, .why-grid > *, .reel-grid > *'
     ).forEach((c, i) => {
-      if (c.classList.contains('roll-up')) return;
+      if (c.classList.contains('roll-up') || c.matches(SD_SKIP)) return;
       c.classList.add('roll-up');
       c.style.transitionDelay = (i % 6) * 80 + 'ms';
       io.observe(c);
@@ -256,8 +275,9 @@ function injectFloatingCTA() {
   }
   sdAutoAnimate();
 
-  // Re-tag when dynamic content (properties/reviews) loads in
-  const sdMo = new MutationObserver(() => sdAutoAnimate());
+  // Re-tag when dynamic content (properties/reviews) loads in, then re-arm the
+  // safety net so freshly injected cards can't get stuck hidden either.
+  const sdMo = new MutationObserver(() => { sdAutoAnimate(); setTimeout(sdRevealAll, 2500); });
   document.querySelectorAll('.properties-grid, .review-grid-new, .stay-types-grid, .why-grid, .swipe-wrap').forEach(g => {
     sdMo.observe(g, { childList: true });
   });
