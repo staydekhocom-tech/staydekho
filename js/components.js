@@ -173,6 +173,33 @@ function injectFloatingCTA() {
       #sd-float-cta { bottom: 80px; right: 16px; }
       .sd-fab { width: 46px; height: 46px; }
     }
+
+    /* Attention pulse on the WhatsApp button — a ring expanding out of it.
+       Drawn on a pseudo-element so the button itself never changes. */
+    .sd-fab-wa::after {
+      content: ''; position: absolute; inset: 0; border-radius: 50px;
+      border: 2px solid #25D366; opacity: 0; pointer-events: none;
+      animation: sdRipple 9s ease-out infinite;
+    }
+    .sd-fab-wa { position: relative; }
+    @keyframes sdRipple {
+      0%, 88%  { transform: scale(1);   opacity: 0; }
+      90%      { transform: scale(1);   opacity: .7; }
+      100%     { transform: scale(1.7); opacity: 0; }
+    }
+
+    /* Reading progress along the top of the page */
+    #sd-progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, #8B1717, #c0392b);
+      z-index: 10000; pointer-events: none;
+      transition: width .1s linear;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sd-fab-wa::after { animation: none; }
+      #sd-progress { transition: none; }
+    }
   `;
   document.head.appendChild(style);
 
@@ -194,6 +221,31 @@ function injectFloatingCTA() {
     </a>
   `;
   document.body.appendChild(wrap);
+
+  // Reading-progress bar. Purely additive — its own fixed element, so it can
+  // never affect the layout or visibility of anything on the page.
+  const bar = document.createElement('div');
+  bar.id = 'sd-progress';
+  document.body.appendChild(bar);
+
+  let barQueued = false;
+  const updateBar = () => {
+    barQueued = false;
+    const doc = document.documentElement;
+    const top = window.scrollY != null ? window.scrollY : doc.scrollTop;
+    const max = doc.scrollHeight - window.innerHeight;
+    const pct = max > 0 ? Math.max(0, Math.min(100, (top / max) * 100)) : 0;
+    bar.style.width = pct + '%';
+  };
+  const queueBar = () => {
+    if (barQueued) return;
+    barQueued = true;
+    if (window.requestAnimationFrame) requestAnimationFrame(updateBar);
+    else updateBar();
+  };
+  window.addEventListener('scroll', queueBar, { passive: true });
+  window.addEventListener('resize', queueBar, { passive: true });
+  updateBar();
 }
 
 // ── Inject nav + footer ───────────────────────────────

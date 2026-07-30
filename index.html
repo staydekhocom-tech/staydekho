@@ -2006,12 +2006,59 @@
   // Initial slider boot if hydration didn't run (e.g., API offline)
   if (!slides) initHeroSlider();
 
+  /* ── Hero stat count-up ──────────────────────────────────────────────
+     Counts "500+" up from zero, keeping any suffix. The final string is
+     always written exactly as given, so a parse failure or an interrupted
+     animation can never leave a stat blank or half-counted. */
+  function sdCountUp(el, value) {
+    if (!el || value == null) return;
+    const text = String(value);
+    const m = text.match(/^(\D*)([\d,]*\d(?:\.\d+)?)(.*)$/);
+    const reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    if (el._sdRaf) { cancelAnimationFrame(el._sdRaf); el._sdRaf = null; }
+    el._sdCounted = true;
+    if (!m || reduced) { el.textContent = text; return; }
+
+    const [, prefix, numStr, suffix] = m;
+    const grouped  = numStr.indexOf(',') > -1;       // e.g. "1,200+"
+    const target   = parseFloat(numStr.replace(/,/g, ''));
+    const decimals = (numStr.split('.')[1] || '').length;
+    if (!isFinite(target)) { el.textContent = text; return; }
+
+    const fmt = n => grouped
+      ? n.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : n.toFixed(decimals);
+
+    const DURATION = 1100;
+    const start    = performance.now();
+    const tick = now => {
+      const t = Math.min(1, (now - start) / DURATION);
+      const eased = 1 - Math.pow(1 - t, 3);          // ease-out
+      el.textContent = prefix + fmt(target * eased) + suffix;
+      if (t < 1) { el._sdRaf = requestAnimationFrame(tick); }
+      else { el._sdRaf = null; el.textContent = text; }  // exact value wins
+    };
+    el.textContent = prefix + fmt(0) + suffix;
+    el._sdRaf = requestAnimationFrame(tick);
+  }
+  window.sdCountUp = sdCountUp;
+
+  // Animate whatever the stats currently show, so the effect still happens when
+  // the API is slow or offline and the static fallback numbers are all we have.
+  window.addEventListener('load', () => setTimeout(() => {
+    ['stat-villas', 'stat-dest', 'stat-guests', 'stat-rating'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el._sdCounted) sdCountUp(el, el.textContent.trim());
+    });
+  }, 400));
+
   /* ── Dynamic hero stats from /api/site-settings/public-stats ── */
   (async function hydrateStats() {
     if (!window.api || !api.getPublicStats) return;
     try {
       const { stats } = await api.getPublicStats();
-      const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.textContent = v; };
+      const set = (id, v) => { const el = document.getElementById(id); if (el && v) sdCountUp(el, v); };
       set('stat-villas',  stats.villas);
       set('stat-dest',    stats.destinations);
       set('stat-guests',  stats.guests);
@@ -2259,11 +2306,16 @@
     const cfg = window.SD || {};
 
     // Stats
+    const setStat = (id, v) => {
+      const el = document.getElementById(id);
+      if (!el || !v) return;
+      if (window.sdCountUp) sdCountUp(el, v); else el.textContent = v;
+    };
     if (cfg.stats) {
-      if (cfg.stats.villas)       document.getElementById('stat-villas').textContent  = cfg.stats.villas;
-      if (cfg.stats.destinations) document.getElementById('stat-dest').textContent    = cfg.stats.destinations;
-      if (cfg.stats.guests)       document.getElementById('stat-guests').textContent  = cfg.stats.guests;
-      if (cfg.stats.rating)       document.getElementById('stat-rating').textContent  = cfg.stats.rating;
+      setStat('stat-villas', cfg.stats.villas);
+      setStat('stat-dest',   cfg.stats.destinations);
+      setStat('stat-guests', cfg.stats.guests);
+      setStat('stat-rating', cfg.stats.rating);
     }
 
     // Marquee destination chips (doubled for seamless infinite scroll)
