@@ -2416,11 +2416,6 @@
   document.body.classList.add('loaded');
   document.body.style.opacity = '1';
 
-  // Railway wake-up ping — hit a lightweight endpoint immediately so backend wakes up
-  // before the real data requests fire
-  if (typeof api !== 'undefined' && api.getPublicStats) {
-    api.getPublicStats().catch(() => {}); // fire-and-forget, just to wake Railway
-  }
 </script>
 
 <!-- Search suggestions dropdown — outside hero so overflow:hidden doesn't clip it -->

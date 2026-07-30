@@ -78,31 +78,37 @@ router.get('/', optionalAuth, async (req, res) => {
 
     const props = await Property.find(filter).sort({ created_at: -1 }).lean();
     const today = new Date().toISOString().split('T')[0];
+    const ids   = props.map(p => p._id);
 
-    const rows = await Promise.all(props.map(async (p) => {
+    // Ratings and today's prices are fetched for the whole set in one query each.
+    // Doing it per-property meant 2N round trips, which dominated response time.
+    const [ratingRows, priceRows] = await Promise.all([
+      Review.aggregate([
+        { $match: { property_id: { $in: ids } } },
+        { $group: { _id: '$property_id', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+      ]),
+      DatePrice.find({
+        property_id: { $in: ids },
+        date:        today,
+        blocked:     false,
+        price:       { $ne: null },
+      }).lean(),
+    ]);
+
+    const ratingBy = new Map(ratingRows.map(r => [String(r._id), r]));
+    const priceBy  = new Map(priceRows.map(d => [String(d.property_id), d.price]));
+
+    const rows = props.map(p => {
       const norm = normalize(p);
-
-      // avg rating
-      const aggResult = await Review.aggregate([
-        { $match: { property_id: new mongoose.Types.ObjectId(p._id) } },
-        { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
-      ]);
-      if (aggResult.length > 0) {
-        norm.rating       = String(aggResult[0].avg.toFixed(1));
-        norm.review_count = aggResult[0].count;
+      const key  = String(p._id);
+      const agg  = ratingBy.get(key);
+      if (agg) {
+        norm.rating       = String(agg.avg.toFixed(1));
+        norm.review_count = agg.count;
       }
-
-      // today's date price
-      const dp = await DatePrice.findOne({
-        property_id: p._id,
-        date: today,
-        blocked: false,
-        price: { $ne: null },
-      }).lean();
-      norm.today_price = dp ? dp.price : null;
-
+      norm.today_price = priceBy.has(key) ? priceBy.get(key) : null;
       return norm;
-    }));
+    });
 
     res.json({ properties: rows });
   } catch (err) {
