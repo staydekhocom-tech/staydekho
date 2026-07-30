@@ -14,6 +14,15 @@ function cleanPhone(phone) {
   return String(phone).replace(/\D/g, '').slice(-10); // last 10 digits
 }
 
+// Normalize any phone (with/without +91, spaces, etc.) to a clean 10-digit number,
+// ya null agar valid number nahi hai. Isse DB mein hamesha ek hi format rehta hai.
+function normalizePhone(phone) {
+  if (!phone) return null;
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  return digits.slice(-10);
+}
+
 // Indian mobile: 10 digits, starting with 6/7/8/9 (per TRAI spec)
 function isValidIndianMobile(ph) {
   return /^[6-9]\d{9}$/.test(ph);
@@ -134,7 +143,7 @@ router.post('/register', async (req, res) => {
     const created = await User.create({
       name: name.trim(),
       email: email.toLowerCase(),
-      phone: phone || null,
+      phone: normalizePhone(phone),
       password: hash,
     });
 
@@ -160,11 +169,12 @@ router.get('/me', protect, async (req, res) => {
 router.put('/me', protect, async (req, res) => {
   const { name, phone, avatar_url } = req.body;
   try {
+    const cleanedPhone = phone !== undefined ? normalizePhone(phone) : undefined;
     const updated = await User.findByIdAndUpdate(
       req.user.id,
       {
         name:       name       || req.user.name,
-        phone:      phone      || req.user.phone,
+        phone:      cleanedPhone !== undefined ? cleanedPhone : req.user.phone,
         avatar_url: avatar_url !== undefined ? avatar_url : (req.user.avatar_url || ''),
       },
       { new: true }

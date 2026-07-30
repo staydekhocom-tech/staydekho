@@ -112,6 +112,6 @@ const SD = {
 
 // Auto links
 SD.whatsapp_link = `https://wa.me/${SD.whatsapp}?text=${encodeURIComponent(SD.whatsapp_msg)}`;
-SD.phone_tel     = `tel:${SD.phone_link}`;
+SD.phone_tel     = `tel:+${SD.phone_link}`;   // + zaroori — warna dialer 12-digit ko invalid maanta hai
 
 window.SD = SD;
