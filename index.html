@@ -1339,6 +1339,10 @@
       .hero-content { padding: 80px 20px 260px; }
       .hero-headline { font-size: 2.2rem; }
       .hero-sub { font-size: .9rem; }
+      /* Desktop's 96px top/bottom section padding ate ~24% of a phone's
+         viewport height per section with nothing to show for it. */
+      .section { padding: 56px 0; }
+      .section-sm { padding: 40px 0; }
       .hero-search-wrap { bottom: 16px; }
       .search-box {
         border-radius: 16px; flex-direction: column; gap: 0;
@@ -1372,6 +1376,10 @@
         font-weight: 700;
       }
       .search-btn::after { content: ' Search'; }
+      /* Bigger tap targets on the guest +/- and destination chips — 22px and
+         38px were both under the ~40px minimum for a comfortable thumb tap. */
+      .gctr-btn { width: 36px; height: 36px; font-size: 16px; }
+      .dest-chip { padding: 12px 18px; }
       .slider-arrow { width: 40px; height: 40px; }
       .slider-arrow.prev { left: 12px; }
       .slider-arrow.next { right: 12px; }
