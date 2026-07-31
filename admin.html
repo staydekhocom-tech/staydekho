@@ -308,8 +308,13 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:20px">
         <div class="card">
-          <div class="sec-hdr" style="gap:10px; flex-wrap:wrap;">
-            <div class="sec-title" id="mini-cal-title">📅 Loading...</div>
+          <div class="sec-hdr" style="gap:10px; flex-wrap:wrap; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button onclick="miniCalNav(-1)" title="Previous month" style="border:1px solid #e5e7eb; background:#fff; border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:14px; line-height:1; color:#8B1717;">‹</button>
+              <div class="sec-title" id="mini-cal-title" style="min-width:110px; text-align:center;">📅 Loading...</div>
+              <button onclick="miniCalNav(1)" title="Next month" style="border:1px solid #e5e7eb; background:#fff; border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:14px; line-height:1; color:#8B1717;">›</button>
+              <button onclick="miniCalToday()" title="Back to current month" style="border:1px solid #e5e7eb; background:#fff; border-radius:6px; padding:0 8px; height:26px; cursor:pointer; font-size:11px; color:#6b7280;">Today</button>
+            </div>
             <select id="mini-cal-filter" class="form-ctrl" style="width:auto; padding:4px 8px; font-size:12px;" onchange="renderMiniCal()">
               <option value="all">All Properties</option>
             </select>
@@ -1227,8 +1232,15 @@ function renderRecentBookings(list) {
   }).join('');
 }
 
+let miniCalOffset = 0;  // 0 = current month, +1 = next, -1 = previous
+function miniCalNav(delta) { miniCalOffset += delta; renderMiniCal(); }
+function miniCalToday()     { miniCalOffset = 0;      renderMiniCal(); }
+
 function renderMiniCal() {
-  const today  = new Date(); const year = today.getFullYear(); const month = today.getMonth(); 
+  const today  = new Date();
+  // offset ke hisaab se target month/year nikalo
+  const base   = new Date(today.getFullYear(), today.getMonth() + miniCalOffset, 1);
+  const year   = base.getFullYear(); const month = base.getMonth();
   const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const filterEl = document.getElementById('mini-cal-filter'); const selectedP = filterEl ? filterEl.value : 'all';
   const titleEl = document.getElementById('mini-cal-title');
