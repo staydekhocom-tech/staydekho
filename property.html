@@ -817,7 +817,7 @@
     </div>
   </div>
   <div class="mob-sheet-total" id="mob-sheet-total"></div>
-  <button class="btn btn-primary btn-full btn-lg" id="mob-reserve-btn" onclick="confirmMobBooking()">Reserve Now</button>
+  <button class="btn btn-primary btn-full btn-lg" id="mob-reserve-btn" onclick="confirmMobBooking()">Reserve Now — Pay 30% Advance</button>
 </div>
 
 <!-- ── Calendar Picker Popup ─────────────────────── -->
@@ -902,7 +902,7 @@
   </div>
   <div class="mob-sticky-btns">
     <button class="btn btn-outline btn-sm" onclick="openWAEnquiry()" style="padding:9px 14px">WhatsApp</button>
-    <button class="btn btn-primary btn-sm" onclick="initiateBooking()" style="padding:9px 18px">Reserve</button>
+    <button class="btn btn-primary btn-sm" onclick="openMobSheet()" style="padding:9px 18px">Reserve</button>
   </div>
 </div>
 
@@ -1593,7 +1593,7 @@ function render(p, host, reviews) {
       </div><!-- /LEFT -->
 
       <!-- RIGHT: Booking widget (desktop) -->
-      <div class="prop-sticky">
+      <div class="prop-sticky" id="prop-sticky">
         <div class="bk-widget">
           <div class="bk-price" id="bk-price-display">₹${fmt(p.price)} <span>/ night</span></div>
           <div class="bk-rating">
@@ -1871,9 +1871,9 @@ function updateBreakdown() {
     priceEl.innerHTML = `₹${fmt(avgPerNight)} <span>/ night</span>`;
   }
 
-  // Per-night breakdown (show individual dates if ≤14 nights)
+  // Per-night breakdown — sirf 4 nights tak har date dikhao, warna ek summary line (box chhota rahe)
   let nightsHtml;
-  if (nights <= 14) {
+  if (nights <= 4) {
     nightsHtml = perNight.map(n =>
       `<div class="bk-row" style="font-size:.82rem">
         <span style="color:var(--gray-500)">${n.date}</span>
@@ -1894,21 +1894,11 @@ function updateBreakdown() {
   if (payNow)   payNow.textContent   = '₹' + fmt(advance);
   if (payLater) payLater.textContent = '₹' + fmt(balance);
 
+  // Note: Payment split upar green "Easy Payment" box mein dikhta hai — yahan repeat nahi karte (box compact rahe)
   bd.innerHTML = `
     ${nightsHtml}
     <div class="bk-row"><span>GST (${gstRate*100}%)</span><span>₹${fmt(gst)}</span></div>
-    <div class="bk-row total"><span>Total</span><span>₹${fmt(total)}</span></div>
-    <div style="background:#fff8e6;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px">
-      <div style="font-weight:700;color:#92400e;margin-bottom:8px">💳 Payment Schedule</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span style="color:#4b5563">Pay Now (30% advance)</span>
-        <span style="font-weight:700;color:#15803d">₹${fmt(advance)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between">
-        <span style="color:#4b5563">Pay at Check-in (70%)</span>
-        <span style="font-weight:700;color:#1d4ed8">₹${fmt(balance)}</span>
-      </div>
-    </div>`;
+    <div class="bk-row total"><span>Total</span><span>₹${fmt(total)}</span></div>`;
 }
 
 function changeGuests(delta) {
@@ -1975,7 +1965,39 @@ function updateMobTotal() {
   if(!el) return;
   const nights=calcNights(ci,co);
   if(!nights) { el.textContent=''; return; }
-  el.innerHTML=`<strong>₹${fmt(calcTotal(nights,ci,co))}</strong> total for ${nights} night${nights>1?'s':''}`;
+
+  // Poora breakdown — desktop widget jaisa hi (base + GST + total + 30/70 split)
+  const perNight = nightBreakdown(ci, co);
+  const base     = perNight.reduce((s, n) => s + n.price, 0);
+  const gstRate  = (base / nights) > 7500 ? 0.18 : 0.05;
+  const gst      = Math.round(base * gstRate);
+  const total    = base + gst;
+  const advance  = Math.round(total * 0.30);
+  const balance  = total - advance;
+  const avgPerNight = Math.round(base / nights);
+
+  el.innerHTML = `
+    <div style="border-top:1px solid var(--gray-100);padding-top:12px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px">
+        <span style="color:var(--gray-500)">₹${fmt(avgPerNight)} × ${nights} night${nights>1?'s':''}</span><span>₹${fmt(base)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px">
+        <span style="color:var(--gray-500)">GST (${gstRate*100}%)</span><span>₹${fmt(gst)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;padding-top:7px;border-top:1px solid var(--gray-100);margin-bottom:10px">
+        <span>Total</span><span>₹${fmt(total)}</span>
+      </div>
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px 13px;font-size:.82rem;margin-bottom:8px">
+        <div style="font-weight:700;color:#15803d;margin-bottom:5px">💳 Easy Payment — 2 Parts</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="color:#374151">✅ Pay Now (30% advance)</span><span style="font-weight:700;color:#15803d">₹${fmt(advance)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:#374151">🏠 Pay at Check-in (70%)</span><span style="font-weight:700;color:#1d4ed8">₹${fmt(balance)}</span>
+        </div>
+      </div>
+      <div style="font-size:.72rem;color:var(--gray-400);text-align:center;margin-bottom:4px">✅ Free cancellation 7 days before · 🔒 Secure payment · 💬 24/7 support</div>
+    </div>`;
 }
 function confirmMobBooking() {
   // Sync mobile inputs to desktop widget then call booking
