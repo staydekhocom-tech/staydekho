@@ -1295,14 +1295,7 @@ async function loadProperty() {
     const todayPrice = (todayDp && todayDp.price) ? todayDp.price : property.price;
     const priceElInit = document.getElementById('bk-price-display');
     if (priceElInit) priceElInit.innerHTML = `₹${fmt(todayPrice)} <span>/ night</span>`;
-    document.title = `${property.title} — StayDekho`;
-
-    // Update SEO meta
-    document.getElementById('og-title').setAttribute('content', `${property.title} — StayDekho`);
-    document.getElementById('og-description').setAttribute('content', property.description || 'Premium group stay — StayDekho');
-    document.getElementById('og-image').setAttribute('content', property.main_image || '');
-    document.getElementById('og-url').setAttribute('content', location.href);
-    document.querySelector('meta[name="description"]').setAttribute('content', property.description || 'Premium group stay — StayDekho');
+    injectPropertySEO(property, reviews || []);
 
     render(property, host || {}, reviews || []);
     loadSimilarProperties(property);
@@ -2453,6 +2446,86 @@ function buildFaqHtml() {
 function toggleFaq(i) {
   const el = document.getElementById('faq-'+i);
   if (el) el.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════════════
+   SEO — per-property title, description, canonical +
+   LodgingBusiness & FAQPage structured data (JSON-LD)
+   Ye Google ranking + AI Overview citation ke liye zaroori hai
+═══════════════════════════════════════════════════ */
+function injectPropertySEO(p, reviews) {
+  const price   = p.price ? `₹${Number(p.price).toLocaleString('en-IN')}/night` : '';
+  const loc     = p.location || 'Udaipur, Rajasthan';
+  const beds    = p.beds ? `${p.beds} BHK` : '';
+  const maxG    = p.max_guests || p.guests || '';
+
+  // Title: "<Villa>, <Location> — ₹X/night | StayDekho"
+  const title = `${p.title}, ${loc}${price ? ' — ' + price : ''} | StayDekho`;
+  document.title = title;
+
+  // Description: rich, keyword-friendly, 1-2 lines. Markdown/HTML strip karo (warna Google pe ** dikhega)
+  const cleanDesc = String(p.description || '').replace(/[*_#`>]/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const desc = (cleanDesc.length > 40)
+    ? cleanDesc.slice(0, 155)
+    : `Book ${p.title} — a private ${beds} group stay in ${loc}${maxG ? ' for up to ' + maxG + ' guests' : ''}. Direct booking, best price, verified homestay by StayDekho.`;
+
+  const setMeta = (sel, val) => { const el = document.querySelector(sel); if (el) el.setAttribute('content', val); };
+  setMeta('meta[name="description"]', desc);
+  setMeta('#og-title', title);
+  setMeta('#og-description', desc);
+  setMeta('#og-image', p.main_image || '');
+  setMeta('#og-url', location.href);
+
+  // Canonical URL
+  let canon = document.querySelector('link[rel="canonical"]');
+  if (!canon) { canon = document.createElement('link'); canon.rel = 'canonical'; document.head.appendChild(canon); }
+  canon.href = location.href.split('#')[0];
+
+  // Rating from real reviews (agar hain)
+  let ratingBlock = {};
+  if (reviews && reviews.length) {
+    const avg = (reviews.reduce((s, r) => s + (r.rating || 5), 0) / reviews.length).toFixed(1);
+    ratingBlock = { aggregateRating: { '@type': 'AggregateRating', ratingValue: avg, reviewCount: reviews.length } };
+  }
+
+  const images = Array.isArray(p.images) && p.images.length ? p.images.slice(0, 6) : (p.main_image ? [p.main_image] : []);
+
+  // ── LodgingBusiness schema (villa ki poori info) ──
+  const lodging = {
+    '@context': 'https://schema.org',
+    '@type': 'LodgingBusiness',
+    name: p.title,
+    description: desc,
+    url: location.href.split('#')[0],
+    image: images,
+    priceRange: price || '₹₹',
+    address: { '@type': 'PostalAddress', addressLocality: loc.split(',')[0].trim(), addressRegion: 'Rajasthan', addressCountry: 'IN' },
+    telephone: (window.SD && window.SD.phone) || '+91 87692 22983',
+    ...(p.lat && p.lng ? { geo: { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng } } : {}),
+    ...(maxG ? { numberOfRooms: p.beds || undefined, petsAllowed: false } : {}),
+    ...ratingBlock,
+  };
+
+  // ── FAQPage schema (AI Overview isko uthata hai) ──
+  const faqPage = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_LIST.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
+
+  // Purane inject kiye schema hatao, naye daalo
+  document.querySelectorAll('script[data-sd-seo]').forEach(s => s.remove());
+  [lodging, faqPage].forEach(obj => {
+    const s = document.createElement('script');
+    s.type = 'application/ld+json';
+    s.setAttribute('data-sd-seo', '1');
+    s.textContent = JSON.stringify(obj);
+    document.head.appendChild(s);
+  });
 }
 
 /* ═══════════════════════════════════════════════════
