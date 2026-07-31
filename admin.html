@@ -327,7 +327,7 @@
           <div class="chart-bars" id="rev-chart"></div>
         </div>
         <div class="card">
-          <div class="sec-hdr"><div class="sec-title">Property-wise Revenue</div></div>
+          <div class="sec-hdr"><div class="sec-title" id="prop-rev-title">Property-wise Revenue</div></div>
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse;font-size:13px">
               <thead>
@@ -1186,7 +1186,7 @@ async function initAdmin() {
     renderRecentBookings(statsRes.recentBookings || bookings);
     renderDashArrivals();
     renderChartFromData(statsRes.monthlyRevenue || []);
-    renderPropertyRevenue(statsRes.propertyRevenue || []);
+    // Property-wise revenue ab renderMiniCal ke through month-wise dikhta hai (neeche call hota hai)
     
     const propSelect = document.getElementById('adv-cal-property');
     if(propSelect) {
@@ -1327,6 +1327,41 @@ function renderMiniCal() {
     revEl.innerHTML = `<span style="color:var(--gray-500)">${MONTH_NAMES[month]} bookings: <b style="color:#1a1a1a">${monthRows.length}</b></span>
       <span style="color:var(--gray-500)">Revenue: <b style="color:#15803d">₹${rev.toLocaleString('en-IN')}</b></span>`;
   }
+
+  // Property-wise revenue bhi usi month ka dikhao (calendar ke saath sync)
+  renderPropRevenueForMonth(year, month, MONTH_NAMES[month]);
+}
+
+// Displayed month ke check-ins se per-property revenue nikaal ke table bharo
+function renderPropRevenueForMonth(year, month, monthLabel) {
+  const tbody = document.getElementById('prop-rev-tbody');
+  if (!tbody) return;
+  const titleEl = document.getElementById('prop-rev-title');
+  if (titleEl) titleEl.textContent = `Property-wise Revenue — ${monthLabel} ${year}`;
+
+  const byProp = {};
+  bookings.filter(b => !b.isExternal && b.status !== 'cancelled' && (() => {
+    const c = new Date(b.checkin); return c.getFullYear()===year && c.getMonth()===month;
+  })()).forEach(b => {
+    const name = b.property || '—';
+    if (!byProp[name]) byProp[name] = { property_name: name, bookings: 0, booked: 0, received: 0 };
+    const total = Number(b.total_amount || b.amount || 0);
+    const adv   = Number(b.amount || 0);
+    byProp[name].bookings += 1;
+    byProp[name].booked   += total;
+    byProp[name].received += b.balance_paid ? total : adv;
+  });
+
+  const rows = Object.values(byProp).sort((a,b) => b.booked - a.booked);
+  const money = v => '₹' + Number(v || 0).toLocaleString('en-IN');
+  tbody.innerHTML = rows.length
+    ? rows.map(r => `<tr style="border-top:1px solid var(--gray-100)">
+        <td style="padding:10px 12px;font-weight:600">${r.property_name}</td>
+        <td style="padding:10px 12px">${r.bookings}</td>
+        <td style="padding:10px 12px;text-align:right;font-weight:700">${money(r.booked)}</td>
+        <td style="padding:10px 12px;text-align:right;color:#16a34a;font-weight:600">${money(r.received)}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--gray-400)">No bookings in ${monthLabel} ${year}</td></tr>`;
 }
 
 function getBookedDaysForProp(propName, year, month) {
