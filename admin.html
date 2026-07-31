@@ -1210,14 +1210,24 @@ function renderDashArrivals() {
   const todayRows = pick(sdDateStr(0));
   const tmrwRows  = pick(sdDateStr(1));
 
-  const names = rows => rows.length
-    ? rows.map(b => b.guest).slice(0, 3).join(', ') + (rows.length > 3 ? ` +${rows.length - 3}` : '')
-    : 'No arrivals';
+  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day:'numeric', month:'short' }); } catch { return s || ''; } };
+
+  // Har arrival ka detail: "guest — property" + hover pe phone/nights/checkout
+  const detailHtml = rows => {
+    if (!rows.length) return '<span style="color:var(--gray-400)">No arrivals</span>';
+    return rows.slice(0, 4).map(b => {
+      const tip = `${b.guest}${b.guest_phone ? ' · 📞 ' + b.guest_phone : ''} · ${b.nights || 1} night${(b.nights||1)>1?'s':''} · Check-out ${fmtD(b.checkout)}`;
+      return `<div title="${tip.replace(/"/g,'&quot;')}" style="line-height:1.5;margin-top:2px">
+        <span style="color:#15803d;font-weight:600">${b.guest}</span>
+        <span style="color:var(--gray-400)"> · ${b.property || '—'}</span>
+      </div>`;
+    }).join('') + (rows.length > 4 ? `<div style="color:var(--gray-400);font-size:.8em">+${rows.length - 4} more</div>` : '');
+  };
 
   el('stat-checkin-today').textContent = todayRows.length;
-  el('stat-checkin-today-sub').textContent = names(todayRows);
+  el('stat-checkin-today-sub').innerHTML = detailHtml(todayRows);
   el('stat-checkin-tmrw').textContent = tmrwRows.length;
-  el('stat-checkin-tmrw-sub').textContent = names(tmrwRows);
+  el('stat-checkin-tmrw-sub').innerHTML = detailHtml(tmrwRows);
 }
 
 // ── RECENT BOOKINGS & MINI CAL (DASHBOARD) ──
