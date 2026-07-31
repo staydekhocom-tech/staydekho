@@ -327,18 +327,9 @@
   /* ═══════════════════════════════════════════
      LAYOUT (desktop 70 / 30)
   ═══════════════════════════════════════════ */
-  .prop-layout { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 44px; align-items: start; }
-  .prop-sticky {
-    position: sticky; top: 90px;
-    /* Box viewport se lamba ho to andar hi scroll ho — page-end wali ajeeb behaviour khatam */
-    max-height: calc(100vh - 110px);
-    overflow-y: auto;
-    /* subtle scrollbar */
-    scrollbar-width: thin;
-  }
-  .prop-sticky::-webkit-scrollbar { width: 6px; }
-  .prop-sticky::-webkit-scrollbar-thumb { background: #e0dbd5; border-radius: 3px; }
-  .prop-sticky::-webkit-scrollbar-track { background: transparent; }
+  /* Right column thoda chauda — booking box ko poori jagah mile, koi internal scroll nahi */
+  .prop-layout { display: grid; grid-template-columns: minmax(0,1fr) 400px; gap: 36px; align-items: start; }
+  .prop-sticky { position: sticky; top: 90px; }
 
   /* ═══════════════════════════════════════════
      BOOKING WIDGET
