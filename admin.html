@@ -287,8 +287,8 @@
       <div class="stat-card"><div class="stat-icon si-green">📋</div><div><div class="stat-val" id="stat-books">—</div><div class="stat-lbl">Total Bookings</div><div class="stat-chg up" id="stat-books-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-val" id="stat-users-count">—</div><div class="stat-lbl">Registered Users</div><div class="stat-chg up" id="stat-users-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl">Total Booked (This Month)</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-blue">📍</div><div><div class="stat-val" id="stat-checkin-today">—</div><div class="stat-lbl">Check-ins Today</div><div class="stat-chg up" id="stat-checkin-today-sub">—</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-orange">⏰</div><div><div class="stat-val" id="stat-checkin-tmrw">—</div><div class="stat-lbl">Check-ins Tomorrow</div><div class="stat-chg up" id="stat-checkin-tmrw-sub">—</div></div></div>
+      <div class="stat-card" style="cursor:pointer" onclick="openArrivalsModal('today')" title="Click for details"><div class="stat-icon si-blue">📍</div><div><div class="stat-val" id="stat-checkin-today">—</div><div class="stat-lbl">Check-ins Today <span style="color:var(--gray-300)">🔎</span></div><div class="stat-chg up" id="stat-checkin-today-sub">—</div></div></div>
+      <div class="stat-card" style="cursor:pointer" onclick="openArrivalsModal('tmrw')" title="Click for details"><div class="stat-icon si-orange">⏰</div><div><div class="stat-val" id="stat-checkin-tmrw">—</div><div class="stat-lbl">Check-ins Tomorrow <span style="color:var(--gray-300)">🔎</span></div><div class="stat-chg up" id="stat-checkin-tmrw-sub">—</div></div></div>
     </div>
 
     <div class="dash-grid">
@@ -320,6 +320,7 @@
             </select>
           </div>
           <div id="mini-cal"></div>
+          <div id="mini-cal-revenue" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center;font-size:13px"></div>
         </div>
         <div class="card">
           <div class="sec-hdr"><div class="sec-title">Monthly Revenue (₹L)</div></div>
@@ -801,6 +802,14 @@
 
 <!-- 🔥 MODALS 🔥 -->
 
+<!-- Arrivals (Check-ins) detail modal -->
+<div class="modal-bd" id="arrivals-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr"><div class="modal-title" id="arrivals-modal-title">Check-ins</div><button class="modal-close" onclick="closeModal('arrivals-modal')">✕</button></div>
+    <div id="arrivals-modal-body" style="max-height:60vh;overflow-y:auto"></div>
+  </div>
+</div>
+
 <div class="modal-bd" id="review-add-modal">
   <div class="modal" style="max-width:500px">
     <div class="modal-hdr"><div class="modal-title" id="rev-modal-title">Add Guest Review</div><button class="modal-close" onclick="closeModal('review-add-modal')">✕</button></div>
@@ -1230,6 +1239,42 @@ function renderDashArrivals() {
   el('stat-checkin-tmrw-sub').innerHTML = detailHtml(tmrwRows);
 }
 
+// Click on a Check-ins card → full detail popup (works even with many arrivals)
+function openArrivalsModal(which) {
+  const pick = day => bookings.filter(b =>
+    !b.isExternal && b.status !== 'cancelled' && (b.checkin || '').slice(0, 10) === day);
+  const rows = which === 'today' ? pick(sdDateStr(0)) : pick(sdDateStr(1));
+  const label = which === 'today' ? 'Today' : 'Tomorrow';
+  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); } catch { return s || '—'; } };
+
+  document.getElementById('arrivals-modal-title').textContent = `📍 Check-ins ${label} (${rows.length})`;
+
+  const body = document.getElementById('arrivals-modal-body');
+  if (!rows.length) {
+    body.innerHTML = '<div style="text-align:center;color:var(--gray-400);padding:30px">No check-ins ' + label.toLowerCase() + '</div>';
+  } else {
+    body.innerHTML = rows.map(b => {
+      const bal = b.balance_paid ? '<span style="color:#15803d;font-weight:600">✓ Fully Paid</span>'
+        : `<span style="color:#dc2626;font-weight:600">Balance ₹${Number(b.balance_amount||0).toLocaleString('en-IN')}</span>`;
+      const wa = b.guest_phone ? `<a href="https://wa.me/91${String(b.guest_phone).replace(/\D/g,'').slice(-10)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:600">💬 WhatsApp</a>` : '';
+      const call = b.guest_phone ? `<a href="tel:+91${String(b.guest_phone).replace(/\D/g,'').slice(-10)}" style="color:#1d4ed8;text-decoration:none;font-weight:600">📞 ${b.guest_phone}</a>` : '<span style="color:var(--gray-400)">No phone</span>';
+      return `<div style="border:1px solid #eee;border-radius:10px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+          <div style="font-weight:700;font-size:15px">${b.guest || '—'}</div>
+          <span class="badge b-${b.status||'pending'}">${(b.status||'pending').replace('_',' ')}</span>
+        </div>
+        <div style="color:#8B1717;font-weight:600;margin-top:3px">🏡 ${b.property || '—'}</div>
+        <div style="color:var(--gray-500);font-size:13px;margin-top:6px;line-height:1.7">
+          📅 ${fmtD(b.checkin)} → ${fmtD(b.checkout)} · ${b.nights||1} night${(b.nights||1)>1?'s':''} · 👥 ${b.guests||1} guest${(b.guests||1)>1?'s':''}<br/>
+          💰 Total ₹${Number(b.total_amount||b.amount||0).toLocaleString('en-IN')} · ${bal}
+        </div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:13px">${call} ${wa}</div>
+      </div>`;
+    }).join('');
+  }
+  showModal('arrivals-modal');
+}
+
 // ── RECENT BOOKINGS & MINI CAL (DASHBOARD) ──
 function renderRecentBookings(list) {
   const tbody = document.getElementById('recent-bookings-tbody');
@@ -1270,6 +1315,18 @@ function renderMiniCal() {
   h += `</div>`;
   const miniCalEl = document.getElementById('mini-cal');
   if(miniCalEl) miniCalEl.innerHTML = h;
+
+  // Us displayed month ka revenue + bookings count (check-in us month mein ho)
+  const revEl = document.getElementById('mini-cal-revenue');
+  if (revEl) {
+    const monthRows = (selectedP==='all' ? bookings : bookings.filter(b=>b.property===selectedP))
+      .filter(b => !b.isExternal && b.status !== 'cancelled' && (() => {
+        const c = new Date(b.checkin); return c.getFullYear()===year && c.getMonth()===month;
+      })());
+    const rev = monthRows.reduce((s,b) => s + Number(b.total_amount || b.amount || 0), 0);
+    revEl.innerHTML = `<span style="color:var(--gray-500)">${MONTH_NAMES[month]} bookings: <b style="color:#1a1a1a">${monthRows.length}</b></span>
+      <span style="color:var(--gray-500)">Revenue: <b style="color:#15803d">₹${rev.toLocaleString('en-IN')}</b></span>`;
+  }
 }
 
 function getBookedDaysForProp(propName, year, month) {
