@@ -1,6 +1,7 @@
 const router   = require('express').Router();
 const Razorpay  = require('razorpay');
-const { Booking, Property, Payment, DatePrice } = require('../db/models');
+const jwt       = require('jsonwebtoken');
+const { Booking, Property, Payment, DatePrice, User, Staff } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
 const { blockCalendarForBooking, unblockCalendarIfFree, createCleaningTaskForCheckout, notifyGuestBookingCancelled } = require('../services/bookingAutomation');
@@ -242,12 +243,27 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
 // ?type=final    → Final Tax Invoice (full payment)
 // Auto-detects if ?type not provided: balance_paid=false → Proforma, else Final
 // Supports ?token=JWT for direct browser tab opening
-router.get('/:id/invoice', (req, res, next) => {
-  if (req.query.token && !req.headers.authorization) {
-    req.headers.authorization = `Bearer ${req.query.token}`;
-  }
-  next();
-}, protect, async (req, res) => {
+router.get('/:id/invoice', async (req, res) => {
+  // Accept token from ?token= query param or Authorization header (supports both user + staff JWTs)
+  const rawToken = req.query.token
+    || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+  if (!rawToken) return res.status(401).json({ error: 'Not authenticated' });
+
+  let isAdmin = false, userId = null, staffId = null;
+  try {
+    const decoded = jwt.verify(rawToken, process.env.JWT_SECRET);
+    if (decoded.type === 'staff') {
+      const staff = await Staff.findById(decoded.id).lean();
+      if (!staff || staff.status !== 'active') return res.status(401).json({ error: 'Staff not authorized' });
+      staffId = staff._id.toString();
+    } else {
+      const user = await User.findById(decoded.id).lean();
+      if (!user) return res.status(401).json({ error: 'User not found' });
+      isAdmin = user.role === 'admin';
+      userId  = user._id.toString();
+    }
+  } catch { return res.status(401).json({ error: 'Invalid or expired token' }); }
+
   try {
     const booking = await Booking.findById(req.params.id)
       .populate('user_id', 'name email phone')
@@ -255,7 +271,8 @@ router.get('/:id/invoice', (req, res, next) => {
       .lean();
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (req.user.role !== 'admin' && booking.user_id?._id?.toString() !== req.user.id)
+    const staffIsOwner = staffId && booking.booked_by_staff_id?.toString() === staffId;
+    if (!isAdmin && booking.user_id?._id?.toString() !== userId && !staffIsOwner)
       return res.status(403).json({ error: 'Not authorized' });
 
     const row = {

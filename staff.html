@@ -1017,71 +1017,13 @@ async function loadMyBookings() {
   } catch { toast('Could not load bookings'); }
 }
 
-// ── Invoice ────────────────────────────────────────────────
+// ── Invoice — uses the same backend proforma route as admin ─
 function showBookingInvoice(id) {
   const b = salesBookingCache[id];
-  if (!b) { toast('Booking data not found'); return; }
-  const nights = b.nights || Math.ceil((new Date(b.checkout) - new Date(b.checkin)) / 86400000);
-  function fmtD(d) {
-    if (!d) return '—';
-    const [y, m, day] = d.split('-');
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
-  }
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Invoice SD-${String(b.booking_no||0).padStart(4,'0')}</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:28px 20px;color:#111;max-width:480px;margin:0 auto}
-.logo{font-size:22px;font-weight:800;color:#7c3aed;letter-spacing:-0.5px}
-.hdr{text-align:center;padding-bottom:18px;border-bottom:2px solid #f3f4f6;margin-bottom:20px}
-.bid{font-size:13px;color:#6b7280;margin-top:4px}
-.sec-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-weight:600;margin-bottom:10px}
-.sec{margin-bottom:18px}
-.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f9fafb}
-.row label{color:#6b7280;font-size:13px}
-.row span{font-size:13px;font-weight:500;text-align:right}
-.amt-box{background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:18px}
-.amt-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
-.amt-row.ttl{border-top:1px solid #e5e7eb;margin-top:8px;padding-top:10px;font-size:15px;font-weight:700}
-.green{color:#16a34a}.red{color:#dc2626}
-.footer{text-align:center;font-size:12px;color:#9ca3af;padding-top:16px;border-top:1px solid #f3f4f6}
-.print-btn{display:block;width:100%;padding:13px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:20px}
-@media print{.print-btn{display:none}}
-</style></head><body>
-<button class="print-btn" onclick="window.print()">🖨️ Download / Print PDF</button>
-<div class="hdr">
-  <div class="logo">StayDekho</div>
-  <div class="bid">Booking Confirmation · SD-${String(b.booking_no||0).padStart(4,'0')}</div>
-  <div style="font-size:12px;color:#9ca3af;margin-top:3px">Booked by: ${staffData?.name || '—'}</div>
-</div>
-<div class="sec">
-  <div class="sec-title">Guest Details</div>
-  <div class="row"><label>Name</label><span>${b.guest_name}</span></div>
-  ${b.guest_phone ? `<div class="row"><label>Phone</label><span>${b.guest_phone}</span></div>` : ''}
-  ${b.guest_email ? `<div class="row"><label>Email</label><span>${b.guest_email}</span></div>` : ''}
-</div>
-<div class="sec">
-  <div class="sec-title">Stay Details</div>
-  <div class="row"><label>Property</label><span>${b.property_name}</span></div>
-  <div class="row"><label>Check-in</label><span>${fmtD(b.checkin)}</span></div>
-  <div class="row"><label>Check-out</label><span>${fmtD(b.checkout)}</span></div>
-  <div class="row"><label>Duration</label><span>${nights} night${nights>1?'s':''}</span></div>
-  <div class="row"><label>Guests</label><span>${b.guests}</span></div>
-</div>
-<div class="amt-box">
-  <div class="sec-title">Payment Summary</div>
-  <div class="amt-row"><span>Total Amount</span><span style="font-weight:600">₹${(b.total_amount||0).toLocaleString('en-IN')}</span></div>
-  <div class="amt-row"><span>Advance Paid</span><span class="green">₹${(b.advance||0).toLocaleString('en-IN')}</span></div>
-  <div class="amt-row ttl"><span>Balance Due</span><span class="${(b.balance_amount||0)>0?'red':'green'}">₹${(b.balance_amount||0).toLocaleString('en-IN')}</span></div>
-</div>
-${b.notes ? `<div class="sec"><div class="sec-title">Special Notes</div><p style="font-size:13px;color:#374151;background:#fafafa;padding:10px;border-radius:8px">${b.notes}</p></div>` : ''}
-<div class="footer">Thank you for choosing StayDekho!<br>staydekho.com</div>
-</body></html>`;
-  const win = window.open('', '_blank', 'width=520,height=750');
-  if (win) { win.document.write(html); win.document.close(); }
-  else toast('Allow pop-ups to open invoice');
+  if (!b || !b.id) { toast('Booking not found'); return; }
+  const url = `${API}/api/bookings/${b.id}/invoice?type=proforma&token=${encodeURIComponent(staffToken)}`;
+  const win = window.open(url, '_blank');
+  if (!win) toast('Allow pop-ups to open invoice');
 }
 
 // ── Edit Booking ───────────────────────────────────────────
