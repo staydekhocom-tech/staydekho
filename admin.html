@@ -1980,8 +1980,10 @@ function initOpsMonthFilter() {
   const now = new Date();
   const opts = [];
   for (let i = 0; i < 13; i++) {
-    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const val = d.toISOString().slice(0, 7);
+    const d  = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yr = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const val = `${yr}-${mo}`;
     const lbl = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
     opts.push(`<option value="${val}">${lbl}</option>`);
   }
@@ -2024,14 +2026,15 @@ function updateTodaySnapshot() {
 // ── DASHBOARD (feeds revenue/occupancy snapshot + Revenue by Platform + Monthly Report) ──
 async function loadOpsDashboard() {
   try {
-    // Compute month date range (from = 1st, to = last day)
-    const monthVal = opsSelectedMonth || new Date().toISOString().slice(0, 7);
+    // Compute month date range using local dates (toISOString shifts to UTC — wrong for IST)
+    const now2 = new Date();
+    const defYr = now2.getFullYear(), defMo = String(now2.getMonth() + 1).padStart(2, '0');
+    const monthVal = opsSelectedMonth || `${defYr}-${defMo}`;
     const [yr, mo] = monthVal.split('-').map(Number);
-    const fromDate  = new Date(yr, mo - 1, 1);
-    const toDate    = new Date(yr, mo, 0); // last day of month
-    const from = fromDate.toISOString().split('T')[0];
-    const to   = toDate.toISOString().split('T')[0];
-    const monthLabel = fromDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+    const lastDay  = new Date(yr, mo, 0).getDate();
+    const from = `${yr}-${String(mo).padStart(2,'0')}-01`;
+    const to   = `${yr}-${String(mo).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+    const monthLabel = new Date(yr, mo - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 
     const params = { from, to };
     if (opsSelectedProperty) params.property_id = opsSelectedProperty;
