@@ -103,11 +103,11 @@ router.get('/dashboard', staffProtect, async (req, res) => {
 
     const [checkins, checkouts, upcoming, tasks, issues] = await Promise.all([
       Booking.find({ property_id: propFilter, checkin: todayStr, status: 'confirmed' })
-        .select('guest_name guest_phone checkin checkout guests status').lean(),
+        .select('guest_name guest_phone checkin checkout guests nights booking_no balance_amount notes status').lean(),
       Booking.find({ property_id: propFilter, checkout: todayStr, status: { $in: ['confirmed', 'checked_in'] } })
-        .select('guest_name guest_phone checkin checkout guests status').lean(),
+        .select('guest_name guest_phone checkin checkout guests nights booking_no balance_amount status').lean(),
       Booking.find({ property_id: propFilter, checkin: { $gt: todayStr }, status: 'confirmed' })
-        .select('guest_name checkin checkout guests').sort({ checkin: 1 }).limit(5).lean(),
+        .select('guest_name checkin checkout guests nights booking_no balance_amount').sort({ checkin: 1 }).limit(5).lean(),
       StaffTask.find({ property_id: propFilter, status: { $ne: 'done' }, due_date: { $gte: todayStr } })
         .sort({ due_date: 1 }).limit(10).lean(),
       StaffIssue.find({ property_id: propFilter, status: 'open' })
@@ -509,16 +509,18 @@ router.get('/properties', staffProtect, async (req, res) => {
 router.post('/sales-booking', staffProtect, async (req, res) => {
   if (req.staff.role !== 'sales') return res.status(403).json({ error: 'Sales role required' });
   try {
-    const { property_id, guest_name, guest_phone, guest_email, checkin, checkout, guests, amount, payment_method, notes } = req.body;
+    const { property_id, guest_name, guest_phone, guest_email, checkin, checkout, guests, total_amount, amount, balance_amount, payment_method, notes } = req.body;
     if (!property_id || !guest_name || !checkin || !checkout)
       return res.status(400).json({ error: 'property_id, guest_name, checkin, checkout are required' });
 
     const property = await Property.findById(property_id).lean();
     if (!property) return res.status(404).json({ error: 'Property not found' });
 
-    const bookingNo = (await Booking.countDocuments()) + 1;
-    const nights    = Math.max(1, Math.round((new Date(checkout) - new Date(checkin)) / 86400000));
-    const amt       = parseFloat(amount) || 0;
+    const bookingNo  = (await Booking.countDocuments()) + 1;
+    const nights     = Math.max(1, Math.round((new Date(checkout) - new Date(checkin)) / 86400000));
+    const totalAmt   = parseFloat(total_amount)   || 0;
+    const advanceAmt = parseFloat(amount)         || totalAmt;
+    const balanceAmt = parseFloat(balance_amount) || Math.max(0, totalAmt - advanceAmt);
 
     const booking = await Booking.create({
       property_id,
@@ -529,9 +531,9 @@ router.post('/sales-booking', staffProtect, async (req, res) => {
       checkout,
       guests:             parseInt(guests) || 1,
       nights,
-      amount:             amt,
-      total_amount:       amt,
-      balance_amount:     0,
+      amount:             advanceAmt,
+      total_amount:       totalAmt,
+      balance_amount:     balanceAmt,
       payment_method:     payment_method || 'cash',
       notes:              notes?.trim() || '',
       status:             'confirmed',

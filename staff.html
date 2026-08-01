@@ -379,52 +379,85 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
     <div class="card">
       <div class="card-header"><h2>New Booking</h2></div>
       <div class="card-body">
+
         <div class="nb-field">
           <label>Property *</label>
-          <select id="nb-property">
+          <select id="nb-property" onchange="nbCalcPrice()">
             <option value="">Select property…</option>
           </select>
         </div>
-        <div class="nb-field">
-          <label>Guest Name *</label>
-          <input id="nb-name" type="text" placeholder="Full name">
+
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Guest Name *</label>
+            <input id="nb-name" type="text" placeholder="Full name">
+          </div>
+          <div class="nb-field">
+            <label>Phone</label>
+            <input id="nb-phone" type="tel" placeholder="10-digit" inputmode="numeric" maxlength="10">
+          </div>
         </div>
+
         <div class="nb-field">
-          <label>Phone</label>
-          <input id="nb-phone" type="tel" placeholder="10-digit number" inputmode="numeric" maxlength="10">
+          <label>Email (optional)</label>
+          <input id="nb-email" type="email" placeholder="guest@email.com">
         </div>
+
         <div class="nb-row">
           <div class="nb-field">
             <label>Check-in *</label>
-            <input id="nb-checkin" type="date">
+            <input id="nb-checkin" type="date" onchange="nbCalcPrice()">
           </div>
           <div class="nb-field">
             <label>Check-out *</label>
-            <input id="nb-checkout" type="date">
+            <input id="nb-checkout" type="date" onchange="nbCalcPrice()">
           </div>
         </div>
+
+        <!-- Price summary — appears when dates + property selected -->
+        <div id="nb-price-summary" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:13px;color:#166534;font-weight:500" id="nb-nights-label">— nights</div>
+          <div style="font-size:20px;font-weight:700;color:#15803d;margin-top:2px" id="nb-total-label">₹0</div>
+          <div style="font-size:11.5px;color:#4ade80;margin-top:1px" id="nb-rate-label"></div>
+        </div>
+
         <div class="nb-row">
           <div class="nb-field">
             <label>Guests</label>
             <input id="nb-guests" type="number" value="2" min="1" max="50" inputmode="numeric">
           </div>
           <div class="nb-field">
-            <label>Amount (₹)</label>
-            <input id="nb-amount" type="number" placeholder="0" inputmode="numeric">
+            <label>Total Amount (₹) *</label>
+            <input id="nb-total" type="number" placeholder="Auto" inputmode="numeric" oninput="nbCalcBalance()">
           </div>
         </div>
+
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Advance Paid (₹)</label>
+            <input id="nb-advance" type="number" placeholder="0" inputmode="numeric" oninput="nbCalcBalance()">
+          </div>
+          <div class="nb-field">
+            <label>Balance Due (₹)</label>
+            <input id="nb-balance" type="number" placeholder="0" readonly style="background:#f9fafb;color:#6b7280">
+          </div>
+        </div>
+
         <div class="nb-field">
           <label>Payment Method</label>
           <select id="nb-payment">
             <option value="cash">Cash</option>
             <option value="upi">UPI</option>
             <option value="online">Bank Transfer</option>
+            <option value="pending">Pending</option>
           </select>
         </div>
+
         <div class="nb-field">
           <label>Notes (optional)</label>
-          <textarea id="nb-notes" placeholder="Special requirements, source, etc…"></textarea>
+          <textarea id="nb-notes" placeholder="Source, special requests, etc…"></textarea>
         </div>
+
         <p id="nb-err" style="color:#c0392b;font-size:13px;display:none;margin-bottom:8px"></p>
         <button class="btn-primary" id="nb-btn" onclick="submitSalesBooking()">Confirm Booking</button>
       </div>
@@ -611,16 +644,23 @@ function renderDashboard() {
   document.getElementById('checkouts-badge').textContent = checkouts.length;
 
   document.getElementById('checkins-list').innerHTML = checkins.length
-    ? checkins.map(b => `
-        <div class="list-item">
-          <div class="item-icon checkin">🛎</div>
-          <div class="item-body">
-            <div class="item-title">${b.guest_name}</div>
-            <div class="item-sub">${b.guests} guest${b.guests > 1 ? 's' : ''} · Check-in: ${fmt(b.checkin)}</div>
+    ? checkins.map(b => {
+        const bal = parseFloat(b.balance_amount) || 0;
+        const balBadge = bal > 0
+          ? `<span style="background:#dcfce7;color:#166534;font-weight:600;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap">Collect ₹${bal.toLocaleString('en-IN')}</span>`
+          : `<span style="background:#f0fdf4;color:#16a34a;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap">Fully Paid ✓</span>`;
+        return `
+        <div class="list-item" style="align-items:flex-start">
+          <div class="item-icon checkin" style="margin-top:2px">🛎</div>
+          <div class="item-body" style="flex:1;min-width:0">
+            <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
+            <div class="item-sub">${b.guests} guest${b.guests > 1 ? 's' : ''} · Check-out: ${fmt(b.checkout)}${b.nights ? ' · '+b.nights+' night'+(b.nights>1?'s':'') : ''}</div>
+            ${b.notes ? `<div style="font-size:11.5px;color:#6b7280;margin-top:3px;font-style:italic">${b.notes}</div>` : ''}
+            <div style="margin-top:6px">${balBadge}</div>
           </div>
-          <button class="btn-sm btn-green" onclick="showPage('ready')">Ready</button>
-        </div>`)
-      .join('')
+          <button class="btn-sm btn-green" style="margin-top:2px;flex-shrink:0" onclick="showPage('ready')">Ready</button>
+        </div>`;
+      }).join('')
     : '<div class="empty"><div class="empty-icon">🏠</div><p>No check-ins today</p></div>';
 
   document.getElementById('checkouts-list').innerHTML = checkouts.length
@@ -628,23 +668,26 @@ function renderDashboard() {
         <div class="list-item">
           <div class="item-icon checkout">🚪</div>
           <div class="item-body">
-            <div class="item-title">${b.guest_name}</div>
-            <div class="item-sub">Check-out: ${fmt(b.checkout)} · ${b.guests} guests</div>
+            <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
+            <div class="item-sub">Check-out: ${fmt(b.checkout)} · ${b.guests} guest${b.guests>1?'s':''}</div>
           </div>
         </div>`)
       .join('')
     : '<div class="empty"><div class="empty-icon">🚪</div><p>No check-outs today</p></div>';
 
   document.getElementById('upcoming-list').innerHTML = upcoming.length
-    ? upcoming.map(b => `
+    ? upcoming.map(b => {
+        const bal = parseFloat(b.balance_amount) || 0;
+        return `
         <div class="list-item">
           <div class="item-icon checkin">📅</div>
           <div class="item-body">
-            <div class="item-title">${b.guest_name}</div>
-            <div class="item-sub">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${b.guests} guests</div>
+            <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
+            <div class="item-sub">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${b.guests} guest${b.guests>1?'s':''}${b.nights?' · '+b.nights+' night'+(b.nights>1?'s':''):''}</div>
+            ${bal > 0 ? `<div style="margin-top:4px"><span style="background:#fef9c3;color:#854d0e;font-size:11.5px;padding:2px 7px;border-radius:20px">Collect ₹${bal.toLocaleString('en-IN')} at arrival</span></div>` : ''}
           </div>
-        </div>`)
-      .join('')
+        </div>`;
+      }).join('')
     : '<div class="empty"><div class="empty-icon">📅</div><p>No upcoming bookings</p></div>';
 }
 
@@ -960,24 +1003,65 @@ function calNav(dir) {
 }
 
 // ── Submit sales booking ────────────────────────────────────
+// ── Price calculation ──────────────────────────────────────
+function nbCalcPrice() {
+  const propId  = document.getElementById('nb-property').value;
+  const checkin = document.getElementById('nb-checkin').value;
+  const checkout= document.getElementById('nb-checkout').value;
+  const summary = document.getElementById('nb-price-summary');
+
+  if (!propId || !checkin || !checkout || checkin >= checkout) {
+    summary.style.display = 'none';
+    return;
+  }
+
+  const prop   = salesProperties.find(p => p.id === propId);
+  const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / 86400000);
+  const rate   = prop?.price || 0;
+  const total  = rate * nights;
+
+  if (nights > 0 && rate > 0) {
+    summary.style.display = '';
+    document.getElementById('nb-nights-label').textContent = `${nights} night${nights > 1 ? 's' : ''}`;
+    document.getElementById('nb-total-label').textContent  = '₹' + total.toLocaleString('en-IN');
+    document.getElementById('nb-rate-label').textContent   = `${nights} × ₹${rate.toLocaleString('en-IN')}/night`;
+    // Auto-fill total if not manually set
+    const totalInput = document.getElementById('nb-total');
+    if (!totalInput.dataset.manualEdit) totalInput.value = total;
+    nbCalcBalance();
+  } else {
+    summary.style.display = 'none';
+  }
+}
+
+function nbCalcBalance() {
+  const total   = parseFloat(document.getElementById('nb-total').value)   || 0;
+  const advance = parseFloat(document.getElementById('nb-advance').value) || 0;
+  document.getElementById('nb-balance').value = Math.max(0, total - advance);
+}
+
 async function submitSalesBooking() {
   const errEl = document.getElementById('nb-err');
   errEl.style.display = 'none';
 
-  const property_id = document.getElementById('nb-property').value;
-  const guest_name  = document.getElementById('nb-name').value.trim();
-  const guest_phone = document.getElementById('nb-phone').value.trim();
-  const checkin     = document.getElementById('nb-checkin').value;
-  const checkout    = document.getElementById('nb-checkout').value;
-  const guests      = document.getElementById('nb-guests').value;
-  const amount      = document.getElementById('nb-amount').value;
+  const property_id    = document.getElementById('nb-property').value;
+  const guest_name     = document.getElementById('nb-name').value.trim();
+  const guest_phone    = document.getElementById('nb-phone').value.trim();
+  const guest_email    = document.getElementById('nb-email').value.trim();
+  const checkin        = document.getElementById('nb-checkin').value;
+  const checkout       = document.getElementById('nb-checkout').value;
+  const guests         = document.getElementById('nb-guests').value;
+  const total_amount   = parseFloat(document.getElementById('nb-total').value)   || 0;
+  const amount         = parseFloat(document.getElementById('nb-advance').value) || total_amount;
+  const balance_amount = parseFloat(document.getElementById('nb-balance').value) || 0;
   const payment_method = document.getElementById('nb-payment').value;
-  const notes       = document.getElementById('nb-notes').value.trim();
+  const notes          = document.getElementById('nb-notes').value.trim();
 
   if (!property_id) { errEl.textContent = 'Please select a property'; errEl.style.display = 'block'; return; }
-  if (!guest_name)  { errEl.textContent = 'Guest name is required'; errEl.style.display = 'block'; return; }
+  if (!guest_name)  { errEl.textContent = 'Guest name is required';   errEl.style.display = 'block'; return; }
   if (!checkin || !checkout) { errEl.textContent = 'Check-in and check-out dates are required'; errEl.style.display = 'block'; return; }
-  if (checkin >= checkout)   { errEl.textContent = 'Check-out must be after check-in'; errEl.style.display = 'block'; return; }
+  if (checkin >= checkout)   { errEl.textContent = 'Check-out must be after check-in';          errEl.style.display = 'block'; return; }
+  if (!total_amount)         { errEl.textContent = 'Enter the total booking amount';             errEl.style.display = 'block'; return; }
 
   const btn = document.getElementById('nb-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -986,18 +1070,20 @@ async function submitSalesBooking() {
     const r = await fetch(`${API}/api/staff/sales-booking`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ property_id, guest_name, guest_phone, checkin, checkout, guests, amount, payment_method, notes }),
+      body: JSON.stringify({ property_id, guest_name, guest_phone, guest_email, checkin, checkout, guests, total_amount, amount, balance_amount, payment_method, notes }),
     });
     const data = await r.json();
     if (!r.ok) { errEl.textContent = data.error || 'Failed to create booking'; errEl.style.display = 'block'; return; }
 
     toast('Booking confirmed! SD-' + String(data.booking_no).padStart(4, '0') + ' ✅', 3500);
     // Clear form
-    ['nb-name','nb-phone','nb-checkin','nb-checkout','nb-notes'].forEach(id => document.getElementById(id).value = '');
+    ['nb-name','nb-phone','nb-email','nb-checkin','nb-checkout','nb-notes','nb-total','nb-advance','nb-balance'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; delete el.dataset.manualEdit; }
+    });
     document.getElementById('nb-property').value = '';
-    document.getElementById('nb-guests').value = '2';
-    document.getElementById('nb-amount').value = '';
-    // Refresh dashboard in background
+    document.getElementById('nb-guests').value   = '2';
+    document.getElementById('nb-price-summary').style.display = 'none';
     loadSalesDashboard();
     showSalesPage('home');
   } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
