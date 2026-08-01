@@ -286,7 +286,7 @@
       <div class="stat-card"><div class="stat-icon si-red">🏡</div><div><div class="stat-val" id="stat-props">—</div><div class="stat-lbl">Total Properties</div><div class="stat-chg up" id="stat-props-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-green">📋</div><div><div class="stat-val" id="stat-books">—</div><div class="stat-lbl">Total Bookings</div><div class="stat-chg up" id="stat-books-sub">Loading…</div></div></div>
       <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-val" id="stat-users-count">—</div><div class="stat-lbl">Registered Users</div><div class="stat-chg up" id="stat-users-sub">Loading…</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl">Total Booked (This Month)</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-orange">💰</div><div><div class="stat-val" id="stat-rev">—</div><div class="stat-lbl" id="stat-rev-lbl">Stays This Month</div><div class="stat-chg up" id="stat-rev-sub">Loading…</div></div></div>
       <div class="stat-card" style="cursor:pointer" onclick="openArrivalsModal('today')" title="Click for details"><div class="stat-icon si-blue">📍</div><div><div class="stat-val" id="stat-checkin-today">—</div><div class="stat-lbl">Check-ins Today <span style="color:var(--gray-300)">🔎</span></div><div class="stat-chg up" id="stat-checkin-today-sub">—</div></div></div>
       <div class="stat-card" style="cursor:pointer" onclick="openArrivalsModal('tmrw')" title="Click for details"><div class="stat-icon si-orange">⏰</div><div><div class="stat-val" id="stat-checkin-tmrw">—</div><div class="stat-lbl">Check-ins Tomorrow <span style="color:var(--gray-300)">🔎</span></div><div class="stat-chg up" id="stat-checkin-tmrw-sub">—</div></div></div>
     </div>
@@ -1118,10 +1118,18 @@ async function initAdmin() {
     document.getElementById('stat-books').textContent = s.totalBookings || 0;
     document.getElementById('stat-users-count').textContent = s.totalUsers || 0;
     const fmtRev = v => v >= 100000 ? '₹' + (v/100000).toFixed(1) + 'L' : '₹' + v.toLocaleString('en-IN');
-    document.getElementById('stat-rev').textContent = fmtRev(s.monthBookedValue || s.monthRevenue || 0);
+    // Main: stays this month (checkin in current month, regardless of when booked)
+    document.getElementById('stat-rev').textContent = fmtRev(s.monthStaysBooked || 0);
+    const monthName = s.monthStr
+      ? new Date(s.monthStr + 'T00:00:00').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+      : 'This Month';
+    const revLbl = document.getElementById('stat-rev-lbl');
+    if (revLbl) revLbl.textContent = `Stays in ${monthName}`;
     const revSub = document.getElementById('stat-rev-sub');
-    if (revSub) revSub.innerHTML = 'StayDekho Received: ' + fmtRev(s.monthRevenue || 0)
-      + (s.ownerPending > 0 ? '<br/><span style="color:#9333ea">Owner Payable: ' + fmtRev(s.ownerPending) + '</span>' : '');
+    if (revSub) revSub.innerHTML =
+      `<span style="color:var(--gray-500)">Sales booked in ${monthName}: <b>${fmtRev(s.monthBookedValue || 0)}</b></span>` +
+      `<br/>StayDekho Received: ${fmtRev(s.monthStaysReceived || 0)}` +
+      (s.ownerPending > 0 ? `<br/><span style="color:#9333ea">Owner Payable: ${fmtRev(s.ownerPending)}</span>` : '');
 
     properties = (propsRes.properties || []).map(p => ({
       id: p.id || p._id, name: p.name || p.title, location: p.location, price: p.price, guests: p.guests || p.max_guests || 10, beds: p.beds || 4, amenities: Array.isArray(p.amenities) ? p.amenities.join(', ') : (p.amenities || ''), desc: p.description || '', status: p.status || 'Active', images: p.images && p.images.length ? p.images : (p.main_image ? [p.main_image] : []),
