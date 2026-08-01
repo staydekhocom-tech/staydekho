@@ -1339,10 +1339,12 @@ function renderMiniCal() {
   // Us displayed month ka revenue + bookings count (check-in us month mein ho)
   const revEl = document.getElementById('mini-cal-revenue');
   if (revEl) {
-    const monthRows = (selectedP==='all' ? bookings : bookings.filter(b=>b.property===selectedP))
-      .filter(b => !b.isExternal && b.status !== 'cancelled' && (() => {
-        const c = new Date(b.checkin); return c.getFullYear()===year && c.getMonth()===month;
-      })());
+    const monthRows = bookings.filter(b =>
+      !b.isExternal &&
+      CONFIRMED_STATUSES.includes(b.status) &&
+      (selectedP === 'all' || b.property === selectedP) &&
+      (() => { const c = new Date(b.checkin); return c.getFullYear()===year && c.getMonth()===month; })()
+    );
     const rev = monthRows.reduce((s,b) => s + Number(b.total_amount || b.amount || 0), 0);
     revEl.innerHTML = `<span style="color:var(--gray-500)">${MONTH_NAMES[month]} bookings: <b style="color:#1a1a1a">${monthRows.length}</b></span>
       <span style="color:var(--gray-500)">Revenue: <b style="color:#15803d">₹${rev.toLocaleString('en-IN')}</b></span>`;
@@ -1360,9 +1362,11 @@ function renderPropRevenueForMonth(year, month, monthLabel) {
   if (titleEl) titleEl.textContent = `Property-wise Revenue — ${monthLabel} ${year}`;
 
   const byProp = {};
-  bookings.filter(b => !b.isExternal && b.status !== 'cancelled' && (() => {
-    const c = new Date(b.checkin); return c.getFullYear()===year && c.getMonth()===month;
-  })()).forEach(b => {
+  bookings.filter(b =>
+    !b.isExternal &&
+    CONFIRMED_STATUSES.includes(b.status) &&
+    (() => { const c = new Date(b.checkin); return c.getFullYear()===year && c.getMonth()===month; })()
+  ).forEach(b => {
     const name = b.property || '—';
     if (!byProp[name]) byProp[name] = { property_name: name, bookings: 0, booked: 0, received: 0 };
     const total = Number(b.total_amount || b.amount || 0);
@@ -1384,9 +1388,14 @@ function renderPropRevenueForMonth(year, month, monthLabel) {
     : `<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--gray-400)">No bookings in ${monthLabel} ${year}</td></tr>`;
 }
 
+const CONFIRMED_STATUSES = ['confirmed', 'checked_in', 'checked_out'];
 function getBookedDaysForProp(propName, year, month) {
   const result = {};
-  const filtered = propName==='all' ? bookings : bookings.filter(b=>b.property===propName && b.status !== 'cancelled');
+  const filtered = bookings.filter(b =>
+    !b.isExternal &&
+    CONFIRMED_STATUSES.includes(b.status) &&
+    (propName === 'all' || b.property === propName)
+  );
   filtered.forEach(b => {
     const start = new Date(b.checkin); const end = new Date(b.checkout);
     for (let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
