@@ -506,6 +506,59 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
   </nav>
 </div>
 
+<!-- Edit Booking Modal (Sales) -->
+<div id="edit-booking-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center">
+  <div style="background:#fff;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:18px;font-weight:700;margin:0">Edit Booking</h2>
+      <button onclick="closeEditModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:#9ca3af;line-height:1">×</button>
+    </div>
+    <div class="nb-row">
+      <div class="nb-field">
+        <label>Guest Name *</label>
+        <input id="eb-name" type="text" placeholder="Guest name">
+      </div>
+      <div class="nb-field">
+        <label>Phone</label>
+        <input id="eb-phone" type="tel" placeholder="Phone number" inputmode="tel">
+      </div>
+    </div>
+    <div class="nb-row">
+      <div class="nb-field">
+        <label>Check-in *</label>
+        <input id="eb-checkin" type="date" onchange="ebCalcBalance()">
+      </div>
+      <div class="nb-field">
+        <label>Check-out *</label>
+        <input id="eb-checkout" type="date" onchange="ebCalcBalance()">
+      </div>
+    </div>
+    <div class="nb-row">
+      <div class="nb-field">
+        <label>Total Amount (₹)</label>
+        <input id="eb-total" type="number" inputmode="numeric" oninput="ebCalcBalance()">
+      </div>
+      <div class="nb-field">
+        <label>Advance Paid (₹)</label>
+        <input id="eb-advance" type="number" placeholder="0" inputmode="numeric" oninput="ebCalcBalance()">
+      </div>
+    </div>
+    <div class="nb-field" style="margin-bottom:12px">
+      <label>Balance Due (₹)</label>
+      <input id="eb-balance" type="number" readonly style="background:#f9fafb;color:#6b7280">
+    </div>
+    <div class="nb-field" style="margin-bottom:16px">
+      <label>Notes</label>
+      <textarea id="eb-notes" rows="2" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:14px;resize:none;box-sizing:border-box"></textarea>
+    </div>
+    <div id="edit-err" style="display:none;color:#dc2626;font-size:13px;margin-bottom:8px;padding:8px 12px;background:#fef2f2;border-radius:8px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeEditModal()" style="flex:1;padding:13px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px;cursor:pointer">Cancel</button>
+      <button id="edit-save-btn" onclick="submitEditBooking()" style="flex:2;padding:13px;border:none;border-radius:10px;background:#1d4ed8;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -897,19 +950,23 @@ function populateSalesPropertyDropdowns() {
 }
 
 // ── Sales home dashboard ───────────────────────────────────
+const salesBookingCache = {};
+
 async function loadSalesDashboard() {
   try {
     const r = await fetch(`${API}/api/staff/my-bookings`, {
       headers: { Authorization: `Bearer ${staffToken}` },
     });
     const { bookings = [] } = await r.json();
+    bookings.forEach(b => { salesBookingCache[b.id] = b; });
 
-    const now   = new Date();
-    const ym    = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const month = bookings.filter(b => (b.created_at || b.checkin || '').startsWith(ym));
-    const monthAmt = month.reduce((s, b) => s + (b.amount || 0), 0);
+    const active = bookings.filter(b => b.status !== 'cancelled');
+    const now    = new Date();
+    const ym     = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const month  = active.filter(b => (b.created_at || b.checkin || '').startsWith(ym));
+    const monthAmt = month.reduce((s, b) => s + (b.total_amount || 0), 0);
 
-    document.getElementById('s-snap-total').textContent  = bookings.length;
+    document.getElementById('s-snap-total').textContent  = active.length;
     document.getElementById('s-snap-month').textContent  = month.length;
     document.getElementById('s-snap-amount').textContent = '₹' + monthAmt.toLocaleString('en-IN');
 
@@ -921,18 +978,26 @@ async function loadSalesDashboard() {
 }
 
 function renderBookingItem(b) {
+  salesBookingCache[b.id] = b;
   const statusClass = { confirmed: 'bk-confirmed', pending: 'bk-pending', cancelled: 'bk-cancelled' }[b.status] || 'bk-pending';
+  const canEdit = b.status !== 'cancelled';
+  const bookingLabel = b.booking_no ? ` <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-${String(b.booking_no).padStart(4,'0')}</span>` : '';
   return `<div class="bk-item">
     <div class="bk-top">
-      <div>
-        <div class="bk-name">${b.guest_name}</div>
+      <div style="flex:1;min-width:0">
+        <div class="bk-name">${b.guest_name}${bookingLabel}</div>
         <div class="bk-prop">${b.property_name}</div>
-        <div class="bk-dates">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${b.guests} guest${b.guests > 1 ? 's' : ''}</div>
+        <div class="bk-dates">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${b.guests} guest${b.guests > 1 ? 's' : ''}${b.nights ? ' · ' + b.nights + 'N' : ''}</div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div class="bk-amount">₹${(b.amount || 0).toLocaleString('en-IN')}</div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px">
+        <div class="bk-amount">₹${(b.total_amount || 0).toLocaleString('en-IN')}</div>
+        ${b.balance_amount > 0 ? `<div style="font-size:11px;color:#dc2626">Due: ₹${b.balance_amount.toLocaleString('en-IN')}</div>` : ''}
         <span class="bk-status ${statusClass}">${b.status}</span>
       </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6">
+      <button style="flex:1;padding:7px 4px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:12.5px;cursor:pointer" onclick="showBookingInvoice('${b.id}')">📄 Invoice</button>
+      ${canEdit ? `<button style="flex:1;padding:7px 4px;border:1px solid #3b82f6;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:12.5px;cursor:pointer" onclick="openEditBooking('${b.id}')">✏️ Edit</button>` : '<div style="flex:1"></div>'}
     </div>
   </div>`;
 }
@@ -945,10 +1010,146 @@ async function loadMyBookings() {
       headers: { Authorization: `Bearer ${staffToken}` },
     });
     const { bookings = [] } = await r.json();
+    bookings.forEach(b => { salesBookingCache[b.id] = b; });
     document.getElementById('s-mine-list').innerHTML = bookings.length
       ? bookings.map(b => renderBookingItem(b)).join('')
       : '<div class="empty"><div class="empty-icon">📋</div><p>No bookings yet</p></div>';
   } catch { toast('Could not load bookings'); }
+}
+
+// ── Invoice ────────────────────────────────────────────────
+function showBookingInvoice(id) {
+  const b = salesBookingCache[id];
+  if (!b) { toast('Booking data not found'); return; }
+  const nights = b.nights || Math.ceil((new Date(b.checkout) - new Date(b.checkin)) / 86400000);
+  function fmtD(d) {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
+  }
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Invoice SD-${String(b.booking_no||0).padStart(4,'0')}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:28px 20px;color:#111;max-width:480px;margin:0 auto}
+.logo{font-size:22px;font-weight:800;color:#7c3aed;letter-spacing:-0.5px}
+.hdr{text-align:center;padding-bottom:18px;border-bottom:2px solid #f3f4f6;margin-bottom:20px}
+.bid{font-size:13px;color:#6b7280;margin-top:4px}
+.sec-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;font-weight:600;margin-bottom:10px}
+.sec{margin-bottom:18px}
+.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f9fafb}
+.row label{color:#6b7280;font-size:13px}
+.row span{font-size:13px;font-weight:500;text-align:right}
+.amt-box{background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:18px}
+.amt-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
+.amt-row.ttl{border-top:1px solid #e5e7eb;margin-top:8px;padding-top:10px;font-size:15px;font-weight:700}
+.green{color:#16a34a}.red{color:#dc2626}
+.footer{text-align:center;font-size:12px;color:#9ca3af;padding-top:16px;border-top:1px solid #f3f4f6}
+.print-btn{display:block;width:100%;padding:13px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:20px}
+@media print{.print-btn{display:none}}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Download / Print PDF</button>
+<div class="hdr">
+  <div class="logo">StayDekho</div>
+  <div class="bid">Booking Confirmation · SD-${String(b.booking_no||0).padStart(4,'0')}</div>
+  <div style="font-size:12px;color:#9ca3af;margin-top:3px">Booked by: ${staffData?.name || '—'}</div>
+</div>
+<div class="sec">
+  <div class="sec-title">Guest Details</div>
+  <div class="row"><label>Name</label><span>${b.guest_name}</span></div>
+  ${b.guest_phone ? `<div class="row"><label>Phone</label><span>${b.guest_phone}</span></div>` : ''}
+  ${b.guest_email ? `<div class="row"><label>Email</label><span>${b.guest_email}</span></div>` : ''}
+</div>
+<div class="sec">
+  <div class="sec-title">Stay Details</div>
+  <div class="row"><label>Property</label><span>${b.property_name}</span></div>
+  <div class="row"><label>Check-in</label><span>${fmtD(b.checkin)}</span></div>
+  <div class="row"><label>Check-out</label><span>${fmtD(b.checkout)}</span></div>
+  <div class="row"><label>Duration</label><span>${nights} night${nights>1?'s':''}</span></div>
+  <div class="row"><label>Guests</label><span>${b.guests}</span></div>
+</div>
+<div class="amt-box">
+  <div class="sec-title">Payment Summary</div>
+  <div class="amt-row"><span>Total Amount</span><span style="font-weight:600">₹${(b.total_amount||0).toLocaleString('en-IN')}</span></div>
+  <div class="amt-row"><span>Advance Paid</span><span class="green">₹${(b.advance||0).toLocaleString('en-IN')}</span></div>
+  <div class="amt-row ttl"><span>Balance Due</span><span class="${(b.balance_amount||0)>0?'red':'green'}">₹${(b.balance_amount||0).toLocaleString('en-IN')}</span></div>
+</div>
+${b.notes ? `<div class="sec"><div class="sec-title">Special Notes</div><p style="font-size:13px;color:#374151;background:#fafafa;padding:10px;border-radius:8px">${b.notes}</p></div>` : ''}
+<div class="footer">Thank you for choosing StayDekho!<br>staydekho.com</div>
+</body></html>`;
+  const win = window.open('', '_blank', 'width=520,height=750');
+  if (win) { win.document.write(html); win.document.close(); }
+  else toast('Allow pop-ups to open invoice');
+}
+
+// ── Edit Booking ───────────────────────────────────────────
+let editingBookingId = null;
+
+function openEditBooking(id) {
+  const b = salesBookingCache[id];
+  if (!b) { toast('Booking not found'); return; }
+  editingBookingId = id;
+  document.getElementById('eb-name').value    = b.guest_name || '';
+  document.getElementById('eb-phone').value   = b.guest_phone || '';
+  document.getElementById('eb-checkin').value = b.checkin || '';
+  document.getElementById('eb-checkout').value= b.checkout || '';
+  document.getElementById('eb-total').value   = b.total_amount || '';
+  document.getElementById('eb-advance').value = b.advance || '';
+  document.getElementById('eb-balance').value = b.balance_amount || '';
+  document.getElementById('eb-notes').value   = b.notes || '';
+  document.getElementById('edit-err').style.display = 'none';
+  const modal = document.getElementById('edit-booking-modal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-booking-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  editingBookingId = null;
+}
+
+function ebCalcBalance() {
+  const total   = parseFloat(document.getElementById('eb-total').value)   || 0;
+  const advance = parseFloat(document.getElementById('eb-advance').value) || 0;
+  document.getElementById('eb-balance').value = Math.max(0, total - advance);
+}
+
+async function submitEditBooking() {
+  const errEl = document.getElementById('edit-err');
+  errEl.style.display = 'none';
+  const guest_name    = document.getElementById('eb-name').value.trim();
+  const guest_phone   = document.getElementById('eb-phone').value.trim();
+  const checkin       = document.getElementById('eb-checkin').value;
+  const checkout      = document.getElementById('eb-checkout').value;
+  const total_amount  = parseFloat(document.getElementById('eb-total').value)   || 0;
+  const advance       = parseFloat(document.getElementById('eb-advance').value) || 0;
+  const balance_amount= parseFloat(document.getElementById('eb-balance').value) || 0;
+  const notes         = document.getElementById('eb-notes').value.trim();
+
+  if (!guest_name) { errEl.textContent = 'Guest name is required'; errEl.style.display = 'block'; return; }
+  if (checkin && checkout && checkin >= checkout) { errEl.textContent = 'Check-out must be after check-in'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const r = await fetch(`${API}/api/staff/edit-booking/${editingBookingId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guest_name, guest_phone, checkin, checkout, total_amount, advance, balance_amount, notes }),
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Failed to save'; errEl.style.display = 'block'; return; }
+
+    toast('Booking updated ✅');
+    closeEditModal();
+    loadMyBookings();
+    loadSalesDashboard();
+  } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
 }
 
 // ── Calendar ───────────────────────────────────────────────

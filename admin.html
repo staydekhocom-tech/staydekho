@@ -3772,13 +3772,14 @@ async function loadSalesStats() {
 
     tbody.innerHTML = salesStaff.map(s => {
       const mine      = salesBooks.filter(b => String(b.booked_by_staff_id) === String(s.id));
-      const thisMonth = mine.filter(b => (b.created_at || b.checkin || '').startsWith(ym));
-      const total     = mine.reduce((sum, b) => sum + (b.total_amount || b.amount || 0), 0);
+      const active    = mine.filter(b => b.status !== 'cancelled');
+      const thisMonth = active.filter(b => (b.created_at || b.checkin || '').startsWith(ym));
+      const total     = active.reduce((sum, b) => sum + (b.total_amount || b.amount || 0), 0);
       const dot       = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.status==='active'?'#16a34a':'#9ca3af'};margin-right:5px"></span>`;
       return `<tr>
         <td>${dot}<strong>${s.name}</strong></td>
         <td>${s.phone}</td>
-        <td style="font-weight:700;color:#1d4ed8">${mine.length}</td>
+        <td style="font-weight:700;color:#1d4ed8">${active.length}</td>
         <td>${thisMonth.length}</td>
         <td style="font-weight:700">₹${total.toLocaleString('en-IN')}</td>
         <td><button class="btn btn-outline btn-sm" onclick="showSalesDetail('${s.id}','${s.name}')">View Bookings</button></td>

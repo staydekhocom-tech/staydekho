@@ -567,17 +567,54 @@ router.get('/my-bookings', staffProtect, async (req, res) => {
         id:            b._id.toString(),
         guest_name:    b.guest_name,
         guest_phone:   b.guest_phone,
+        guest_email:   b.guest_email || '',
         property_name: b.property_id?.name || '—',
+        property_id:   b.property_id?._id?.toString() || '',
         checkin:       b.checkin,
         checkout:      b.checkout,
         guests:        b.guests,
         nights:        b.nights,
-        amount:        b.total_amount || b.amount,
+        total_amount:  b.total_amount || 0,
+        advance:       b.amount || 0,
+        balance_amount:b.balance_amount || 0,
+        payment_method:b.payment_method || 'cash',
         status:        b.status,
         booking_no:    b.booking_no,
+        notes:         b.notes || '',
         created_at:    b.created_at,
       })),
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Sales: edit own booking ───────────────────────────────
+router.put('/edit-booking/:id', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'sales') return res.status(403).json({ error: 'Sales role required' });
+  try {
+    const booking = await Booking.findOne({ _id: req.params.id, booked_by_staff_id: req.staff.id });
+    if (!booking) return res.status(404).json({ error: 'Booking not found or not yours' });
+    if (booking.status === 'cancelled') return res.status(400).json({ error: 'Cannot edit a cancelled booking' });
+
+    const { guest_name, guest_phone, checkin, checkout, total_amount, advance, balance_amount, notes } = req.body;
+
+    if (guest_name)           booking.guest_name   = guest_name.trim();
+    if (guest_phone !== undefined) booking.guest_phone = (guest_phone || '').trim();
+    if (notes     !== undefined) booking.notes       = (notes || '').trim();
+    if (total_amount  !== undefined) booking.total_amount   = parseFloat(total_amount)   || 0;
+    if (advance       !== undefined) booking.amount         = parseFloat(advance)         || 0;
+    if (balance_amount !== undefined) booking.balance_amount = parseFloat(balance_amount) || 0;
+
+    if (checkin && checkout) {
+      if (checkin >= checkout) return res.status(400).json({ error: 'Check-out must be after check-in' });
+      booking.checkin  = checkin;
+      booking.checkout = checkout;
+      booking.nights   = Math.max(1, Math.round((new Date(checkout) - new Date(checkin)) / 86400000));
+    }
+
+    await booking.save();
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
