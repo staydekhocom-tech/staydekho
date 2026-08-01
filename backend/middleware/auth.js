@@ -48,7 +48,12 @@ async function staffProtect(req, res, next) {
     const staff = await Staff.findById(decoded.id).lean();
     if (!staff) return res.status(401).json({ error: 'Staff not found' });
     if (staff.status !== 'active') return res.status(403).json({ error: 'Account deactivated. Contact admin.' });
-    req.staff = { ...staff, id: staff._id.toString(), property_id: staff.property_id?.toString() || null };
+    req.staff = {
+      ...staff,
+      id:           staff._id.toString(),
+      property_id:  staff.property_id?.toString() || null,
+      property_ids: (staff.property_ids || []).map(id => id.toString()),
+    };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });

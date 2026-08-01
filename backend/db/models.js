@@ -86,6 +86,8 @@ const bookingSchema = new Schema({
   owner_paid:          { type: Boolean, default: false }, // owner's 70% share transferred
   owner_paid_at:       { type: Date, default: null },
   notes:               { type: String, default: '' },
+  booked_by_staff_id:  { type: Schema.Types.ObjectId, ref: 'Staff', default: null },
+  booked_by_name:      { type: String, default: null },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 bookingSchema.index({ property_id: 1, checkin: 1 });
@@ -271,8 +273,9 @@ const staffSchema = new Schema({
   name:        { type: String, required: true },
   phone:       { type: String, required: true, unique: true },
   pin:         { type: String, required: true },
-  property_id: { type: Schema.Types.ObjectId, ref: 'Property', default: null },
-  role:        { type: String, default: 'caretaker', enum: ['caretaker', 'housekeeping', 'manager', 'security', 'cook'] },
+  property_id:  { type: Schema.Types.ObjectId, ref: 'Property', default: null },  // legacy single
+  property_ids: [{ type: Schema.Types.ObjectId, ref: 'Property' }],              // multi-property
+  role:         { type: String, default: 'caretaker', enum: ['caretaker', 'housekeeping', 'manager', 'security', 'cook', 'sales'] },
   status:      { type: String, default: 'active', enum: ['active', 'inactive'] },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 

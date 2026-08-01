@@ -3,7 +3,8 @@ const jwt     = require('jsonwebtoken');
 const bcrypt  = require('bcryptjs');
 const crypto  = require('crypto');
 const mongoose = require('mongoose');
-const { Staff, StaffTask, CheckinToken, PropertySOP, StaffIssue, Booking, Property } = require('../db/models');
+const { Staff, StaffTask, CheckinToken, PropertySOP, StaffIssue, Booking, Property, DatePrice } = require('../db/models');
+const { blockCalendarForBooking } = require('../services/bookingAutomation');
 const { protect, adminOnly, staffProtect } = require('../middleware/auth');
 const { notifyGuestRoomReady, notifyAdminGuestSigned, notifyAdminIssue } = require('../services/notify');
 
@@ -18,6 +19,18 @@ function today() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
+// Returns all assigned property ObjectIds for a staff member (deduped)
+function staffPropIds(reqStaff) {
+  const seen = new Set();
+  const ids  = [];
+  for (const raw of [reqStaff.property_id, ...(reqStaff.property_ids || [])]) {
+    if (!raw) continue;
+    const s = raw.toString();
+    if (!seen.has(s)) { seen.add(s); ids.push(new mongoose.Types.ObjectId(s)); }
+  }
+  return ids;
+}
+
 // ── POST /api/staff/login ─────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
@@ -25,7 +38,10 @@ router.post('/login', async (req, res) => {
     if (!phone || !pin) return res.status(400).json({ error: 'Phone and PIN required' });
 
     const clean = String(phone).replace(/\D/g, '').slice(-10);
-    const staff = await Staff.findOne({ phone: clean }).populate('property_id', 'name location images').lean();
+    const staff = await Staff.findOne({ phone: clean })
+      .populate('property_id', 'name location images')
+      .populate('property_ids', 'name location images')
+      .lean();
 
     if (!staff) return res.status(401).json({ error: 'Incorrect phone or PIN' });
 
@@ -47,11 +63,12 @@ router.post('/login', async (req, res) => {
     res.json({
       token: staffToken(staff._id),
       staff: {
-        id:       staff._id.toString(),
-        name:     staff.name,
-        phone:    staff.phone,
-        role:     staff.role,
-        property: staff.property_id || null,
+        id:         staff._id.toString(),
+        name:       staff.name,
+        phone:      staff.phone,
+        role:       staff.role,
+        property:   staff.property_id || null,
+        properties: staff.property_ids || [],
       },
     });
   } catch (err) {
@@ -62,21 +79,23 @@ router.post('/login', async (req, res) => {
 // ── GET /api/staff/dashboard ──────────────────────────────
 router.get('/dashboard', staffProtect, async (req, res) => {
   try {
-    const propId   = req.staff.property_id ? new mongoose.Types.ObjectId(req.staff.property_id) : null;
+    const propIds  = staffPropIds(req.staff);
     const todayStr = today();
 
-    if (!propId) return res.json({ checkins: [], checkouts: [], upcoming: [], tasks: [], issues: [] });
+    if (!propIds.length) return res.json({ checkins: [], checkouts: [], upcoming: [], tasks: [], issues: [] });
+
+    const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
 
     const [checkins, checkouts, upcoming, tasks, issues] = await Promise.all([
-      Booking.find({ property_id: propId, checkin: todayStr, status: 'confirmed' })
+      Booking.find({ property_id: propFilter, checkin: todayStr, status: 'confirmed' })
         .select('guest_name guest_phone checkin checkout guests status').lean(),
-      Booking.find({ property_id: propId, checkout: todayStr, status: { $in: ['confirmed', 'checked_in'] } })
+      Booking.find({ property_id: propFilter, checkout: todayStr, status: { $in: ['confirmed', 'checked_in'] } })
         .select('guest_name guest_phone checkin checkout guests status').lean(),
-      Booking.find({ property_id: propId, checkin: { $gt: todayStr }, status: 'confirmed' })
+      Booking.find({ property_id: propFilter, checkin: { $gt: todayStr }, status: 'confirmed' })
         .select('guest_name checkin checkout guests').sort({ checkin: 1 }).limit(5).lean(),
-      StaffTask.find({ property_id: propId, status: { $ne: 'done' }, due_date: { $gte: todayStr } })
+      StaffTask.find({ property_id: propFilter, status: { $ne: 'done' }, due_date: { $gte: todayStr } })
         .sort({ due_date: 1 }).limit(10).lean(),
-      StaffIssue.find({ property_id: propId, status: 'open' })
+      StaffIssue.find({ property_id: propFilter, status: 'open' })
         .sort({ created_at: -1 }).limit(5).lean(),
     ]);
 
@@ -95,10 +114,11 @@ router.get('/dashboard', staffProtect, async (req, res) => {
 // ── GET /api/staff/tasks ──────────────────────────────────
 router.get('/tasks', staffProtect, async (req, res) => {
   try {
-    const propId = req.staff.property_id ? new mongoose.Types.ObjectId(req.staff.property_id) : null;
-    if (!propId) return res.json({ tasks: [] });
+    const propIds = staffPropIds(req.staff);
+    if (!propIds.length) return res.json({ tasks: [] });
 
-    const tasks = await StaffTask.find({ property_id: propId, status: { $ne: 'done' } })
+    const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
+    const tasks = await StaffTask.find({ property_id: propFilter, status: { $ne: 'done' } })
       .populate('booking_id', 'guest_name checkin checkout')
       .sort({ due_date: 1 }).lean();
 
@@ -117,8 +137,9 @@ router.get('/tasks', staffProtect, async (req, res) => {
 // ── PUT /api/staff/tasks/:id/done ────────────────────────
 router.put('/tasks/:id/done', staffProtect, async (req, res) => {
   try {
-    const propId = req.staff.property_id;
-    const task = await StaffTask.findOne({ _id: req.params.id, property_id: propId });
+    const propIds = staffPropIds(req.staff);
+    const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
+    const task = await StaffTask.findOne({ _id: req.params.id, property_id: propFilter });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     const { notes, photos } = req.body;
@@ -140,10 +161,11 @@ router.post('/room-ready', staffProtect, async (req, res) => {
     const { booking_id, photos } = req.body;
     if (!booking_id) return res.status(400).json({ error: 'booking_id required' });
 
-    const propId = req.staff.property_id;
+    const propIds = staffPropIds(req.staff);
+    const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
     const booking = await Booking.findOne({
       _id: booking_id,
-      property_id: propId,
+      property_id: propFilter,
       status: { $in: ['confirmed', 'pending'] },
     }).populate('property_id', 'name').lean();
 
@@ -152,9 +174,10 @@ router.post('/room-ready', staffProtect, async (req, res) => {
     const token = crypto.randomBytes(16).toString('hex');
     const photosStr = JSON.stringify(photos || []);
 
+    const bookingPropId = booking.property_id?._id || booking.property_id;
     await CheckinToken.findOneAndUpdate(
       { booking_id },
-      { property_id: propId, token, room_photos: photosStr, ready_at: new Date(), ready_by_staff_id: req.staff.id },
+      { property_id: bookingPropId, token, room_photos: photosStr, ready_at: new Date(), ready_by_staff_id: req.staff.id },
       { upsert: true, new: true }
     );
 
@@ -215,10 +238,16 @@ router.get('/all', protect, adminOnly, async (req, res) => {
   try {
     const staff = await Staff.find()
       .populate('property_id', 'name')
+      .populate('property_ids', 'name')
       .sort({ created_at: -1 }).lean();
     res.json({ staff: staff.map(s => {
       const { pin: _pin, ...safe } = s;
-      return { ...safe, id: s._id.toString(), property_name: s.property_id?.name };
+      return {
+        ...safe,
+        id:             s._id.toString(),
+        property_name:  s.property_id?.name || null,
+        property_names: (s.property_ids || []).map(p => p.name),
+      };
     }) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -227,7 +256,7 @@ router.get('/all', protect, adminOnly, async (req, res) => {
 
 router.post('/create', protect, adminOnly, async (req, res) => {
   try {
-    const { name, phone, property_id, role, pin } = req.body;
+    const { name, phone, property_id, property_ids, role, pin } = req.body;
     if (!name || !phone || !pin) return res.status(400).json({ error: 'Name, phone and PIN required' });
 
     const clean = String(phone).replace(/\D/g, '').slice(-10);
@@ -235,9 +264,13 @@ router.post('/create', protect, adminOnly, async (req, res) => {
     if (String(pin).length !== 4 || !/^\d{4}$/.test(String(pin)))
       return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
 
+    const allPropIds  = Array.isArray(property_ids) && property_ids.length ? property_ids : (property_id ? [property_id] : []);
+    const primaryProp = allPropIds[0] || null;
+
     const staff = await Staff.create({
       name, phone: clean,
-      property_id: property_id || null,
+      property_id:  primaryProp,
+      property_ids: allPropIds,
       role: role || 'caretaker',
       pin: bcrypt.hashSync(String(pin), 10),
     });
@@ -250,19 +283,26 @@ router.post('/create', protect, adminOnly, async (req, res) => {
 
 router.put('/update/:id', protect, adminOnly, async (req, res) => {
   try {
-    const { name, phone, property_id, role, pin, status } = req.body;
+    const { name, phone, property_id, property_ids, role, pin, status } = req.body;
     const s = await Staff.findById(req.params.id);
     if (!s) return res.status(404).json({ error: 'Staff not found' });
 
-    if (name)        s.name        = name;
-    if (phone)       s.phone       = String(phone).replace(/\D/g, '').slice(-10);
-    if (property_id !== undefined) s.property_id = property_id || null;
-    if (role)        s.role        = role;
+    if (name)  s.name  = name;
+    if (phone) s.phone = String(phone).replace(/\D/g, '').slice(-10);
+    if (role)  s.role  = role;
+    if (status) s.status = status;
+
+    if (Array.isArray(property_ids)) {
+      s.property_ids = property_ids;
+      s.property_id  = property_ids[0] || null;
+    } else if (property_id !== undefined) {
+      s.property_id  = property_id || null;
+    }
+
     if (pin) {
       if (!/^\d{4}$/.test(String(pin))) return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
       s.pin = bcrypt.hashSync(String(pin), 10);
     }
-    if (status)      s.status      = status;
     await s.save();
 
     res.json({ success: true });
@@ -363,6 +403,129 @@ router.post('/sop', protect, adminOnly, async (req, res) => {
       { upsert: true, new: true }
     );
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Sales: property availability calendar ─────────────────
+router.get('/availability/:property_id', staffProtect, async (req, res) => {
+  try {
+    const { property_id } = req.params;
+    const { year, month } = req.query;
+
+    const now       = new Date();
+    const y         = parseInt(year)  || now.getFullYear();
+    const m         = parseInt(month) || now.getMonth() + 1;
+    const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    const endDate   = new Date(y, m, 0).toISOString().slice(0, 10); // last day of that month
+
+    const [dpBlocked, bookings] = await Promise.all([
+      DatePrice.find({ property_id, date: { $gte: startDate, $lte: endDate }, blocked: true }).select('date').lean(),
+      Booking.find({
+        property_id,
+        status: { $in: ['confirmed', 'checked_in', 'pending'] },
+        checkin:  { $lte: endDate },
+        checkout: { $gte: startDate },
+      }).select('checkin checkout').lean(),
+    ]);
+
+    const blockedSet = new Set(dpBlocked.map(d => d.date));
+    for (const b of bookings) {
+      const cin  = new Date(b.checkin);
+      const cout = new Date(b.checkout);
+      for (let d = new Date(cin); d < cout; d.setDate(d.getDate() + 1)) {
+        blockedSet.add(d.toISOString().slice(0, 10));
+      }
+    }
+
+    res.json({ blocked_dates: [...blockedSet] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Sales: list all active properties ────────────────────
+router.get('/properties', staffProtect, async (req, res) => {
+  try {
+    const props = await Property.find({ status: 'Active' }).select('name location').lean();
+    res.json({ properties: props.map(p => ({ id: p._id.toString(), name: p.name, location: p.location })) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Sales: create a booking ───────────────────────────────
+router.post('/sales-booking', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'sales') return res.status(403).json({ error: 'Sales role required' });
+  try {
+    const { property_id, guest_name, guest_phone, guest_email, checkin, checkout, guests, amount, payment_method, notes } = req.body;
+    if (!property_id || !guest_name || !checkin || !checkout)
+      return res.status(400).json({ error: 'property_id, guest_name, checkin, checkout are required' });
+
+    const property = await Property.findById(property_id).lean();
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    const bookingNo = (await Booking.countDocuments()) + 1;
+    const nights    = Math.max(1, Math.round((new Date(checkout) - new Date(checkin)) / 86400000));
+    const amt       = parseFloat(amount) || 0;
+
+    const booking = await Booking.create({
+      property_id,
+      guest_name:         guest_name.trim(),
+      guest_phone:        guest_phone?.trim() || '',
+      guest_email:        guest_email?.trim() || '',
+      checkin,
+      checkout,
+      guests:             parseInt(guests) || 1,
+      nights,
+      amount:             amt,
+      total_amount:       amt,
+      balance_amount:     0,
+      payment_method:     payment_method || 'cash',
+      notes:              notes?.trim() || '',
+      status:             'confirmed',
+      platform:           'direct',
+      booking_no:         bookingNo,
+      booked_by_staff_id: req.staff.id,
+      booked_by_name:     req.staff.name,
+    });
+
+    blockCalendarForBooking(booking).catch(e => console.error('blockCalendar error:', e.message));
+
+    res.json({ success: true, id: booking._id.toString(), booking_no: bookingNo });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Sales: my bookings list ───────────────────────────────
+router.get('/my-bookings', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'sales') return res.status(403).json({ error: 'Sales role required' });
+  try {
+    const bookings = await Booking.find({ booked_by_staff_id: req.staff.id })
+      .populate('property_id', 'name')
+      .sort({ created_at: -1 })
+      .limit(100)
+      .lean();
+
+    const now = new Date();
+    res.json({
+      bookings: bookings.map(b => ({
+        id:            b._id.toString(),
+        guest_name:    b.guest_name,
+        guest_phone:   b.guest_phone,
+        property_name: b.property_id?.name || '—',
+        checkin:       b.checkin,
+        checkout:      b.checkout,
+        guests:        b.guests,
+        nights:        b.nights,
+        amount:        b.total_amount || b.amount,
+        status:        b.status,
+        booking_no:    b.booking_no,
+        created_at:    b.created_at,
+      })),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

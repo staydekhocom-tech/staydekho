@@ -114,6 +114,41 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
 .profile-role{font-size:14px;color:#666;text-transform:capitalize;margin-bottom:2px}
 .profile-prop{font-size:13px;color:#8B1717;font-weight:500}
 .btn-logout{width:100%;padding:13px;background:transparent;color:#c0392b;border:1.5px solid #c0392b;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px}
+
+/* ── Sales Calendar ── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-title{font-size:16px;font-weight:700}
+.cal-nav{background:none;border:1.5px solid #ddd;border-radius:8px;padding:5px 14px;font-size:16px;cursor:pointer;color:#444;line-height:1}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day-label{text-align:center;font-size:11px;font-weight:600;color:#aaa;padding:4px 0}
+.cal-day{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+.cal-day.available{background:#f0fdf4;color:#166534}
+.cal-day.blocked{background:#fee2e2;color:#dc2626;font-weight:700}
+.cal-day.today{outline:2px solid #8B1717;outline-offset:-2px}
+.cal-day.empty,.cal-day.past{background:transparent;color:#d1d5db}
+.cal-legend{display:flex;gap:14px;margin-top:12px;font-size:12px;color:#666;align-items:center}
+.cal-dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px;flex-shrink:0}
+
+/* ── Sales booking form field ── */
+.nb-field{margin-bottom:12px}
+.nb-field label{display:block;font-size:13px;font-weight:500;color:#444;margin-bottom:5px}
+.nb-field input,.nb-field select,.nb-field textarea{width:100%;padding:12px 13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;outline:none;background:#fff;font-family:inherit}
+.nb-field input:focus,.nb-field select:focus,.nb-field textarea:focus{border-color:#8B1717}
+.nb-field textarea{resize:none;height:70px}
+.nb-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── My bookings card ── */
+.bk-item{padding:12px 0;border-bottom:1px solid #f5f5f5}
+.bk-item:last-child{border-bottom:none}
+.bk-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.bk-name{font-size:14px;font-weight:600;color:#1a1a1a}
+.bk-prop{font-size:12px;color:#8B1717;font-weight:500;margin-top:1px}
+.bk-dates{font-size:12px;color:#888;margin-top:3px}
+.bk-amount{font-size:15px;font-weight:700;color:#1a1a1a;white-space:nowrap}
+.bk-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:3px;display:inline-block}
+.bk-confirmed{background:#D4EDDA;color:#155724}
+.bk-pending{background:#FFF3CD;color:#856404}
+.bk-cancelled{background:#F8D7DA;color:#721C24}
 </style>
 </head>
 <body>
@@ -276,6 +311,168 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
   </nav>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     SALES PANEL — shown only when role === 'sales'
+══════════════════════════════════════════════════ -->
+<div id="sales-app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>StayDekho Sales</h1>
+      <p id="sales-topbar-name">Loading...</p>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="showSalesPage('profile')">👤</button>
+    </div>
+  </div>
+
+  <!-- Home -->
+  <div class="page active" id="page-sales-home" style="padding:16px">
+    <div class="snapshot">
+      <div class="snap-card">
+        <div class="snap-num" id="s-snap-month">0</div>
+        <div class="snap-label">This Month</div>
+      </div>
+      <div class="snap-card">
+        <div class="snap-num" id="s-snap-total">0</div>
+        <div class="snap-label">All Bookings</div>
+      </div>
+      <div class="snap-card" style="grid-column:span 2">
+        <div class="snap-num" id="s-snap-amount" style="font-size:20px">₹0</div>
+        <div class="snap-label">Total Value (this month)</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Recent Bookings</h2></div>
+      <div class="card-body" id="s-recent-list">
+        <div class="empty"><div class="empty-icon">📋</div><p>No bookings yet. Add your first one!</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="page" id="page-sales-calendar" style="padding:16px">
+    <div class="card">
+      <div class="card-body">
+        <div class="nb-field">
+          <label>Select Property</label>
+          <select class="booking-select" id="cal-property" onchange="fetchAndRenderCalendar()" style="margin-bottom:0">
+            <option value="">— Choose property —</option>
+          </select>
+        </div>
+        <div id="cal-container">
+          <div class="empty" style="padding:20px 0"><div class="empty-icon">📅</div><p>Select a property to view availability</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <div class="card-body" style="padding:10px 16px">
+        <div class="cal-legend">
+          <span><span class="cal-dot" style="background:#dcfce7"></span>Available</span>
+          <span><span class="cal-dot" style="background:#fee2e2"></span>Booked / Blocked</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Booking -->
+  <div class="page" id="page-sales-new" style="padding:16px">
+    <div class="card">
+      <div class="card-header"><h2>New Booking</h2></div>
+      <div class="card-body">
+        <div class="nb-field">
+          <label>Property *</label>
+          <select id="nb-property">
+            <option value="">Select property…</option>
+          </select>
+        </div>
+        <div class="nb-field">
+          <label>Guest Name *</label>
+          <input id="nb-name" type="text" placeholder="Full name">
+        </div>
+        <div class="nb-field">
+          <label>Phone</label>
+          <input id="nb-phone" type="tel" placeholder="10-digit number" inputmode="numeric" maxlength="10">
+        </div>
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Check-in *</label>
+            <input id="nb-checkin" type="date">
+          </div>
+          <div class="nb-field">
+            <label>Check-out *</label>
+            <input id="nb-checkout" type="date">
+          </div>
+        </div>
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Guests</label>
+            <input id="nb-guests" type="number" value="2" min="1" max="50" inputmode="numeric">
+          </div>
+          <div class="nb-field">
+            <label>Amount (₹)</label>
+            <input id="nb-amount" type="number" placeholder="0" inputmode="numeric">
+          </div>
+        </div>
+        <div class="nb-field">
+          <label>Payment Method</label>
+          <select id="nb-payment">
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="online">Bank Transfer</option>
+          </select>
+        </div>
+        <div class="nb-field">
+          <label>Notes (optional)</label>
+          <textarea id="nb-notes" placeholder="Special requirements, source, etc…"></textarea>
+        </div>
+        <p id="nb-err" style="color:#c0392b;font-size:13px;display:none;margin-bottom:8px"></p>
+        <button class="btn-primary" id="nb-btn" onclick="submitSalesBooking()">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Bookings -->
+  <div class="page" id="page-sales-mine" style="padding:16px">
+    <div class="card">
+      <div class="card-header"><h2>My Bookings</h2></div>
+      <div class="card-body" id="s-mine-list">
+        <div class="empty"><div class="empty-icon">📋</div><p>Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="page" id="page-sales-profile" style="padding:16px">
+    <div class="profile-card">
+      <div class="profile-avatar" id="s-profile-initials">?</div>
+      <div class="profile-name" id="s-profile-name">—</div>
+      <div class="profile-role">Sales Executive</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <p style="font-size:12px;color:#aaa;margin-bottom:12px">Contact admin to update your PIN or property assignment.</p>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sales bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="snav-home" onclick="showSalesPage('home')">
+      <span class="nav-icon">🏠</span>Home
+    </button>
+    <button class="nav-item" id="snav-calendar" onclick="showSalesPage('calendar')">
+      <span class="nav-icon">📅</span>Calendar
+    </button>
+    <button class="nav-item" id="snav-new" onclick="showSalesPage('new')">
+      <span class="nav-icon">➕</span>Booking
+    </button>
+    <button class="nav-item" id="snav-mine" onclick="showSalesPage('mine')">
+      <span class="nav-icon">📋</span>My List
+    </button>
+  </nav>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -340,8 +537,13 @@ document.getElementById('login-pin').addEventListener('keydown', e => { if (e.ke
 // ── App init ───────────────────────────────────────────────
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
 
+  if (staffData?.role === 'sales') {
+    initSalesApp();
+    return;
+  }
+
+  document.getElementById('app').style.display = 'block';
   document.getElementById('topbar-name').textContent = staffData?.name || 'Staff';
   document.getElementById('topbar-property').textContent = staffData?.property?.name || 'StayDekho';
 
@@ -574,9 +776,214 @@ function logout() {
   localStorage.removeItem('sd_staff_data');
   staffToken = null; staffData = null;
   document.getElementById('app').style.display = 'none';
+  document.getElementById('sales-app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-phone').value = '';
   document.getElementById('login-pin').value = '';
+}
+
+// ══════════════════════════════════════════════════════
+//  SALES PANEL JS
+// ══════════════════════════════════════════════════════
+
+let salesProperties = [];
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth() + 1; // 1-12
+
+function initSalesApp() {
+  document.getElementById('sales-app').style.display = 'block';
+  const name = staffData?.name || '?';
+  document.getElementById('sales-topbar-name').textContent = name;
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  document.getElementById('s-profile-initials').textContent = initials;
+  document.getElementById('s-profile-name').textContent = name;
+  loadSalesProperties().then(() => loadSalesDashboard());
+}
+
+// ── Navigation ─────────────────────────────────────────────
+const salesPages = ['home', 'calendar', 'new', 'mine', 'profile'];
+function showSalesPage(p) {
+  salesPages.forEach(id => {
+    const pg  = document.getElementById(`page-sales-${id}`);
+    const nav = document.getElementById(`snav-${id}`);
+    if (pg)  pg.classList.toggle('active', id === p);
+    if (nav) nav.classList.toggle('active', id === p);
+  });
+  if (p === 'mine')     loadMyBookings();
+  if (p === 'calendar') { calYear = new Date().getFullYear(); calMonth = new Date().getMonth() + 1; }
+  if (p === 'new')      populateSalesPropertyDropdowns();
+}
+
+// ── Load properties ────────────────────────────────────────
+async function loadSalesProperties() {
+  try {
+    const r = await fetch(`${API}/api/staff/properties`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    const data = await r.json();
+    salesProperties = data.properties || [];
+    populateSalesPropertyDropdowns();
+  } catch { toast('Could not load properties'); }
+}
+
+function populateSalesPropertyDropdowns() {
+  const opts = '<option value="">Select property…</option>' +
+    salesProperties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  ['nb-property', 'cal-property'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+// ── Sales home dashboard ───────────────────────────────────
+async function loadSalesDashboard() {
+  try {
+    const r = await fetch(`${API}/api/staff/my-bookings`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    const { bookings = [] } = await r.json();
+
+    const now   = new Date();
+    const ym    = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const month = bookings.filter(b => (b.created_at || b.checkin || '').startsWith(ym));
+    const monthAmt = month.reduce((s, b) => s + (b.amount || 0), 0);
+
+    document.getElementById('s-snap-total').textContent  = bookings.length;
+    document.getElementById('s-snap-month').textContent  = month.length;
+    document.getElementById('s-snap-amount').textContent = '₹' + monthAmt.toLocaleString('en-IN');
+
+    const recent = bookings.slice(0, 5);
+    document.getElementById('s-recent-list').innerHTML = recent.length
+      ? recent.map(b => renderBookingItem(b)).join('')
+      : '<div class="empty"><div class="empty-icon">📋</div><p>No bookings yet. Add your first!</p></div>';
+  } catch { toast('Could not load dashboard'); }
+}
+
+function renderBookingItem(b) {
+  const statusClass = { confirmed: 'bk-confirmed', pending: 'bk-pending', cancelled: 'bk-cancelled' }[b.status] || 'bk-pending';
+  return `<div class="bk-item">
+    <div class="bk-top">
+      <div>
+        <div class="bk-name">${b.guest_name}</div>
+        <div class="bk-prop">${b.property_name}</div>
+        <div class="bk-dates">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${b.guests} guest${b.guests > 1 ? 's' : ''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="bk-amount">₹${(b.amount || 0).toLocaleString('en-IN')}</div>
+        <span class="bk-status ${statusClass}">${b.status}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── My Bookings page ───────────────────────────────────────
+async function loadMyBookings() {
+  document.getElementById('s-mine-list').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><p>Loading…</p></div>';
+  try {
+    const r = await fetch(`${API}/api/staff/my-bookings`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    const { bookings = [] } = await r.json();
+    document.getElementById('s-mine-list').innerHTML = bookings.length
+      ? bookings.map(b => renderBookingItem(b)).join('')
+      : '<div class="empty"><div class="empty-icon">📋</div><p>No bookings yet</p></div>';
+  } catch { toast('Could not load bookings'); }
+}
+
+// ── Calendar ───────────────────────────────────────────────
+async function fetchAndRenderCalendar() {
+  const propId = document.getElementById('cal-property').value;
+  if (!propId) return;
+  document.getElementById('cal-container').innerHTML = '<div class="empty" style="padding:20px 0"><p>Loading calendar…</p></div>';
+  try {
+    const r = await fetch(`${API}/api/staff/availability/${propId}?year=${calYear}&month=${calMonth}`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    const { blocked_dates = [] } = await r.json();
+    renderCalendar(calYear, calMonth, new Set(blocked_dates));
+  } catch { toast('Could not load calendar'); }
+}
+
+function renderCalendar(year, month, blockedSet) {
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const firstDay  = new Date(year, month - 1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const todayStr  = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+  let html = `<div class="cal-header">
+    <button class="cal-nav" onclick="calNav(-1)">‹</button>
+    <span class="cal-title">${monthNames[month-1]} ${year}</span>
+    <button class="cal-nav" onclick="calNav(1)">›</button>
+  </div>
+  <div class="cal-grid">
+    ${days.map(d => `<div class="cal-day-label">${d}</div>`).join('')}
+    ${Array(firstDay).fill('<div class="cal-day empty"></div>').join('')}`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isBlocked = blockedSet.has(dateStr);
+    const isToday   = dateStr === todayStr;
+    const isPast    = dateStr < todayStr;
+    let cls = isBlocked ? 'blocked' : (isPast ? 'past' : 'available');
+    if (isToday) cls += ' today';
+    html += `<div class="cal-day ${cls}">${d}</div>`;
+  }
+
+  html += '</div>';
+  document.getElementById('cal-container').innerHTML = html;
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth > 12) { calMonth = 1;  calYear++; }
+  if (calMonth < 1)  { calMonth = 12; calYear--; }
+  fetchAndRenderCalendar();
+}
+
+// ── Submit sales booking ────────────────────────────────────
+async function submitSalesBooking() {
+  const errEl = document.getElementById('nb-err');
+  errEl.style.display = 'none';
+
+  const property_id = document.getElementById('nb-property').value;
+  const guest_name  = document.getElementById('nb-name').value.trim();
+  const guest_phone = document.getElementById('nb-phone').value.trim();
+  const checkin     = document.getElementById('nb-checkin').value;
+  const checkout    = document.getElementById('nb-checkout').value;
+  const guests      = document.getElementById('nb-guests').value;
+  const amount      = document.getElementById('nb-amount').value;
+  const payment_method = document.getElementById('nb-payment').value;
+  const notes       = document.getElementById('nb-notes').value.trim();
+
+  if (!property_id) { errEl.textContent = 'Please select a property'; errEl.style.display = 'block'; return; }
+  if (!guest_name)  { errEl.textContent = 'Guest name is required'; errEl.style.display = 'block'; return; }
+  if (!checkin || !checkout) { errEl.textContent = 'Check-in and check-out dates are required'; errEl.style.display = 'block'; return; }
+  if (checkin >= checkout)   { errEl.textContent = 'Check-out must be after check-in'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('nb-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const r = await fetch(`${API}/api/staff/sales-booking`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ property_id, guest_name, guest_phone, checkin, checkout, guests, amount, payment_method, notes }),
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Failed to create booking'; errEl.style.display = 'block'; return; }
+
+    toast('Booking confirmed! SD-' + String(data.booking_no).padStart(4, '0') + ' ✅', 3500);
+    // Clear form
+    ['nb-name','nb-phone','nb-checkin','nb-checkout','nb-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('nb-property').value = '';
+    document.getElementById('nb-guests').value = '2';
+    document.getElementById('nb-amount').value = '';
+    // Refresh dashboard in background
+    loadSalesDashboard();
+    showSalesPage('home');
+  } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Confirm Booking'; }
 }
 </script>
 </body>

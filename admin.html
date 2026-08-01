@@ -900,13 +900,12 @@
         <select class="form-ctrl" id="sf-role">
           <option value="caretaker">Caretaker</option>
           <option value="manager">Manager</option>
+          <option value="sales">Sales</option>
           <option value="cleaner">Cleaner</option>
         </select>
       </div>
-      <div class="form-grp"><label class="form-lbl">Property</label>
-        <select class="form-ctrl" id="sf-property">
-          <option value="">No Property</option>
-        </select>
+      <div class="form-grp" style="flex:1 1 100%"><label class="form-lbl">Assign Properties</label>
+        <div id="sf-prop-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto"></div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:6px">
@@ -926,15 +925,14 @@
     </div>
     <input type="hidden" id="es-id"/>
     <div class="form-grp"><label class="form-lbl">Full Name</label><input class="form-ctrl" id="es-name"/></div>
-    <div class="form-grp"><label class="form-lbl">Property</label>
-      <select class="form-ctrl" id="es-property">
-        <option value="">No Property</option>
-      </select>
+    <div class="form-grp"><label class="form-lbl">Assign Properties</label>
+      <div id="es-prop-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto"></div>
     </div>
     <div class="form-grp"><label class="form-lbl">Role</label>
       <select class="form-ctrl" id="es-role">
         <option value="caretaker">Caretaker</option>
         <option value="manager">Manager</option>
+        <option value="sales">Sales</option>
         <option value="cleaner">Cleaner</option>
       </select>
     </div>
@@ -1335,6 +1333,7 @@ async function initAdmin() {
       guest_phone: b.guest_phone || '', nights: b.nights || 1,
       propId: (b.property_id?._id || b.property_id || '').toString(),
       razorpay_payment_id: b.razorpay_payment_id || null,
+      booked_by_name: b.booked_by_name || null,
     }));
 
     users = (usersRes.users || []).map(u => ({
@@ -2505,7 +2504,10 @@ function renderBookingsLog() {
       <td>${b.property_name || '—'}</td>
       <td>${fmtDate(b.checkin)}</td>
       <td>${fmtDate(b.checkout)}</td>
-      <td><span class="badge">${PLATFORM_LABELS[b.platform] || b.platform}</span></td>
+      <td>
+        <span class="badge">${PLATFORM_LABELS[b.platform] || b.platform}</span>
+        ${b.booked_by_name ? `<br><span style="font-size:10px;color:#7c3aed;font-weight:600">via ${b.booked_by_name}</span>` : ''}
+      </td>
       <td>${fmtMoney(b.total_amount)}</td>
       <td>${fmtMoney(b.amount)}</td>
       <td style="color:${isFullyPaid ? '#16a34a' : '#dc2626'};font-weight:600">${isFullyPaid ? '✓ Paid' : fmtMoney(b.balance_amount)}</td>
@@ -2648,6 +2650,7 @@ async function refreshMainBookings() {
       platform: b.platform || 'direct', payout_received: b.payout_received || false, owner_paid: b.owner_paid || false,
       guest_phone: b.guest_phone || '', nights: b.nights || 1,
       status: b.status || 'pending', propId: (b.property_id?._id || b.property_id || '').toString(),
+      booked_by_name: b.booked_by_name || null,
     }));
     applyBookingFilters();
     renderRecentBookings(bookings.slice(0, 5));
@@ -3456,7 +3459,11 @@ async function loadStaffList() {
         <td><strong>${s.name}</strong></td>
         <td>${s.phone}</td>
         <td><span class="badge" style="background:#dbeafe;color:#1d4ed8">${roleLabel[s.role] || s.role}</span></td>
-        <td>${s.property_name || '<span style="color:var(--gray-400)">—</span>'}</td>
+        <td>${
+          (s.property_names && s.property_names.length)
+            ? s.property_names.map(n => `<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 7px;font-size:11.5px;margin:1px 2px">${n}</span>`).join('')
+            : (s.property_name ? `<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 7px;font-size:11.5px">${s.property_name}</span>` : '<span style="color:var(--gray-400)">—</span>')
+        }</td>
         <td>
           <span class="badge ${s.status === 'active' ? 'b-active' : 'b-cancelled'}">
             ${s.status === 'active' ? 'Active' : 'Inactive'}
@@ -3538,13 +3545,47 @@ async function loadStaffIssues() {
 }
 
 function populateStaffPropertyDropdowns() {
-  const opts = '<option value="">No Property</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-  ['sf-property','es-property'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = opts;
-  });
+  // Task modal still uses a regular single-select
   const tkProp = document.getElementById('tk-property');
   if (tkProp) tkProp.innerHTML = '<option value="">Select property…</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+function populateStaffPropertyCheckboxes(containerId, selectedIds = []) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const selSet = new Set(selectedIds.map(String));
+  el.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-alt,#f8fafc);border-bottom:1px solid var(--border);cursor:pointer;font-weight:500;font-size:13px">
+      <input type="checkbox" id="${containerId}-all" onchange="toggleAllStaffProperties('${containerId}')" style="width:15px;height:15px;cursor:pointer"/>
+      <span>Select All</span>
+    </label>
+    ${properties.length === 0 ? '<div style="padding:10px 12px;font-size:13px;color:var(--gray-400)">No properties found</div>' :
+      properties.map(p => `
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)">
+          <input type="checkbox" name="${containerId}-prop" value="${p.id}" ${selSet.has(p.id) ? 'checked' : ''}
+            onchange="updateSelectAllState('${containerId}')" style="width:15px;height:15px;cursor:pointer"/>
+          <span>${p.name}</span>
+        </label>`).join('')}
+  `;
+  updateSelectAllState(containerId);
+}
+
+function toggleAllStaffProperties(containerId) {
+  const allChk = document.getElementById(`${containerId}-all`);
+  document.querySelectorAll(`input[name="${containerId}-prop"]`).forEach(c => { c.checked = allChk.checked; });
+}
+
+function updateSelectAllState(containerId) {
+  const allChk  = document.getElementById(`${containerId}-all`);
+  if (!allChk) return;
+  const all     = document.querySelectorAll(`input[name="${containerId}-prop"]`);
+  const checked = document.querySelectorAll(`input[name="${containerId}-prop"]:checked`);
+  allChk.checked       = all.length > 0 && checked.length === all.length;
+  allChk.indeterminate = checked.length > 0 && checked.length < all.length;
+}
+
+function getSelectedStaffProperties(containerId) {
+  return [...document.querySelectorAll(`input[name="${containerId}-prop"]:checked`)].map(c => c.value);
 }
 
 function populateTaskStaffDropdown() {
@@ -3554,10 +3595,9 @@ function populateTaskStaffDropdown() {
 }
 
 function openAddStaffModal() {
-  populateStaffPropertyDropdowns();
   ['sf-name','sf-phone','sf-pin'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('sf-role').value = 'caretaker';
-  document.getElementById('sf-property').value = '';
+  populateStaffPropertyCheckboxes('sf-prop-list', []);
   document.getElementById('sf-err').style.display = 'none';
   document.getElementById('add-staff-modal-title').textContent = 'Add Staff Member';
   document.getElementById('sf-submit-btn').textContent = 'Add Staff';
@@ -3569,9 +3609,9 @@ async function submitAddStaff() {
   errEl.style.display = 'none';
   const name  = document.getElementById('sf-name').value.trim();
   const phone = document.getElementById('sf-phone').value.trim();
-  const pin   = document.getElementById('sf-pin').value.trim();
-  const role  = document.getElementById('sf-role').value;
-  const prop  = document.getElementById('sf-property').value;
+  const pin      = document.getElementById('sf-pin').value.trim();
+  const role     = document.getElementById('sf-role').value;
+  const propIds  = getSelectedStaffProperties('sf-prop-list');
   if (!name || !phone || !pin) { errEl.textContent = 'Name, phone and PIN are required'; errEl.style.display = ''; return; }
   if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits'; errEl.style.display = ''; return; }
   if (phone.length < 10) { errEl.textContent = 'Enter a valid 10-digit phone number'; errEl.style.display = ''; return; }
@@ -3580,7 +3620,7 @@ async function submitAddStaff() {
     const res = await fetch(getApiBase() + '/staff/create', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, pin, role, property_id: prop || null }),
+      body: JSON.stringify({ name, phone, pin, role, property_ids: propIds, property_id: propIds[0] || null }),
     });
     const data = await res.json();
     if (!res.ok) { errEl.textContent = data.error || 'Failed to add staff'; errEl.style.display = ''; return; }
@@ -3594,13 +3634,16 @@ async function submitAddStaff() {
 function openEditStaffModal(id) {
   const s = staffList.find(x => x.id === id);
   if (!s) return;
-  populateStaffPropertyDropdowns();
-  document.getElementById('es-id').value = id;
+  document.getElementById('es-id').value   = id;
   document.getElementById('es-name').value = s.name;
   document.getElementById('es-role').value = s.role || 'caretaker';
-  document.getElementById('es-property').value = s.property_id?._id || s.property_id || '';
-  document.getElementById('es-pin').value = '';
+  document.getElementById('es-pin').value  = '';
   document.getElementById('es-err').style.display = 'none';
+  // Build selected IDs: prefer property_ids array, fall back to single property_id
+  const existingIds = (s.property_ids || []).map(p => (p._id || p).toString());
+  if (!existingIds.length && (s.property_id?._id || s.property_id))
+    existingIds.push((s.property_id?._id || s.property_id).toString());
+  populateStaffPropertyCheckboxes('es-prop-list', existingIds);
   showModal('edit-staff-modal');
 }
 
@@ -3608,12 +3651,12 @@ async function submitEditStaff() {
   const errEl = document.getElementById('es-err');
   errEl.style.display = 'none';
   const id   = document.getElementById('es-id').value;
-  const name = document.getElementById('es-name').value.trim();
-  const role = document.getElementById('es-role').value;
-  const prop = document.getElementById('es-property').value;
-  const pin  = document.getElementById('es-pin').value.trim();
+  const name    = document.getElementById('es-name').value.trim();
+  const role    = document.getElementById('es-role').value;
+  const propIds = getSelectedStaffProperties('es-prop-list');
+  const pin     = document.getElementById('es-pin').value.trim();
   if (pin && !/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits'; errEl.style.display = ''; return; }
-  const body = { name, role, property_id: prop || null };
+  const body = { name, role, property_ids: propIds, property_id: propIds[0] || null };
   if (pin) body.pin = pin;
   try {
     const tok = localStorage.getItem('sd_token');
