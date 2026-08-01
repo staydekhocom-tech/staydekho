@@ -931,14 +931,14 @@
     </div>
     <div class="form-row">
       <div class="form-grp"><label class="form-lbl">Role</label>
-        <select class="form-ctrl" id="sf-role">
+        <select class="form-ctrl" id="sf-role" onchange="onStaffRoleChange('sf')">
           <option value="caretaker">Caretaker</option>
           <option value="manager">Manager</option>
           <option value="sales">Sales</option>
           <option value="cleaner">Cleaner</option>
         </select>
       </div>
-      <div class="form-grp" style="flex:1 1 100%"><label class="form-lbl">Assign Properties</label>
+      <div class="form-grp" style="flex:1 1 100%" id="sf-prop-wrap"><label class="form-lbl">Assign Properties</label>
         <div id="sf-prop-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto"></div>
       </div>
     </div>
@@ -959,16 +959,16 @@
     </div>
     <input type="hidden" id="es-id"/>
     <div class="form-grp"><label class="form-lbl">Full Name</label><input class="form-ctrl" id="es-name"/></div>
-    <div class="form-grp"><label class="form-lbl">Assign Properties</label>
-      <div id="es-prop-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto"></div>
-    </div>
     <div class="form-grp"><label class="form-lbl">Role</label>
-      <select class="form-ctrl" id="es-role">
+      <select class="form-ctrl" id="es-role" onchange="onStaffRoleChange('es')">
         <option value="caretaker">Caretaker</option>
         <option value="manager">Manager</option>
         <option value="sales">Sales</option>
         <option value="cleaner">Cleaner</option>
       </select>
+    </div>
+    <div class="form-grp" id="es-prop-wrap"><label class="form-lbl">Assign Properties</label>
+      <div id="es-prop-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:180px;overflow-y:auto"></div>
     </div>
     <div class="form-grp"><label class="form-lbl">New PIN (leave blank to keep current)</label><input class="form-ctrl" id="es-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/></div>
     <div style="display:flex;gap:10px;margin-top:6px">
@@ -3579,6 +3579,12 @@ async function loadStaffIssues() {
   }
 }
 
+function onStaffRoleChange(prefix) {
+  const role = document.getElementById(prefix + '-role').value;
+  const wrap = document.getElementById(prefix + '-prop-wrap');
+  if (wrap) wrap.style.display = role === 'sales' ? 'none' : '';
+}
+
 function populateStaffPropertyDropdowns() {
   // Task modal still uses a regular single-select
   const tkProp = document.getElementById('tk-property');
@@ -3632,6 +3638,7 @@ function populateTaskStaffDropdown() {
 function openAddStaffModal() {
   ['sf-name','sf-phone','sf-pin'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('sf-role').value = 'caretaker';
+  onStaffRoleChange('sf');
   populateStaffPropertyCheckboxes('sf-prop-list', []);
   document.getElementById('sf-err').style.display = 'none';
   document.getElementById('add-staff-modal-title').textContent = 'Add Staff Member';
@@ -3674,6 +3681,7 @@ function openEditStaffModal(id) {
   document.getElementById('es-role').value = s.role || 'caretaker';
   document.getElementById('es-pin').value  = '';
   document.getElementById('es-err').style.display = 'none';
+  onStaffRoleChange('es');
   // Build selected IDs: prefer property_ids array, fall back to single property_id
   const existingIds = (s.property_ids || []).map(p => (p._id || p).toString());
   if (!existingIds.length && (s.property_id?._id || s.property_id))

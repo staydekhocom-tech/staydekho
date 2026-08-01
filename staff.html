@@ -556,7 +556,25 @@ function initApp() {
   loadDashboard();
 }
 
-if (staffToken && staffData) initApp();
+if (staffToken) {
+  // Always fetch fresh profile so role changes in admin reflect immediately
+  fetch(`${API}/api/staff/me`, { headers: { Authorization: `Bearer ${staffToken}` } })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) { logout(); return; }
+      staffData = {
+        id:         data.staff.id || data.staff._id,
+        name:       data.staff.name,
+        phone:      data.staff.phone,
+        role:       data.staff.role,
+        property:   data.staff.property_id || null,
+        properties: data.staff.property_ids || [],
+      };
+      localStorage.setItem('sd_staff_data', JSON.stringify(staffData));
+      initApp();
+    })
+    .catch(() => { if (staffData) initApp(); else logout(); });
+}
 
 // ── Navigation ─────────────────────────────────────────────
 const pages = ['home', 'tasks', 'ready', 'issue', 'profile'];

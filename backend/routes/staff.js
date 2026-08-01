@@ -76,6 +76,21 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ── GET /api/staff/me ─────────────────────────────────────
+router.get('/me', staffProtect, async (req, res) => {
+  try {
+    const staff = await Staff.findById(req.staff.id)
+      .populate('property_id',  'name location images')
+      .populate('property_ids', 'name location images')
+      .lean();
+    if (!staff) return res.status(404).json({ error: 'Staff not found' });
+    const { pin: _pin, ...safe } = staff;
+    res.json({ staff: { ...safe, id: staff._id.toString() } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/staff/dashboard ──────────────────────────────
 router.get('/dashboard', staffProtect, async (req, res) => {
   try {
