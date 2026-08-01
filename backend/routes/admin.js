@@ -132,8 +132,8 @@ router.get('/stats', async (req, res) => {
       { $sort: { booked: -1 } },
     ]);
 
-    // Owner payable tracking — only bookings from cutoff onwards (older ones settled informally)
-    const OWNER_TRACKING_START = new Date('2026-07-11T00:00:00Z');
+    // Owner payable tracking — Aug 1 2026 se, pehle wale sab clear ho gaye
+    const OWNER_TRACKING_START = new Date('2026-08-01T00:00:00Z');
     const ownerRows = await Booking.find({
       status:     { $in: ['confirmed', 'checked_in', 'checked_out'] },
       created_at: { $gte: OWNER_TRACKING_START },
