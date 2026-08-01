@@ -408,6 +408,41 @@ router.post('/sop', protect, adminOnly, async (req, res) => {
   }
 });
 
+// ── Admin: all sales bookings (with optional ?staff_id filter) ──
+router.get('/sales-bookings', protect, adminOnly, async (req, res) => {
+  try {
+    const filter = { booked_by_staff_id: { $ne: null } };
+    if (req.query.staff_id) filter.booked_by_staff_id = req.query.staff_id;
+
+    const bookings = await Booking.find(filter)
+      .populate('property_id', 'name')
+      .sort({ created_at: -1 })
+      .limit(200)
+      .lean();
+
+    res.json({
+      bookings: bookings.map(b => ({
+        id:                   b._id.toString(),
+        booking_no:           b.booking_no,
+        guest_name:           b.guest_name,
+        guest_phone:          b.guest_phone,
+        property_name:        b.property_id?.name || '—',
+        checkin:              b.checkin,
+        checkout:             b.checkout,
+        guests:               b.guests,
+        amount:               b.amount,
+        total_amount:         b.total_amount,
+        status:               b.status,
+        created_at:           b.created_at,
+        booked_by_staff_id:   b.booked_by_staff_id?.toString(),
+        booked_by_name:       b.booked_by_name,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Sales: property availability calendar ─────────────────
 router.get('/availability/:property_id', staffProtect, async (req, res) => {
   try {

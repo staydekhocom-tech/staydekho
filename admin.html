@@ -824,6 +824,7 @@
       <button class="btn btn-primary ops-tab-btn" id="staff-tab-people"   onclick="switchStaffTab('people')">People</button>
       <button class="btn btn-outline ops-tab-btn" id="staff-tab-tasks"    onclick="switchStaffTab('tasks')">Tasks</button>
       <button class="btn btn-outline ops-tab-btn" id="staff-tab-issues"   onclick="switchStaffTab('issues')">Issues</button>
+      <button class="btn btn-outline ops-tab-btn" id="staff-tab-sales"    onclick="switchStaffTab('sales')">Sales</button>
     </div>
 
     <!-- ── People tab ── -->
@@ -874,6 +875,39 @@
               <tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Sales tab ── -->
+    <div id="staff-panel-sales" style="display:none">
+      <div class="card" style="margin-bottom:16px">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Sales Person</th><th>Phone</th><th>Total Bookings</th><th>This Month</th><th>Total Amount</th><th>Action</th>
+            </tr></thead>
+            <tbody id="staff-sales-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Bookings detail panel (shown when clicking View) -->
+      <div id="sales-detail-panel" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-weight:600;font-size:15px" id="sales-detail-title">Bookings by —</div>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('sales-detail-panel').style.display='none'">✕ Close</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Booking#</th><th>Guest</th><th>Property</th><th>Check-in</th><th>Check-out</th><th>Amount</th><th>Status</th>
+              </tr></thead>
+              <tbody id="sales-detail-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -3424,7 +3458,7 @@ let staffCurrentTab = 'people';
 
 function switchStaffTab(tab) {
   staffCurrentTab = tab;
-  ['people','tasks','issues'].forEach(t => {
+  ['people','tasks','issues','sales'].forEach(t => {
     document.getElementById('staff-panel-' + t).style.display = t === tab ? '' : 'none';
     const btn = document.getElementById('staff-tab-' + t);
     if (btn) {
@@ -3434,6 +3468,7 @@ function switchStaffTab(tab) {
   });
   if (tab === 'tasks')  loadStaffTasks();
   if (tab === 'issues') loadStaffIssues();
+  if (tab === 'sales')  loadSalesStats();
 }
 
 async function loadStaffPage() {
@@ -3701,6 +3736,84 @@ async function resolveIssue(id) {
     await fetch(getApiBase() + '/staff/issues/' + id + '/resolve', { method: 'PUT', headers: { Authorization: 'Bearer ' + tok } });
     await loadStaffIssues();
   } catch(e) { alert('Failed. Try again.'); }
+}
+
+// ── Sales Stats ────────────────────────────────────────────
+async function loadSalesStats() {
+  const tbody = document.getElementById('staff-sales-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>';
+  document.getElementById('sales-detail-panel').style.display = 'none';
+
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const [staffRes, bookRes] = await Promise.all([
+      fetch(getApiBase() + '/staff/all',             { headers: { Authorization: 'Bearer ' + tok } }),
+      fetch(getApiBase() + '/staff/sales-bookings',  { headers: { Authorization: 'Bearer ' + tok } }),
+    ]);
+    const { staff: allStaff = [] }      = await staffRes.json();
+    const { bookings: salesBooks = [] } = bookRes.ok ? await bookRes.json() : { bookings: [] };
+
+    const salesStaff = allStaff.filter(s => s.role === 'sales');
+    if (!salesStaff.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No sales staff added yet</td></tr>';
+      return;
+    }
+
+    const now = new Date();
+    const ym  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    tbody.innerHTML = salesStaff.map(s => {
+      const mine      = salesBooks.filter(b => String(b.booked_by_staff_id) === String(s.id));
+      const thisMonth = mine.filter(b => (b.created_at || b.checkin || '').startsWith(ym));
+      const total     = mine.reduce((sum, b) => sum + (b.total_amount || b.amount || 0), 0);
+      const dot       = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.status==='active'?'#16a34a':'#9ca3af'};margin-right:5px"></span>`;
+      return `<tr>
+        <td>${dot}<strong>${s.name}</strong></td>
+        <td>${s.phone}</td>
+        <td style="font-weight:700;color:#1d4ed8">${mine.length}</td>
+        <td>${thisMonth.length}</td>
+        <td style="font-weight:700">₹${total.toLocaleString('en-IN')}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="showSalesDetail('${s.id}','${s.name}')">View Bookings</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626">Failed to load</td></tr>';
+  }
+}
+
+async function showSalesDetail(staffId, staffName) {
+  const panel = document.getElementById('sales-detail-panel');
+  const tbody = document.getElementById('sales-detail-tbody');
+  document.getElementById('sales-detail-title').textContent = 'Bookings by ' + staffName;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>';
+  panel.style.display = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/sales-bookings?staff_id=' + staffId, {
+      headers: { Authorization: 'Bearer ' + tok },
+    });
+    const { bookings = [] } = await res.json();
+    if (!bookings.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--gray-400)">No bookings yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = bookings.map(b => {
+      const st = b.status || 'pending';
+      return `<tr>
+        <td style="font-weight:600;color:#6b7280">SD-${String(b.booking_no||0).padStart(4,'0')}</td>
+        <td><strong>${b.guest_name}</strong>${b.guest_phone ? `<br><span style="font-size:11px;color:var(--gray-400)">${b.guest_phone}</span>` : ''}</td>
+        <td>${b.property_name || '—'}</td>
+        <td>${fmtDate(b.checkin)}</td>
+        <td>${fmtDate(b.checkout)}</td>
+        <td style="font-weight:700">₹${(b.total_amount||b.amount||0).toLocaleString('en-IN')}</td>
+        <td><span class="badge b-${st}">${st}</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626">Failed to load</td></tr>';
+  }
 }
 
 function openAddTaskModal() {
