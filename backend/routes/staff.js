@@ -27,12 +27,14 @@ router.post('/login', async (req, res) => {
     const clean = String(phone).replace(/\D/g, '').slice(-10);
     const staff = await Staff.findOne({ phone: clean }).populate('property_id', 'name location images').lean();
 
+    if (!staff) return res.status(401).json({ error: 'Incorrect phone or PIN' });
+
     // Support both bcrypt-hashed PINs and legacy plaintext (auto-upgrade on login)
     const isBcrypt = staff.pin?.startsWith('$2');
     const pinMatch = isBcrypt
       ? bcrypt.compareSync(String(pin), staff.pin)
       : staff.pin === String(pin);
-    if (!staff || !pinMatch)
+    if (!pinMatch)
       return res.status(401).json({ error: 'Incorrect phone or PIN' });
     // Auto-upgrade plaintext PIN to bcrypt hash
     if (!isBcrypt) {
