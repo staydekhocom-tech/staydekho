@@ -132,11 +132,9 @@ router.get('/stats', async (req, res) => {
       { $sort: { booked: -1 } },
     ]);
 
-    // Owner payable tracking — Aug 1 2026 se, pehle wale sab clear ho gaye
-    const OWNER_TRACKING_START = new Date('2026-08-01T00:00:00Z');
+    // Owner payable: sab confirmed/checked_in/checked_out bookings — owner_paid flag is source of truth
     const ownerRows = await Booking.find({
-      status:     { $in: ['confirmed', 'checked_in', 'checked_out'] },
-      created_at: { $gte: OWNER_TRACKING_START },
+      status: { $in: ['confirmed', 'checked_in', 'checked_out'] },
     }).select('total_amount amount nights platform net_payout owner_paid').lean();
 
     let ownerPending = 0, ownerPaidTotal = 0;
