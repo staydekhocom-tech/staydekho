@@ -1178,7 +1178,11 @@ function onCalDayClick(ds) {
       ['bk-checkout','mob-checkout'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
       updateCalDisplay();
     } else {
-      // Valid CO picked — both dates set
+      // Valid CO picked — check range doesn't cross any blocked/booked night
+      if (rangeHasBlockedDate(CPOP_CI, ds)) {
+        showToast('Selected range includes unavailable dates. Please choose a checkout before the blocked dates.', 'error');
+        return; // keep CI, let user pick a different CO
+      }
       CPOP_CO    = ds;
       CPOP_STAGE = 'ci';
     }
@@ -2567,17 +2571,27 @@ function localDateStr(d) {
 }
 function getBookedSet() {
   const s = new Set();
-  // 1. Confirmed bookings
   (BOOKED_RANGES||[]).forEach(r => {
     const ci = new Date(r.checkin+'T00:00:00');
     const co = new Date(r.checkout+'T00:00:00');
     for (let d=new Date(ci); d<co; d.setDate(d.getDate()+1)) s.add(localDateStr(d));
   });
-  // 2. Manually blocked dates set by admin in date-price manager
   Object.entries(DATE_PRICES||{}).forEach(([date, dp]) => {
     if (dp && dp.blocked) s.add(date);
   });
   return s;
+}
+// Returns true if any night between ci (inclusive) and co (exclusive) is in getBookedSet()
+function rangeHasBlockedDate(ci, co) {
+  if (!ci || !co) return false;
+  const booked = getBookedSet();
+  const d = new Date(ci + 'T00:00:00');
+  const end = new Date(co + 'T00:00:00');
+  while (d < end) {
+    if (booked.has(localDateStr(d))) return true;
+    d.setDate(d.getDate() + 1);
+  }
+  return false;
 }
 function buildCalMonthHtml(year, month) {
   const today = new Date(); today.setHours(0,0,0,0);
@@ -2634,7 +2648,11 @@ function calPickDate(dateStr){
       // Clicked same/earlier — restart: new CI, clear CO
       ci.value=dateStr; co.value=''; CAL_HOVER=null;
     } else {
-      // Second click after CI — lock in CO
+      // Second click after CI — validate range then lock in CO
+      if (rangeHasBlockedDate(ci.value, dateStr)) {
+        showToast('Selected range includes unavailable dates. Please choose a checkout before the blocked dates.', 'error');
+        return;
+      }
       co.value=dateStr; CAL_PICK='start'; CAL_HOVER=null;
     }
   }

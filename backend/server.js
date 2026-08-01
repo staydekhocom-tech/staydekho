@@ -61,6 +61,8 @@ app.use('/api/guides',        require('./routes/guides'));
 app.use('/api/addons',        require('./routes/addons'));
 app.use('/api/blog',          require('./routes/blog'));
 app.use('/api/operations',    require('./routes/operations'));
+app.use('/api/staff',         require('./routes/staff'));
+app.use('/api/checkin',       require('./routes/checkin'));
 
 // ── Health check ──────────────────────────────────────
 app.get('/api/health', (req, res) => {

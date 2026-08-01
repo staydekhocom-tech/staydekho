@@ -431,6 +431,7 @@
           <option value="checked_out">Checked Out</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <button class="btn btn-primary btn-sm" onclick="openAddBookingModal()" style="white-space:nowrap">+ Add Booking</button>
         <button class="btn btn-primary btn-sm" onclick="exportBookingsExcel()" style="white-space:nowrap">📊 Export Excel</button>
       </div>
     </div>
@@ -1132,6 +1133,7 @@ async function initAdmin() {
       platform: b.platform || 'direct', payout_received: b.payout_received || false, owner_paid: b.owner_paid || false,
       guest_phone: b.guest_phone || '', nights: b.nights || 1,
       propId: (b.property_id?._id || b.property_id || '').toString(),
+      razorpay_payment_id: b.razorpay_payment_id || null,
     }));
 
     users = (usersRes.users || []).map(u => ({
@@ -3019,7 +3021,7 @@ function filterByStatus(s) { bookingStatusQ = s || ''; applyBookingFilters(); }
 function filterUsers(q) { renderUsers(users.filter(u => (u.name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase()))); }
 
 function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-primary btn-sm" style="flex:1" onclick="openPropDash('${p.id}')">📊 Details</button><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp('${p.id}')">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteProp('${p.id}')">🗑</button></div></div></div>`; }).join(''); }
-function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="updateBookingStatus('${b.id}','confirmed')">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')" title="Proforma Invoice">📋 Proforma</button>`);
+function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="confirmBookingWithCheck('${b.id}',${!!b.razorpay_payment_id})">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')" title="Proforma Invoice">📋 Proforma</button>`);
   actions.push(`<button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')" title="Owner Payout Statement">🏠 Owner</button>`);
   // Balance pending button
   const balanceAmt = b.balance_amount || b.balanceAmount;
@@ -3034,7 +3036,10 @@ function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); docu
     : `<b>₹${Number(b.amount||0).toLocaleString('en-IN')}</b>`;
   const PLAT_LBL = { direct: 'StayDekho Direct', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT/Goibibo', walkin: 'Walk-in' };
   const platLbl = PLAT_LBL[b.platform] || 'StayDekho Direct';
-  return `<tr><td style="color:var(--gray-400);font-size:12px;font-weight:600;white-space:nowrap" title="${b.id}">#${bookingSeqNo(b.id)}</td><td><b>${b.guest}</b></td><td>${b.property}</td><td><span class="badge" style="font-size:10.5px">${platLbl}</span></td><td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td><td>${b.guests}</td><td>${amtDisplay}</td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${actions.join('')}</div></td></tr>`; }).join(''); }
+  const payBadge = b.razorpay_payment_id
+    ? `<div style="font-size:10px;color:#16a34a;font-weight:600;margin-top:3px">✓ Online Paid</div>`
+    : (st === 'pending' ? `<div style="font-size:10px;color:#854d0e;font-weight:600;margin-top:3px">⚠ Unpaid</div>` : '');
+  return `<tr><td style="color:var(--gray-400);font-size:12px;font-weight:600;white-space:nowrap" title="${b.id}">#${bookingSeqNo(b.id)}</td><td><b>${b.guest}</b></td><td>${b.property}</td><td><span class="badge" style="font-size:10.5px">${platLbl}</span></td><td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td><td>${b.guests}</td><td>${amtDisplay}${payBadge}</td><td><span class="badge b-${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${actions.join('')}</div></td></tr>`; }).join(''); }
 
 // Short sequential booking number: oldest booking = #1 (full Mongo id in hover tooltip)
 function bookingSeqNo(id) {
@@ -3073,8 +3078,157 @@ function renderPropertyRevenue(rows) {
     : '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--gray-400)">No revenue data yet</td></tr>';
 }
 
+// ── confirmBookingWithCheck ───────────────────────────
+async function confirmBookingWithCheck(id, isPaid) {
+  if (!isPaid) {
+    const go = confirm('⚠️ This booking has NO online payment.\n\nConfirm only if you have received cash/UPI payment manually.\n\nProceed to confirm?');
+    if (!go) return;
+  }
+  await updateBookingStatus(id, 'confirmed');
+}
+
+// ── Add Booking Modal ─────────────────────────────────
+function openAddBookingModal() {
+  const sel = document.getElementById('ab-property');
+  sel.innerHTML = properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('ab-form').reset();
+  const today = new Date().toISOString().split('T')[0];
+  const tom   = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('ab-checkin').value  = today;
+  document.getElementById('ab-checkout').value = tom;
+  document.getElementById('ab-pending-warn').style.display = 'none';
+  abCalcAmount();
+  showModal('add-booking-modal');
+}
+
+function abCalcAmount() {
+  const propId  = document.getElementById('ab-property').value;
+  const cin     = document.getElementById('ab-checkin').value;
+  const cout    = document.getElementById('ab-checkout').value;
+  const method  = document.getElementById('ab-payment').value;
+  const prop    = properties.find(p => p.id === propId);
+  const hint    = document.getElementById('ab-amount-hint');
+  const warn    = document.getElementById('ab-pending-warn');
+
+  warn.style.display = method === 'pending' ? 'block' : 'none';
+
+  if (prop && cin && cout && cin < cout) {
+    const nights = Math.ceil((new Date(cout) - new Date(cin)) / 86400000);
+    const total  = prop.price * nights;
+    document.getElementById('ab-amount').placeholder = `Auto: ₹${total.toLocaleString('en-IN')} (${nights} nights × ₹${prop.price.toLocaleString('en-IN')})`;
+    if (hint) hint.textContent = `${nights} night${nights > 1 ? 's' : ''} × ₹${prop.price.toLocaleString('en-IN')}/night`;
+  }
+}
+
+async function saveAdminBooking() {
+  const body = {
+    guest_name:     document.getElementById('ab-name').value.trim(),
+    guest_phone:    document.getElementById('ab-phone').value.trim(),
+    guest_email:    document.getElementById('ab-email').value.trim(),
+    property_id:    document.getElementById('ab-property').value,
+    checkin:        document.getElementById('ab-checkin').value,
+    checkout:       document.getElementById('ab-checkout').value,
+    guests:         parseInt(document.getElementById('ab-guests').value) || 1,
+    amount:         document.getElementById('ab-amount').value || null,
+    payment_method: document.getElementById('ab-payment').value,
+  };
+
+  if (!body.guest_name) { alert('Guest name is required'); return; }
+  if (!body.checkin || !body.checkout) { alert('Check-in and check-out dates required'); return; }
+
+  const btn = document.getElementById('ab-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  try {
+    const token = localStorage.getItem('sd_token');
+    const res   = await fetch(`${getApiBase()}/admin/booking`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save booking');
+    closeModal('add-booking-modal');
+    showAdminToast(`Booking created! ${data.status === 'pending' ? '(Pending — confirm once payment received)' : 'Confirmed ✅'}`, 'success');
+    await initAdmin();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Booking';
+  }
+}
+
 // START
 initAdmin();
 </script>
+
+<!-- Add Booking Modal -->
+<div class="modal-bd" id="add-booking-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hdr">
+      <div class="modal-title">Add Booking</div>
+      <button class="modal-close" onclick="closeModal('add-booking-modal')">✕</button>
+    </div>
+    <form id="ab-form" onsubmit="return false" style="padding:4px 0">
+      <div class="form-row">
+        <div class="form-grp" style="flex:2">
+          <label class="form-lbl">Guest Name *</label>
+          <input class="form-ctrl" id="ab-name" type="text" placeholder="Full name" required>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Guests</label>
+          <input class="form-ctrl" id="ab-guests" type="number" min="1" max="50" value="2">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-grp">
+          <label class="form-lbl">Phone</label>
+          <input class="form-ctrl" id="ab-phone" type="tel" placeholder="10-digit number">
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Email</label>
+          <input class="form-ctrl" id="ab-email" type="email" placeholder="guest@email.com">
+        </div>
+      </div>
+      <div class="form-grp">
+        <label class="form-lbl">Property *</label>
+        <select class="form-ctrl" id="ab-property" onchange="abCalcAmount()"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-grp">
+          <label class="form-lbl">Check-in *</label>
+          <input class="form-ctrl" id="ab-checkin" type="date" onchange="abCalcAmount()" required>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Check-out *</label>
+          <input class="form-ctrl" id="ab-checkout" type="date" onchange="abCalcAmount()" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-grp">
+          <label class="form-lbl">Amount (₹) <span id="ab-amount-hint" style="color:var(--gray-400);font-weight:400"></span></label>
+          <input class="form-ctrl" id="ab-amount" type="number" min="0" placeholder="Leave blank for auto-calculate">
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Payment Method *</label>
+          <select class="form-ctrl" id="ab-payment" onchange="abCalcAmount()">
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="bank">Bank Transfer</option>
+            <option value="pending">Pending (no payment yet)</option>
+          </select>
+        </div>
+      </div>
+      <div id="ab-pending-warn" style="display:none;background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:10px">
+        ⚠️ Booking will be saved as <strong>Pending</strong>. Confirm it from the bookings table once payment is received.
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px">
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('add-booking-modal')">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="ab-save-btn" onclick="saveAdminBooking()">Save Booking</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

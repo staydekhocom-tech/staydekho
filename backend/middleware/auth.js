@@ -35,4 +35,24 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { protect, adminOnly, optionalAuth };
+async function staffProtect(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer '))
+    return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const token   = header.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type !== 'staff')
+      return res.status(401).json({ error: 'Invalid staff token' });
+    const { Staff } = require('../db/models');
+    const staff = await Staff.findById(decoded.id).lean();
+    if (!staff) return res.status(401).json({ error: 'Staff not found' });
+    if (staff.status !== 'active') return res.status(403).json({ error: 'Account deactivated. Contact admin.' });
+    req.staff = { ...staff, id: staff._id.toString(), property_id: staff.property_id?.toString() || null };
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+module.exports = { protect, adminOnly, optionalAuth, staffProtect };

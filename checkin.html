@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Check-In — StayDekho</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;color:#1a1a1a}
+.header{background:#8B1717;padding:16px 20px;text-align:center}
+.header h1{color:#fff;font-size:18px;font-weight:600}
+.header p{color:rgba(255,255,255,.8);font-size:13px;margin-top:2px}
+.container{max-width:480px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:12px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card-header{padding:14px 16px;border-bottom:1px solid #f0f0f0}
+.card-header h2{font-size:15px;font-weight:600;color:#1a1a1a}
+.card-body{padding:16px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f5f5f5}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:13px;color:#666}
+.info-value{font-size:13px;font-weight:500;color:#1a1a1a;text-align:right}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#f0f0f0;cursor:pointer}
+.photo-placeholder{width:100%;aspect-ratio:4/3;background:#f0f0f0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:24px}
+.sop-img{width:100%;border-radius:8px;display:block;cursor:pointer}
+.sop-placeholder{width:100%;padding:24px;text-align:center;color:#999;font-size:14px;background:#fafafa;border-radius:8px;border:1px dashed #ddd}
+.sign-section{padding:16px}
+.sign-label{font-size:13px;color:#666;margin-bottom:8px;line-height:1.5}
+.sign-input{width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:16px;outline:none;transition:border .2s}
+.sign-input:focus{border-color:#8B1717}
+.sign-btn{width:100%;margin-top:12px;padding:14px;background:#8B1717;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.sign-btn:disabled{opacity:.5;cursor:not-allowed}
+.success{text-align:center;padding:32px 20px}
+.success-icon{font-size:64px;margin-bottom:16px}
+.success h2{font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:8px}
+.success p{font-size:14px;color:#666;line-height:1.6}
+.error-page{text-align:center;padding:48px 20px}
+.error-page h2{font-size:18px;color:#1a1a1a;margin-bottom:8px}
+.error-page p{font-size:14px;color:#666}
+#loading{text-align:center;padding:48px 20px;color:#666}
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;align-items:center;justify-content:center}
+.lightbox.open{display:flex}
+.lightbox img{max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px}
+.lightbox-close{position:absolute;top:16px;right:16px;color:#fff;font-size:32px;cursor:pointer;line-height:1;background:none;border:none}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>StayDekho</h1>
+  <p>Guest Check-In</p>
+</div>
+
+<div id="loading">Loading your check-in details...</div>
+<div id="error-page" class="container" style="display:none">
+  <div class="error-page">
+    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+    <h2>Link not found</h2>
+    <p>This check-in link is invalid or has expired.<br>Please contact StayDekho support.</p>
+  </div>
+</div>
+<div id="main" style="display:none">
+  <div class="container">
+    <div class="card" id="booking-card">
+      <div class="card-header"><h2>Your Booking</h2></div>
+      <div class="card-body" id="booking-info"></div>
+    </div>
+
+    <div class="card" id="photos-card" style="display:none">
+      <div class="card-header"><h2>Room Photos</h2></div>
+      <div class="card-body">
+        <div class="photos" id="room-photos"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>House Rules</h2></div>
+      <div class="card-body" id="sop-section"></div>
+    </div>
+
+    <div class="card" id="sign-card">
+      <div class="card-header"><h2>Acknowledge &amp; Sign</h2></div>
+      <div class="sign-section">
+        <p class="sign-label">I have read the house rules and agree to follow them during my stay.</p>
+        <input class="sign-input" id="sign-name" type="text" placeholder="Enter your full name" autocomplete="name">
+        <button class="sign-btn" id="sign-btn" onclick="submitSign()">Sign &amp; Confirm Check-In</button>
+      </div>
+    </div>
+
+    <div id="success-section" style="display:none" class="card">
+      <div class="success">
+        <div class="success-icon">✅</div>
+        <h2>All Set!</h2>
+        <p>You have successfully signed the house rules.<br>Enjoy your stay! If you need anything, feel free to contact us.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lightbox-img" src="" alt="Full view">
+</div>
+
+<script>
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:5000'
+  : 'https://api.staydekho.com';
+
+const token = new URLSearchParams(window.location.search).get('token');
+
+function fmt(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+async function load() {
+  if (!token) { showError(); return; }
+  try {
+    const r = await fetch(`${API}/api/checkin/${token}`);
+    if (!r.ok) { showError(); return; }
+    const data = await r.json();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+
+    document.getElementById('booking-info').innerHTML = `
+      <div class="info-row"><span class="info-label">Property</span><span class="info-value">${data.property_name}</span></div>
+      <div class="info-row"><span class="info-label">Location</span><span class="info-value">${data.property_location}</span></div>
+      <div class="info-row"><span class="info-label">Guest</span><span class="info-value">${data.guest_name}</span></div>
+      <div class="info-row"><span class="info-label">Check-in</span><span class="info-value">${fmt(data.checkin)}</span></div>
+      <div class="info-row"><span class="info-label">Check-out</span><span class="info-value">${fmt(data.checkout)}</span></div>
+      <div class="info-row"><span class="info-label">Guests</span><span class="info-value">${data.num_guests}</span></div>
+    `;
+
+    if (data.room_photos?.length) {
+      document.getElementById('photos-card').style.display = 'block';
+      document.getElementById('room-photos').innerHTML = data.room_photos.map(p =>
+        `<img class="photo" src="${p}" alt="Room" onclick="openLightbox('${p}')" loading="lazy">`
+      ).join('');
+    }
+
+    const sopEl = document.getElementById('sop-section');
+    if (data.sop_photo) {
+      sopEl.innerHTML = `<img class="sop-img" src="${data.sop_photo}" alt="House Rules" onclick="openLightbox('${data.sop_photo}')">
+        <p style="font-size:12px;color:#999;text-align:center;margin-top:8px">Tap to view full size</p>`;
+    } else {
+      sopEl.innerHTML = `<div class="sop-placeholder">House rules will be shown here.<br>Please contact property staff.</div>`;
+    }
+
+    if (data.already_signed) {
+      document.getElementById('sign-card').style.display = 'none';
+      document.getElementById('success-section').style.display = 'block';
+    } else {
+      const inp = document.getElementById('sign-name');
+      inp.value = data.guest_name || '';
+    }
+
+  } catch(e) {
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-page').style.display = 'block';
+}
+
+async function submitSign() {
+  const name = document.getElementById('sign-name').value.trim();
+  if (!name) { alert('Please enter your name to sign.'); return; }
+
+  const btn = document.getElementById('sign-btn');
+  btn.disabled = true;
+  btn.textContent = 'Signing...';
+
+  try {
+    const r = await fetch(`${API}/api/checkin/${token}/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guest_signed_name: name }),
+    });
+    if (!r.ok) throw new Error('Failed');
+    document.getElementById('sign-card').style.display = 'none';
+    document.getElementById('success-section').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch {
+    btn.disabled = false;
+    btn.textContent = 'Sign & Confirm Check-In';
+    alert('Something went wrong. Please try again.');
+  }
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+load();
+</script>
+</body>
+</html>

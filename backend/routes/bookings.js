@@ -119,6 +119,14 @@ router.post('/', protect, async (req, res) => {
     }).lean();
     if (overlap) return res.status(409).json({ error: 'These dates are already booked. Please choose different dates.' });
 
+    // Blocked dates check — admin may have blocked individual dates via date-price manager
+    const blockedInRange = await DatePrice.findOne({
+      property_id,
+      blocked: true,
+      date: { $gte: checkin.slice(0,10), $lt: checkout.slice(0,10) },
+    }).lean();
+    if (blockedInRange) return res.status(409).json({ error: 'Some dates in your selection are not available. Please choose different dates.' });
+
     const nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
 
     // Build per-night prices from DatePrice, fallback to property.price

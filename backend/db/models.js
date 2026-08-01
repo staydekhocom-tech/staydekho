@@ -261,6 +261,58 @@ const platformSettingSchema = new Schema({
   default_base_price: { type: Number, default: 4000 },
 }, { toJSON });
 
+// ── 20. Staff ─────────────────────────────────────────
+const staffSchema = new Schema({
+  name:        { type: String, required: true },
+  phone:       { type: String, required: true, unique: true },
+  pin:         { type: String, required: true },
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', default: null },
+  role:        { type: String, default: 'caretaker', enum: ['caretaker', 'housekeeping', 'manager', 'security', 'cook'] },
+  status:      { type: String, default: 'active', enum: ['active', 'inactive'] },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 21. StaffTask ─────────────────────────────────────
+const staffTaskSchema = new Schema({
+  staff_id:     { type: Schema.Types.ObjectId, ref: 'Staff', default: null },
+  property_id:  { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  booking_id:   { type: Schema.Types.ObjectId, ref: 'Booking', default: null },
+  task_type:    { type: String, default: 'cleaning', enum: ['cleaning', 'maintenance', 'setup', 'other'] },
+  title:        { type: String, required: true },
+  notes:        { type: String, default: '' },
+  photos:       { type: String, default: '[]' },
+  status:       { type: String, default: 'pending', enum: ['pending', 'in_progress', 'done'] },
+  due_date:     { type: String, required: true },
+  completed_at: { type: Date, default: null },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 22. CheckinToken ──────────────────────────────────
+const checkinTokenSchema = new Schema({
+  booking_id:        { type: Schema.Types.ObjectId, ref: 'Booking', required: true, unique: true },
+  property_id:       { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  token:             { type: String, required: true, unique: true },
+  room_photos:       { type: String, default: '[]' },
+  guest_signed_name: { type: String, default: null },
+  signed_at:         { type: Date, default: null },
+  ready_at:          { type: Date, default: null },
+  ready_by_staff_id: { type: Schema.Types.ObjectId, ref: 'Staff', default: null },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 23. PropertySOP ───────────────────────────────────
+const propertySopSchema = new Schema({
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true, unique: true },
+  sop_photo:   { type: String, default: null },
+}, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }, toJSON });
+
+// ── 24. StaffIssue ────────────────────────────────────
+const staffIssueSchema = new Schema({
+  staff_id:    { type: Schema.Types.ObjectId, ref: 'Staff', required: true },
+  property_id: { type: Schema.Types.ObjectId, ref: 'Property', required: true },
+  title:       { type: String, required: true },
+  description: { type: String, default: '' },
+  photos:      { type: String, default: '[]' },
+  status:      { type: String, default: 'open', enum: ['open', 'resolved'] },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
 module.exports = {
   User:         mongoose.model('User',         userSchema),
   Property:     mongoose.model('Property',     propertySchema),
@@ -278,7 +330,12 @@ module.exports = {
   AddonRequest: mongoose.model('AddonRequest', addonRequestSchema),
   DatePrice:    mongoose.model('DatePrice',    datePriceSchema),
   BlogPost:     mongoose.model('BlogPost',     blogPostSchema),
-  Expense:        mongoose.model('Expense',        expenseSchema),
-  CleaningTask:   mongoose.model('CleaningTask',   cleaningTaskSchema),
-  PlatformSetting:mongoose.model('PlatformSetting',platformSettingSchema),
+  Expense:         mongoose.model('Expense',         expenseSchema),
+  CleaningTask:    mongoose.model('CleaningTask',    cleaningTaskSchema),
+  PlatformSetting: mongoose.model('PlatformSetting', platformSettingSchema),
+  Staff:           mongoose.model('Staff',           staffSchema),
+  StaffTask:       mongoose.model('StaffTask',       staffTaskSchema),
+  CheckinToken:    mongoose.model('CheckinToken',    checkinTokenSchema),
+  PropertySOP:     mongoose.model('PropertySOP',     propertySopSchema),
+  StaffIssue:      mongoose.model('StaffIssue',      staffIssueSchema),
 };

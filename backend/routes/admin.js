@@ -2,6 +2,7 @@ const router   = require('express').Router();
 const mongoose = require('mongoose');
 const { User, Property, Booking, Review } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
+const { notifyStaffNewBooking } = require('../services/notify');
 
 // All admin routes require auth + admin role
 router.use(protect, adminOnly);
@@ -314,6 +315,48 @@ router.delete('/users/:id', async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/booking  — admin manually creates a booking
+router.post('/booking', async (req, res) => {
+  try {
+    const { guest_name, guest_phone, guest_email, property_id, checkin, checkout, guests, amount, payment_method, notes } = req.body;
+
+    if (!guest_name || !property_id || !checkin || !checkout)
+      return res.status(400).json({ error: 'guest_name, property_id, checkin, checkout are required' });
+
+    const property = await Property.findById(property_id).lean();
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    const cin  = new Date(checkin);
+    const cout = new Date(checkout);
+    if (cout <= cin) return res.status(400).json({ error: 'Check-out must be after check-in' });
+    const nights = Math.ceil((cout - cin) / (1000 * 60 * 60 * 24));
+
+    const finalAmount = amount ? parseInt(amount) : property.price * nights;
+    const status = payment_method === 'pending' ? 'pending' : 'confirmed';
+
+    const booking = await Booking.create({
+      user_id:        req.user.id,
+      property_id,
+      guest_name:     guest_name.trim(),
+      guest_email:    guest_email?.trim() || '',
+      guest_phone:    guest_phone ? String(guest_phone).replace(/\D/g, '').slice(-10) : '',
+      checkin,
+      checkout,
+      guests:         guests || 1,
+      nights,
+      amount:         finalAmount,
+      total_amount:   finalAmount,
+      status,
+      platform:       'walkin',
+      notes:          notes || '',
+    });
+
+    res.status(201).json({ success: true, booking_id: booking._id.toString(), status, nights, amount: finalAmount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
