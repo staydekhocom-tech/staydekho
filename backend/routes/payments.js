@@ -32,7 +32,7 @@ router.post('/create-order', protect, async (req, res) => {
 
     const booking = await Booking.findById(booking_id).lean();
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (booking.user_id.toString() !== req.user.id && req.user.role !== 'admin')
+    if (req.user.role !== 'admin' && booking.user_id?.toString() !== req.user.id)
       return res.status(403).json({ error: 'Not authorized' });
     if (booking.status !== 'pending')
       return res.status(400).json({ error: 'Booking is not in pending state' });
@@ -93,7 +93,7 @@ router.post('/verify', protect, async (req, res) => {
   try {
     const booking = await Booking.findById(booking_id).lean();
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (booking.user_id.toString() !== req.user.id && req.user.role !== 'admin')
+    if (req.user.role !== 'admin' && booking.user_id?.toString() !== req.user.id)
       return res.status(403).json({ error: 'Not authorized' });
 
     // Update payment record to captured

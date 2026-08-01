@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const { User, Property, Booking, Review } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { notifyStaffNewBooking } = require('../services/notify');
+const { blockCalendarForBooking, createCleaningTaskForCheckout } = require('../services/bookingAutomation');
+const { notifyTeamNewBooking } = require('../services/whatsapp');
 
 // All admin routes require auth + admin role
 router.use(protect, adminOnly);
@@ -156,7 +158,7 @@ router.get('/stats', async (req, res) => {
 
     // Monthly revenue chart (last 6 months)
     const monthlyRevenue = await Booking.aggregate([
-      { $match: { status: 'confirmed' } },
+      { $match: { status: { $in: ['confirmed', 'checked_in', 'checked_out'] } } },
       {
         $group: {
           _id: {
@@ -359,7 +361,9 @@ router.post('/booking', async (req, res) => {
     const finalAmount = amount ? parseInt(amount) : property.price * nights;
     const status = payment_method === 'pending' ? 'pending' : 'confirmed';
 
+    const bookingNo = (await Booking.countDocuments()) + 1;
     const booking = await Booking.create({
+      booking_no:     bookingNo,
       user_id:        req.user.id,
       property_id,
       guest_name:     guest_name.trim(),
@@ -376,7 +380,12 @@ router.post('/booking', async (req, res) => {
       notes:          notes || '',
     });
 
-    res.status(201).json({ success: true, booking_id: booking._id.toString(), status, nights, amount: finalAmount });
+    // Run automation in background (don't await — don't block response)
+    blockCalendarForBooking(booking).catch(e => console.error('blockCalendar error:', e.message));
+    createCleaningTaskForCheckout(booking).catch(e => console.error('cleaningTask error:', e.message));
+    notifyTeamNewBooking(booking, property.name).catch(e => console.error('notifyTeam error:', e.message));
+
+    res.status(201).json({ success: true, booking_id: booking._id.toString(), booking_no: bookingNo, status, nights, amount: finalAmount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -1,5 +1,6 @@
 const router  = require('express').Router();
 const jwt     = require('jsonwebtoken');
+const bcrypt  = require('bcryptjs');
 const crypto  = require('crypto');
 const mongoose = require('mongoose');
 const { Staff, StaffTask, CheckinToken, PropertySOP, StaffIssue, Booking, Property } = require('../db/models');
@@ -14,7 +15,7 @@ function staffToken(id) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
 // ── POST /api/staff/login ─────────────────────────────────
@@ -26,8 +27,17 @@ router.post('/login', async (req, res) => {
     const clean = String(phone).replace(/\D/g, '').slice(-10);
     const staff = await Staff.findOne({ phone: clean }).populate('property_id', 'name location images').lean();
 
-    if (!staff || staff.pin !== String(pin))
+    // Support both bcrypt-hashed PINs and legacy plaintext (auto-upgrade on login)
+    const isBcrypt = staff.pin?.startsWith('$2');
+    const pinMatch = isBcrypt
+      ? bcrypt.compareSync(String(pin), staff.pin)
+      : staff.pin === String(pin);
+    if (!staff || !pinMatch)
       return res.status(401).json({ error: 'Incorrect phone or PIN' });
+    // Auto-upgrade plaintext PIN to bcrypt hash
+    if (!isBcrypt) {
+      Staff.findByIdAndUpdate(staff._id, { pin: bcrypt.hashSync(String(pin), 10) }).catch(() => {});
+    }
 
     if (staff.status !== 'active')
       return res.status(403).json({ error: 'Account deactivated. Contact admin.' });
@@ -204,7 +214,10 @@ router.get('/all', protect, adminOnly, async (req, res) => {
     const staff = await Staff.find()
       .populate('property_id', 'name')
       .sort({ created_at: -1 }).lean();
-    res.json({ staff: staff.map(s => ({ ...s, id: s._id.toString(), property_name: s.property_id?.name })) });
+    res.json({ staff: staff.map(s => {
+      const { pin: _pin, ...safe } = s;
+      return { ...safe, id: s._id.toString(), property_name: s.property_id?.name };
+    }) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -217,13 +230,14 @@ router.post('/create', protect, adminOnly, async (req, res) => {
 
     const clean = String(phone).replace(/\D/g, '').slice(-10);
     if (clean.length < 10) return res.status(400).json({ error: 'Enter valid 10-digit phone' });
-    if (String(pin).length !== 4) return res.status(400).json({ error: 'PIN must be 4 digits' });
+    if (String(pin).length !== 4 || !/^\d{4}$/.test(String(pin)))
+      return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
 
     const staff = await Staff.create({
       name, phone: clean,
       property_id: property_id || null,
       role: role || 'caretaker',
-      pin: String(pin),
+      pin: bcrypt.hashSync(String(pin), 10),
     });
     res.json({ success: true, id: staff._id.toString() });
   } catch (err) {
@@ -242,7 +256,10 @@ router.put('/update/:id', protect, adminOnly, async (req, res) => {
     if (phone)       s.phone       = String(phone).replace(/\D/g, '').slice(-10);
     if (property_id !== undefined) s.property_id = property_id || null;
     if (role)        s.role        = role;
-    if (pin)         s.pin         = String(pin);
+    if (pin) {
+      if (!/^\d{4}$/.test(String(pin))) return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+      s.pin = bcrypt.hashSync(String(pin), 10);
+    }
     if (status)      s.status      = status;
     await s.save();
 

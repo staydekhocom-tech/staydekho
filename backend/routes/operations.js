@@ -19,7 +19,7 @@ router.get('/bookings-log', async (req, res) => {
     if (property_id) q.property_id = property_id;
     const rows = await Booking.find(q)
       .populate('property_id', 'name location')
-      .sort({ checkin: -1 })
+      .sort({ checkin: 1 })
       .lean();
     const bookings = rows.map(b => ({
       ...b,
@@ -72,6 +72,7 @@ router.post('/bookings-log', async (req, res) => {
     const isPaid = !!balance_paid || balance <= 0;
     const bookingNo = (await Booking.countDocuments()) + 1;
     const booking = await Booking.create({
+      booking_no: bookingNo,
       property_id, guest_name, guest_phone: guest_phone || '',
       guest_email: guest_email || '', guests: Number(guests) || 1, checkin, checkout, nights,
       amount: advance, total_amount: Number(total_amount), balance_amount: balance,

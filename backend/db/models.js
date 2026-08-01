@@ -88,6 +88,11 @@ const bookingSchema = new Schema({
   notes:               { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
+bookingSchema.index({ property_id: 1, checkin: 1 });
+bookingSchema.index({ property_id: 1, status: 1 });
+bookingSchema.index({ checkin: 1 });
+bookingSchema.index({ status: 1, created_at: -1 });
+
 // ── 4. Payment ─────────────────────────────────────────
 const paymentSchema = new Schema({
   booking_id:          { type: Schema.Types.ObjectId, ref: 'Booking', required: true },

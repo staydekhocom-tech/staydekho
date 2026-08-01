@@ -15,6 +15,7 @@ function sendWhatsApp(phone, message) {
       method: 'POST',
       headers: { authkey: process.env.MSG91_AUTH_KEY, 'content-type': 'application/json' },
     });
+    req.on('error', e => console.error('MSG91 WhatsApp error:', e.message));
     req.write(payload);
     req.end();
   }

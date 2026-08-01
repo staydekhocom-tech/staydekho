@@ -13,6 +13,7 @@ router.get('/:token', async (req, res) => {
       .lean();
 
     if (!row) return res.status(404).json({ error: 'Link not found or expired' });
+    if (!row.property_id) return res.status(404).json({ error: 'Property not found' });
 
     const sop = await PropertySOP.findOne({ property_id: row.property_id._id }).lean();
 

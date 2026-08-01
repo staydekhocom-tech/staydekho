@@ -4,6 +4,7 @@ const { Booking, Property, Payment, DatePrice } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
 const { blockCalendarForBooking, unblockCalendarIfFree, createCleaningTaskForCheckout, notifyGuestBookingCancelled } = require('../services/bookingAutomation');
+const { notifyTeamBookingCancelled } = require('../services/whatsapp');
 
 function getRazorpay() {
   const key_id     = process.env.RAZORPAY_KEY_ID;
@@ -129,19 +130,20 @@ router.post('/', protect, async (req, res) => {
 
     const nights = Math.max(1, Math.round((cout - cin) / (1000 * 60 * 60 * 24)));
 
-    // Build per-night prices from DatePrice, fallback to property.price
+    // Build per-night prices — single query instead of N+1
+    const dpRows = await DatePrice.find({
+      property_id,
+      date:    { $gte: checkin.slice(0, 10), $lt: checkout.slice(0, 10) },
+      blocked: false,
+      price:   { $ne: null },
+    }).lean();
+    const dpMap = new Map(dpRows.map(dp => [dp.date, dp.price]));
     let base = 0;
     for (let i = 0; i < nights; i++) {
       const d = new Date(cin);
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
-      const dp = await DatePrice.findOne({
-        property_id,
-        date:    dateStr,
-        blocked: false,
-        price:   { $ne: null },
-      }).lean();
-      base += dp ? dp.price : property.price;
+      base += dpMap.has(dateStr) ? dpMap.get(dateStr) : property.price;
     }
 
     const avgNight = base / nights;
@@ -737,9 +739,12 @@ router.delete('/:id', protect, async (req, res) => {
         bookingCancelledHtml(emailData)
       ).catch(e => console.error('Cancel email error:', e.message));
 
-      // ── Automation: free up the calendar dates if no other booking covers them ──
+      // ── Automation: free up calendar + notify team ──
       unblockCalendarIfFree(cancelled.property_id._id, cancelled.checkin, cancelled.checkout, cancelled._id)
         .catch(e => console.error('Calendar unblock error:', e.message));
+      Property.findById(cancelled.property_id._id).lean()
+        .then(prop => notifyTeamBookingCancelled(cancelled, prop || {}))
+        .catch(e => console.error('Cancel notify error:', e.message));
     }
 
     res.json({ message: 'Booking cancelled' });

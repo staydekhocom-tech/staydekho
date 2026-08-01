@@ -6,8 +6,7 @@ const { protect } = require('../middleware/auth');
 const { sendOtpSMS } = require('../services/sms');
 
 function signToken(id) {
-  // No expiresIn = token never expires
-  return jwt.sign({ id }, process.env.JWT_SECRET);
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '90d' });
 }
 
 function cleanPhone(phone) {
