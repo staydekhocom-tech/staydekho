@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.staydekho.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://www.staydekho.com/listings.html</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://www.staydekho.com/about.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.staydekho.com/contact.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.staydekho.com/travel-guide.html</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.staydekho.com/blog.html</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.staydekho.com/how-it-works.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.staydekho.com/help.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://www.staydekho.com/safety.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://www.staydekho.com/cancellation.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://www.staydekho.com/careers.html</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://www.staydekho.com/terms.html</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-</urlset>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Static pages sitemap -->
+  <sitemap>
+    <loc>https://www.staydekho.com/sitemap-static.xml</loc>
+    <lastmod>2026-08-01</lastmod>
+  </sitemap>
+  <!-- Dynamic sitemap (properties + blog posts + travel guides) — generated live -->
+  <sitemap>
+    <loc>https://api.staydekho.com/api/sitemap.xml</loc>
+    <lastmod>2026-08-01</lastmod>
+  </sitemap>
+</sitemapindex>

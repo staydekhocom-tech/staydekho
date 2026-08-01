@@ -20,8 +20,13 @@
   <!-- End Meta Pixel Code -->
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Travel Guide — StayDekho</title>
-  <meta name="description" content="City-wise travel guides for India's best destinations — what to see, where to eat, when to go."/>
+  <title>Udaipur Travel Guide — Places to Visit, Itinerary & Tips | StayDekho</title>
+  <meta name="description" content="Complete Udaipur travel guide: best places to visit, 3-day itinerary, where to stay, what to eat, and travel tips. Plan your perfect Udaipur trip with StayDekho."/>
+  <link rel="canonical" href="https://www.staydekho.com/travel-guide.html"/>
+  <meta name="robots" content="index, follow"/>
+  <meta name="keywords" content="udaipur travel guide, places to visit in udaipur, udaipur itinerary, udaipur trip plan, udaipur tourism, udaipur sightseeing, udaipur me ghumne ki jagah"/>
+  <meta name="geo.region" content="IN-RJ"/>
+  <meta name="geo.placename" content="Udaipur, Rajasthan"/>
   <link rel="icon" type="image/png" href="images/favicon.png"/>
   <meta property="og:site_name" content="StayDekho"/>
   <meta property="og:type" content="website"/>
@@ -121,14 +126,50 @@
       const grid = document.getElementById('tg-grid');
       try {
         const { guide } = await api.getGuide(slug);
+
+        // ── SEO: update meta for this specific guide ──
+        const guideUrl = `https://www.staydekho.com/travel-guide.html?slug=${encodeURIComponent(guide.slug || slug)}`;
+        const guideImg = guide.hero_image || 'https://www.staydekho.com/images/og-cover.jpg';
+        const guideDesc = (guide.summary || guide.title || '').slice(0, 160);
+        document.title = `${guide.title} — Udaipur Travel Guide | StayDekho`;
+        const setM = (sel, val) => { const el = document.querySelector(sel); if (el) el.setAttribute('content', val); };
+        setM('meta[name="description"]', guideDesc);
+        setM('meta[property="og:title"]', guide.title);
+        setM('meta[property="og:description"]', guideDesc);
+        setM('meta[property="og:url"]', guideUrl);
+        setM('meta[property="og:image"]', guideImg);
+        let canon = document.querySelector('link[rel="canonical"]');
+        if (!canon) { canon = document.createElement('link'); canon.rel = 'canonical'; document.head.appendChild(canon); }
+        canon.href = guideUrl;
+        // TouristAttraction + Article schema
+        const prev = document.getElementById('_guide_schema');
+        if (prev) prev.remove();
+        const sc = document.createElement('script');
+        sc.type = 'application/ld+json'; sc.id = '_guide_schema';
+        sc.textContent = JSON.stringify({
+          '@context': 'https://schema.org', '@type': 'Article',
+          headline: guide.title, description: guideDesc, image: guideImg,
+          author: { '@type': 'Organization', name: 'StayDekho' },
+          publisher: { '@type': 'Organization', name: 'StayDekho', logo: { '@type': 'ImageObject', url: 'https://www.staydekho.com/images/favicon.png' } },
+          datePublished: guide.created_at, url: guideUrl,
+          about: { '@type': 'TouristDestination', name: guide.city || 'Udaipur', touristType: 'Family, Group, Couples' },
+          keywords: `${guide.city || 'udaipur'} travel guide, places to visit in ${guide.city || 'udaipur'}, ${guide.city || 'udaipur'} trip, staydekho`,
+        });
+        document.head.appendChild(sc);
+
         grid.outerHTML = `
           <article style="max-width:760px;margin:32px auto;padding:0 20px">
             <a href="travel-guide.html" style="color:var(--red);font-size:13px;font-weight:600">← All guides</a>
-            ${guide.hero_image ? `<img src="${esc(guide.hero_image)}" style="width:100%;border-radius:14px;margin:14px 0 20px"/>` : ''}
+            ${guide.hero_image ? `<img src="${esc(guide.hero_image)}" style="width:100%;border-radius:14px;margin:14px 0 20px" alt="${esc(guide.title)}"/>` : ''}
             <div class="tg-city">${esc(guide.city)}</div>
             <h1 style="margin:4px 0 14px">${esc(guide.title)}</h1>
             ${guide.summary ? `<p style="color:var(--gray-500);font-size:1.05rem;margin-bottom:18px">${esc(guide.summary)}</p>` : ''}
             <div style="line-height:1.75;font-size:1rem;white-space:pre-wrap">${esc(guide.body)}</div>
+            <div style="margin-top:32px;padding:20px;background:#fff8f8;border-radius:12px;border:1px solid #fce4e4">
+              <strong style="color:#8B1717">Planning a trip to ${esc(guide.city || 'Udaipur')}?</strong>
+              <p style="margin:8px 0 12px;color:#555;font-size:14px">Book a private villa directly with StayDekho — best price, no middlemen.</p>
+              <a href="listings.html" style="display:inline-block;padding:10px 20px;background:#8B1717;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Browse Villas →</a>
+            </div>
           </article>`;
       } catch (e) {
         grid.innerHTML = `<div class="tg-empty">Guide not found.</div>`;

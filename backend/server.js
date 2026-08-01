@@ -64,6 +64,75 @@ app.use('/api/operations',    require('./routes/operations'));
 app.use('/api/staff',         require('./routes/staff'));
 app.use('/api/checkin',       require('./routes/checkin'));
 
+// ── Dynamic Sitemap ───────────────────────────────────
+app.get('/api/sitemap.xml', async (req, res) => {
+  const { BlogPost, TravelGuide, Property } = require('./db/models');
+  const BASE = 'https://www.staydekho.com';
+  const now  = new Date().toISOString().split('T')[0];
+
+  const staticPages = [
+    { loc: `${BASE}/`,                   priority: '1.0', changefreq: 'daily'   },
+    { loc: `${BASE}/listings.html`,      priority: '0.95', changefreq: 'daily'  },
+    { loc: `${BASE}/travel-guide.html`,  priority: '0.8',  changefreq: 'weekly' },
+    { loc: `${BASE}/blog.html`,          priority: '0.8',  changefreq: 'weekly' },
+    { loc: `${BASE}/about.html`,         priority: '0.6',  changefreq: 'monthly'},
+    { loc: `${BASE}/contact.html`,       priority: '0.6',  changefreq: 'monthly'},
+    { loc: `${BASE}/how-it-works.html`,  priority: '0.5',  changefreq: 'monthly'},
+    { loc: `${BASE}/help.html`,          priority: '0.5',  changefreq: 'monthly'},
+    { loc: `${BASE}/cancellation.html`,  priority: '0.4',  changefreq: 'monthly'},
+    { loc: `${BASE}/terms.html`,         priority: '0.4',  changefreq: 'monthly'},
+  ];
+
+  try {
+    const [posts, guides, props] = await Promise.all([
+      BlogPost.find({ published: true }).select('slug updated_at published_at').lean(),
+      TravelGuide.find({ published: true }).select('slug created_at').lean(),
+      Property.find({ status: 'Active' }).select('_id updated_at').lean(),
+    ]);
+
+    const blogUrls = posts.map(p => ({
+      loc: `${BASE}/blog.html?slug=${encodeURIComponent(p.slug)}`,
+      lastmod: (p.updated_at || p.published_at || new Date()).toISOString().split('T')[0],
+      priority: '0.75', changefreq: 'monthly',
+    }));
+
+    const guideUrls = guides.map(g => ({
+      loc: `${BASE}/travel-guide.html?slug=${encodeURIComponent(g.slug)}`,
+      lastmod: (g.created_at || new Date()).toISOString().split('T')[0],
+      priority: '0.75', changefreq: 'monthly',
+    }));
+
+    const propUrls = props.map(p => ({
+      loc: `${BASE}/property.html?id=${p._id}`,
+      lastmod: (p.updated_at || new Date()).toISOString().split('T')[0],
+      priority: '0.85', changefreq: 'weekly',
+    }));
+
+    const allUrls = [
+      ...staticPages.map(u => ({ ...u, lastmod: now })),
+      ...propUrls,
+      ...blogUrls,
+      ...guideUrls,
+    ];
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${allUrls.map(u => `  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${u.lastmod}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`;
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  } catch (err) {
+    res.status(500).send('<?xml version="1.0"?><error>Sitemap generation failed</error>');
+  }
+});
+
 // ── Health check ──────────────────────────────────────
 app.get('/api/health', (req, res) => {
   const mongoose = require('mongoose');

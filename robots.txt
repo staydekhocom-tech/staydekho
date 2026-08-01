@@ -26,3 +26,5 @@ Disallow: /test-payment.html
 Disallow: /login.html
 
 Sitemap: https://www.staydekho.com/sitemap.xml
+Sitemap: https://www.staydekho.com/sitemap-static.xml
+Sitemap: https://api.staydekho.com/api/sitemap.xml

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.staydekho.com/</loc>                  <lastmod>2026-08-01</lastmod><changefreq>daily</changefreq>  <priority>1.0</priority></url>
+  <url><loc>https://www.staydekho.com/listings.html</loc>     <lastmod>2026-08-01</lastmod><changefreq>daily</changefreq>  <priority>0.95</priority></url>
+  <url><loc>https://www.staydekho.com/travel-guide.html</loc> <lastmod>2026-08-01</lastmod><changefreq>weekly</changefreq> <priority>0.8</priority></url>
+  <url><loc>https://www.staydekho.com/blog.html</loc>         <lastmod>2026-08-01</lastmod><changefreq>weekly</changefreq> <priority>0.8</priority></url>
+  <url><loc>https://www.staydekho.com/about.html</loc>        <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.staydekho.com/contact.html</loc>      <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.staydekho.com/how-it-works.html</loc> <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://www.staydekho.com/help.html</loc>         <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://www.staydekho.com/cancellation.html</loc> <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.staydekho.com/terms.html</loc>        <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.staydekho.com/safety.html</loc>       <lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+</urlset>

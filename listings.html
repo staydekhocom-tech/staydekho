@@ -589,6 +589,36 @@ const sorted = sortProps(list);
     document.getElementById('listings-count').innerHTML = sorted.length
       ? `<strong>${sorted.length}</strong> stay${sorted.length!==1?'s':''} available`
       : '0 stays found';
+
+    // ── SEO: ItemList schema for Google rich results ──
+    const prev = document.getElementById('_listings_schema');
+    if (prev) prev.remove();
+    if (sorted.length) {
+      const sc = document.createElement('script');
+      sc.type = 'application/ld+json'; sc.id = '_listings_schema';
+      sc.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'Villas & Homestays in Udaipur — StayDekho',
+        description: 'Book premium private villas and homestays in Udaipur directly. No middlemen, best price.',
+        url: 'https://www.staydekho.com/listings.html',
+        numberOfItems: sorted.length,
+        itemListElement: sorted.slice(0, 10).map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: {
+            '@type': 'LodgingBusiness',
+            name: p.title || p.name,
+            description: (p.description || '').replace(/[*_#`]/g, '').slice(0, 120),
+            url: `https://www.staydekho.com/property.html?id=${p._id || p.id}`,
+            image: p.main_image || p.images?.[0] || '',
+            address: { '@type': 'PostalAddress', addressLocality: p.location || 'Udaipur', addressRegion: 'Rajasthan', addressCountry: 'IN' },
+            priceRange: p.price ? `₹${p.price.toLocaleString('en-IN')}/night` : '₹₹',
+          }
+        }))
+      });
+      document.head.appendChild(sc);
+    }
   }
 
   /* ── Fetch from API ─────────────────────────────────── */

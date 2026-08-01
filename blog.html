@@ -20,8 +20,11 @@
   <!-- End Meta Pixel Code -->
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Blog — StayDekho</title>
-  <meta name="description" content="Travel guides and villa stories from the StayDekho team. Explore India's best destinations."/>
+  <title>Udaipur Travel Blog — Villa Tips, Itineraries & Stay Guides | StayDekho</title>
+  <meta name="description" content="Udaipur travel tips, villa stay guides, group trip itineraries and local insights from StayDekho. Plan your perfect Udaipur trip — places to visit, what to eat, and where to stay."/>
+  <link rel="canonical" href="https://www.staydekho.com/blog.html"/>
+  <meta name="robots" content="index, follow"/>
+  <meta name="keywords" content="udaipur travel blog, udaipur trip tips, villa in udaipur blog, udaipur itinerary, group trip udaipur, udaipur travel guide"/>
   <link rel="icon" type="image/png" href="images/favicon.png"/>
   <meta property="og:site_name" content="StayDekho"/>
   <meta property="og:type" content="website"/>
@@ -548,6 +551,39 @@
     const content = document.getElementById('single-post-content');
     try {
       const { post } = await api.getBlogPost(slug);
+
+      // ── SEO: update meta tags for this specific post ──
+      const postUrl = `https://www.staydekho.com/blog.html?slug=${encodeURIComponent(post.slug || slug)}`;
+      const postImg = post.cover_image || 'https://www.staydekho.com/images/og-cover.jpg';
+      const postDesc = (post.excerpt || post.title || '').slice(0, 160);
+      document.title = `${post.title} — StayDekho Blog`;
+      const setM = (sel, val) => { const el = document.querySelector(sel); if (el) el.setAttribute('content', val); };
+      setM('meta[name="description"]', postDesc);
+      setM('meta[property="og:title"]', post.title);
+      setM('meta[property="og:description"]', postDesc);
+      setM('meta[property="og:url"]', postUrl);
+      setM('meta[property="og:image"]', postImg);
+      setM('meta[property="og:type"]', 'article');
+      let canon = document.querySelector('link[rel="canonical"]');
+      if (!canon) { canon = document.createElement('link'); canon.rel = 'canonical'; document.head.appendChild(canon); }
+      canon.href = postUrl;
+      // Article schema
+      const prev = document.getElementById('_blog_post_schema');
+      if (prev) prev.remove();
+      const sc = document.createElement('script');
+      sc.type = 'application/ld+json'; sc.id = '_blog_post_schema';
+      sc.textContent = JSON.stringify({
+        '@context': 'https://schema.org', '@type': 'BlogPosting',
+        headline: post.title, description: postDesc, image: postImg,
+        author: { '@type': 'Person', name: post.author || 'StayDekho' },
+        publisher: { '@type': 'Organization', name: 'StayDekho', logo: { '@type': 'ImageObject', url: 'https://www.staydekho.com/images/favicon.png' } },
+        datePublished: post.published_at || post.created_at,
+        dateModified: post.updated_at || post.published_at || post.created_at,
+        url: postUrl, mainEntityOfPage: postUrl,
+        keywords: `udaipur travel, villa udaipur, ${post.category || 'travel guide'}, staydekho`,
+      });
+      document.head.appendChild(sc);
+
       content.innerHTML = `
         ${post.cover_image ? `<img src="${esc(post.cover_image)}" style="width:100%;border-radius:14px;margin-bottom:20px" loading="lazy"/>` : ''}
         <span class="blog-category-badge">${esc(post.category)}</span>
