@@ -513,7 +513,10 @@
   <div class="page-view" id="page-operations">
     <div class="topbar">
       <div><div class="page-title">Operations Hub</div><div class="page-subtitle">Ek booking add karo — calendar, cleaning, bill, payout sab automatic update ho jaate hain</div></div>
-      <div class="topbar-right">
+      <div class="topbar-right" style="display:flex;gap:10px;align-items:center">
+        <select class="search-inp" id="ops-month-filter" style="width:145px" onchange="onOpsMonthChange()">
+          <option value="">This Month</option>
+        </select>
         <select class="search-inp" id="ops-prop-filter" style="width:220px" onchange="onOpsPropChange()">
           <option value="">All Properties</option>
         </select>
@@ -527,7 +530,7 @@
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-ins Tomorrow</div><div style="font-size:1.6rem;font-weight:800" id="ops-tmrw-checkins">—</div></div>
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Check-outs Today</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-checkouts">—</div></div>
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Cleaning Pending</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-cleaning">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">This Month Revenue</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-revenue">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase" id="ops-month-revenue-lbl">This Month Revenue</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-revenue">—</div></div>
       <div class="card" style="padding:18px"><div style="font-size:.75rem;color:var(--gray-400);font-weight:600;text-transform:uppercase">Occupancy %</div><div style="font-size:1.6rem;font-weight:800" id="ops-today-occupancy">—</div></div>
     </div>
 
@@ -1948,6 +1951,7 @@ async function toggleReelActive(id, active) { const fd = new FormData(); fd.appe
 // ╚══════════════════════════════════════════════════════╝
 let opsProperties = [];
 let opsSelectedProperty = '';
+let opsSelectedMonth    = '';   // YYYY-MM; empty = current month (set by initOpsMonthFilter)
 let opsPlatformSettings = null;
 let opsBookingsLog = [];
 let opsCleaningTasks = [];
@@ -1966,7 +1970,28 @@ async function loadOpsProps() {
     document.getElementById('ob-property').innerHTML = modalOpts;
     document.getElementById('ct-property').innerHTML = modalOpts;
     document.getElementById('ex-property').innerHTML = '<option value="">— General —</option>' + modalOpts;
+    initOpsMonthFilter();
   } catch (e) { console.error(e); }
+}
+
+function initOpsMonthFilter() {
+  const sel = document.getElementById('ops-month-filter');
+  if (!sel) return;
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i < 13; i++) {
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.toISOString().slice(0, 7);
+    const lbl = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+    opts.push(`<option value="${val}">${lbl}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  opsSelectedMonth = sel.value;
+}
+
+function onOpsMonthChange() {
+  opsSelectedMonth = document.getElementById('ops-month-filter').value;
+  loadOpsDashboard();
 }
 
 function onOpsPropChange() {
@@ -1999,8 +2024,24 @@ function updateTodaySnapshot() {
 // ── DASHBOARD (feeds revenue/occupancy snapshot + Revenue by Platform + Monthly Report) ──
 async function loadOpsDashboard() {
   try {
-    const params = opsSelectedProperty ? { property_id: opsSelectedProperty } : {};
+    // Compute month date range (from = 1st, to = last day)
+    const monthVal = opsSelectedMonth || new Date().toISOString().slice(0, 7);
+    const [yr, mo] = monthVal.split('-').map(Number);
+    const fromDate  = new Date(yr, mo - 1, 1);
+    const toDate    = new Date(yr, mo, 0); // last day of month
+    const from = fromDate.toISOString().split('T')[0];
+    const to   = toDate.toISOString().split('T')[0];
+    const monthLabel = fromDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+
+    const params = { from, to };
+    if (opsSelectedProperty) params.property_id = opsSelectedProperty;
+
     const d = await api.opsDashboard(params);
+
+    // Update snapshot label to show selected month
+    const lbl = document.getElementById('ops-month-revenue-lbl');
+    if (lbl) lbl.textContent = `${monthLabel} Revenue`;
+
     document.getElementById('ops-today-revenue').textContent   = fmtMoney(d.total_revenue);
     document.getElementById('ops-today-occupancy').textContent = d.occupancy_pct + '%';
 
