@@ -252,7 +252,7 @@ router.get('/bookings', async (req, res) => {
     const docs = await Booking.find(filter)
       .populate('user_id', 'name')
       .populate('property_id', 'name')
-      .sort({ created_at: -1 })
+      .sort({ checkin: 1 })
       .lean();
 
     const bookings = docs.map(b => ({
