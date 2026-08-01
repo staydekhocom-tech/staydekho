@@ -243,6 +243,7 @@
     <div class="sidebar-link" onclick="showPage('operations');closeSidebar()"><span class="icon">🧾</span> Operations / PMS</div>
     <div class="nav-sec-lbl">People</div>
     <div class="sidebar-link" onclick="showPage('users');closeSidebar()"><span class="icon">👥</span> Users</div>
+    <div class="sidebar-link" onclick="showPage('staff');closeSidebar()"><span class="icon">👷</span> Staff</div>
     <div class="sidebar-link" onclick="showPage('reviews');closeSidebar()"><span class="icon">⭐</span> Reviews</div>
     <div class="sidebar-link" onclick="showPage('reels');closeSidebar()"><span class="icon">🎬</span> Guest Reels</div>
     <div class="sidebar-link" onclick="showPage('today');closeSidebar()"><span class="icon">🗓️</span> Today (Check-ins)</div>
@@ -803,9 +804,187 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════
+       STAFF PAGE
+  ══════════════════════════════════════════════════════ -->
+  <div class="page-view" id="page-staff">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Staff Management</div>
+        <div class="page-subtitle">Caretakers, managers and their tasks</div>
+      </div>
+      <div class="topbar-right">
+        <a class="btn btn-outline btn-sm" href="staff.html" target="_blank">Open Staff Panel ↗</a>
+        <button class="btn btn-primary" onclick="openAddStaffModal()">+ Add Staff</button>
+      </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn btn-primary ops-tab-btn" id="staff-tab-people"   onclick="switchStaffTab('people')">People</button>
+      <button class="btn btn-outline ops-tab-btn" id="staff-tab-tasks"    onclick="switchStaffTab('tasks')">Tasks</button>
+      <button class="btn btn-outline ops-tab-btn" id="staff-tab-issues"   onclick="switchStaffTab('issues')">Issues</button>
+    </div>
+
+    <!-- ── People tab ── -->
+    <div id="staff-panel-people">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Name</th><th>Phone</th><th>Role</th><th>Property</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="staff-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tasks tab ── -->
+    <div id="staff-panel-tasks" style="display:none">
+      <div class="topbar" style="margin-bottom:14px">
+        <div></div>
+        <button class="btn btn-primary btn-sm" onclick="openAddTaskModal()">+ Add Task</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Task</th><th>Type</th><th>Property</th><th>Staff</th><th>Due Date</th><th>Status</th>
+            </tr></thead>
+            <tbody id="staff-tasks-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Issues tab ── -->
+    <div id="staff-panel-issues" style="display:none">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Issue</th><th>Property</th><th>Reported By</th><th>Date</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="staff-issues-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- 🔥 MODALS 🔥 -->
+
+<!-- ── Add Staff modal ── -->
+<div class="modal-bd" id="add-staff-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="add-staff-modal-title">Add Staff Member</div>
+      <button class="modal-close" onclick="closeModal('add-staff-modal')">✕</button>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Full Name *</label><input class="form-ctrl" id="sf-name" placeholder="e.g. Ramesh Kumar"/></div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Phone *</label><input class="form-ctrl" id="sf-phone" placeholder="10-digit number" maxlength="10" inputmode="numeric"/></div>
+      <div class="form-grp"><label class="form-lbl">4-Digit PIN *</label><input class="form-ctrl" id="sf-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Role</label>
+        <select class="form-ctrl" id="sf-role">
+          <option value="caretaker">Caretaker</option>
+          <option value="manager">Manager</option>
+          <option value="cleaner">Cleaner</option>
+        </select>
+      </div>
+      <div class="form-grp"><label class="form-lbl">Property</label>
+        <select class="form-ctrl" id="sf-property">
+          <option value="">No Property</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('add-staff-modal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="sf-submit-btn" onclick="submitAddStaff()">Add Staff</button>
+    </div>
+    <div id="sf-err" style="color:#dc2626;font-size:12.5px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- ── Edit Staff / Reset PIN modal ── -->
+<div class="modal-bd" id="edit-staff-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">Edit Staff</div>
+      <button class="modal-close" onclick="closeModal('edit-staff-modal')">✕</button>
+    </div>
+    <input type="hidden" id="es-id"/>
+    <div class="form-grp"><label class="form-lbl">Full Name</label><input class="form-ctrl" id="es-name"/></div>
+    <div class="form-grp"><label class="form-lbl">Property</label>
+      <select class="form-ctrl" id="es-property">
+        <option value="">No Property</option>
+      </select>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Role</label>
+      <select class="form-ctrl" id="es-role">
+        <option value="caretaker">Caretaker</option>
+        <option value="manager">Manager</option>
+        <option value="cleaner">Cleaner</option>
+      </select>
+    </div>
+    <div class="form-grp"><label class="form-lbl">New PIN (leave blank to keep current)</label><input class="form-ctrl" id="es-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/></div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('edit-staff-modal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitEditStaff()">Save Changes</button>
+    </div>
+    <div id="es-err" style="color:#dc2626;font-size:12.5px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- ── Add Task modal ── -->
+<div class="modal-bd" id="add-task-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hdr">
+      <div class="modal-title">Add Task</div>
+      <button class="modal-close" onclick="closeModal('add-task-modal')">✕</button>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Task Title *</label><input class="form-ctrl" id="tk-title" placeholder="e.g. Deep clean bedroom"/></div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Type</label>
+        <select class="form-ctrl" id="tk-type">
+          <option value="cleaning">Cleaning</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="inspection">Inspection</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-grp"><label class="form-lbl">Due Date *</label><input class="form-ctrl" type="date" id="tk-due"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Property *</label>
+        <select class="form-ctrl" id="tk-property">
+          <option value="">Select property…</option>
+        </select>
+      </div>
+      <div class="form-grp"><label class="form-lbl">Assign To</label>
+        <select class="form-ctrl" id="tk-staff">
+          <option value="">Unassigned</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('add-task-modal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitAddTask()">Add Task</button>
+    </div>
+    <div id="tk-err" style="color:#dc2626;font-size:12.5px;margin-top:10px;display:none"></div>
+  </div>
+</div>
 
 <!-- Arrivals (Check-ins) detail modal -->
 <div class="modal-bd" id="arrivals-modal">
@@ -1082,6 +1261,7 @@ function showPage(name) {
   if(name === 'addons') loadAddons();
   if(name === 'blog') loadBlogPosts();
   if(name === 'operations') { loadOpsProps().then(loadOperationsHub); }
+  if(name === 'staff') loadStaffPage();
 }
 
 function showModal(id)  { document.getElementById(id).classList.add('open'); }
@@ -3231,6 +3411,289 @@ async function saveAdminBooking() {
 
 // START
 initAdmin();
+
+// ══════════════════════════════════════════════════
+// STAFF MANAGEMENT
+// ══════════════════════════════════════════════════
+
+let staffList = [];
+let staffCurrentTab = 'people';
+
+function switchStaffTab(tab) {
+  staffCurrentTab = tab;
+  ['people','tasks','issues'].forEach(t => {
+    document.getElementById('staff-panel-' + t).style.display = t === tab ? '' : 'none';
+    const btn = document.getElementById('staff-tab-' + t);
+    if (btn) {
+      btn.classList.toggle('btn-primary', t === tab);
+      btn.classList.toggle('btn-outline',  t !== tab);
+    }
+  });
+  if (tab === 'tasks')  loadStaffTasks();
+  if (tab === 'issues') loadStaffIssues();
+}
+
+async function loadStaffPage() {
+  switchStaffTab('people');
+  await loadStaffList();
+}
+
+async function loadStaffList() {
+  const tbody = document.getElementById('staff-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>';
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/all', { headers: { Authorization: 'Bearer ' + tok } });
+    const data = await res.json();
+    staffList = data.staff || [];
+    if (!staffList.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No staff added yet</td></tr>';
+      return;
+    }
+    const roleLabel = { caretaker: 'Caretaker', manager: 'Manager', cleaner: 'Cleaner' };
+    tbody.innerHTML = staffList.map(s => `
+      <tr>
+        <td><strong>${s.name}</strong></td>
+        <td>${s.phone}</td>
+        <td><span class="badge" style="background:#dbeafe;color:#1d4ed8">${roleLabel[s.role] || s.role}</span></td>
+        <td>${s.property_name || '<span style="color:var(--gray-400)">—</span>'}</td>
+        <td>
+          <span class="badge ${s.status === 'active' ? 'b-active' : 'b-cancelled'}">
+            ${s.status === 'active' ? 'Active' : 'Inactive'}
+          </span>
+        </td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="openEditStaffModal('${s.id}')">Edit</button>
+          ${s.status === 'active'
+            ? `<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c" onclick="deactivateStaff('${s.id}','${s.name}')">Deactivate</button>`
+            : `<button class="btn btn-sm" style="background:#dcfce7;color:#15803d" onclick="activateStaff('${s.id}')">Activate</button>`
+          }
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626">Failed to load</td></tr>';
+  }
+}
+
+async function loadStaffTasks() {
+  const tbody = document.getElementById('staff-tasks-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>';
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/tasks/all', { headers: { Authorization: 'Bearer ' + tok } });
+    const data = await res.json();
+    const tasks = data.tasks || [];
+    if (!tasks.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No tasks yet</td></tr>';
+      return;
+    }
+    const typeColor = { cleaning: '#fef9c3', maintenance: '#dbeafe', inspection: '#dcfce7', other: '#f3f4f6' };
+    const typeText  = { cleaning: '#a16207', maintenance: '#1d4ed8', inspection: '#15803d', other: '#4b5563' };
+    tbody.innerHTML = tasks.map(t => `
+      <tr>
+        <td><strong>${t.title}</strong>${t.guest_name ? `<br/><span style="font-size:11px;color:var(--gray-400)">Guest: ${t.guest_name}</span>` : ''}</td>
+        <td><span class="badge" style="background:${typeColor[t.task_type]||'#f3f4f6'};color:${typeText[t.task_type]||'#4b5563'}">${t.task_type}</span></td>
+        <td>${t.property_name || '—'}</td>
+        <td>${t.staff_name || '<span style="color:var(--gray-400)">Unassigned</span>'}</td>
+        <td>${t.due_date || '—'}</td>
+        <td><span class="badge ${t.status === 'done' ? 'b-active' : 'b-pending'}">${t.status}</span></td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626">Failed to load</td></tr>';
+  }
+}
+
+async function loadStaffIssues() {
+  const tbody = document.getElementById('staff-issues-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>';
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/issues/all', { headers: { Authorization: 'Bearer ' + tok } });
+    const data = await res.json();
+    const issues = data.issues || [];
+    if (!issues.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No issues reported</td></tr>';
+      return;
+    }
+    tbody.innerHTML = issues.map(i => `
+      <tr>
+        <td>
+          <strong>${i.title}</strong>
+          ${i.description ? `<br/><span style="font-size:11.5px;color:var(--gray-500)">${i.description}</span>` : ''}
+        </td>
+        <td>${i.property_name || '—'}</td>
+        <td>${i.staff_name || '—'}</td>
+        <td>${fmtDate(i.created_at)}</td>
+        <td><span class="badge ${i.status === 'open' ? 'b-pending' : 'b-active'}">${i.status}</span></td>
+        <td>
+          ${i.status === 'open'
+            ? `<button class="btn btn-sm" style="background:#dcfce7;color:#15803d" onclick="resolveIssue('${i.id}')">Resolve</button>`
+            : '<span style="color:var(--gray-400);font-size:12px">Resolved</span>'
+          }
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626">Failed to load</td></tr>';
+  }
+}
+
+function populateStaffPropertyDropdowns() {
+  const opts = '<option value="">No Property</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  ['sf-property','es-property'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+  const tkProp = document.getElementById('tk-property');
+  if (tkProp) tkProp.innerHTML = '<option value="">Select property…</option>' + properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+function populateTaskStaffDropdown() {
+  const el = document.getElementById('tk-staff');
+  if (!el) return;
+  el.innerHTML = '<option value="">Unassigned</option>' + staffList.filter(s => s.status === 'active').map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+function openAddStaffModal() {
+  populateStaffPropertyDropdowns();
+  ['sf-name','sf-phone','sf-pin'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sf-role').value = 'caretaker';
+  document.getElementById('sf-property').value = '';
+  document.getElementById('sf-err').style.display = 'none';
+  document.getElementById('add-staff-modal-title').textContent = 'Add Staff Member';
+  document.getElementById('sf-submit-btn').textContent = 'Add Staff';
+  showModal('add-staff-modal');
+}
+
+async function submitAddStaff() {
+  const errEl = document.getElementById('sf-err');
+  errEl.style.display = 'none';
+  const name  = document.getElementById('sf-name').value.trim();
+  const phone = document.getElementById('sf-phone').value.trim();
+  const pin   = document.getElementById('sf-pin').value.trim();
+  const role  = document.getElementById('sf-role').value;
+  const prop  = document.getElementById('sf-property').value;
+  if (!name || !phone || !pin) { errEl.textContent = 'Name, phone and PIN are required'; errEl.style.display = ''; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits'; errEl.style.display = ''; return; }
+  if (phone.length < 10) { errEl.textContent = 'Enter a valid 10-digit phone number'; errEl.style.display = ''; return; }
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/create', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, pin, role, property_id: prop || null }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Failed to add staff'; errEl.style.display = ''; return; }
+    closeModal('add-staff-modal');
+    await loadStaffList();
+  } catch(e) {
+    errEl.textContent = 'Network error. Try again.'; errEl.style.display = '';
+  }
+}
+
+function openEditStaffModal(id) {
+  const s = staffList.find(x => x.id === id);
+  if (!s) return;
+  populateStaffPropertyDropdowns();
+  document.getElementById('es-id').value = id;
+  document.getElementById('es-name').value = s.name;
+  document.getElementById('es-role').value = s.role || 'caretaker';
+  document.getElementById('es-property').value = s.property_id?._id || s.property_id || '';
+  document.getElementById('es-pin').value = '';
+  document.getElementById('es-err').style.display = 'none';
+  showModal('edit-staff-modal');
+}
+
+async function submitEditStaff() {
+  const errEl = document.getElementById('es-err');
+  errEl.style.display = 'none';
+  const id   = document.getElementById('es-id').value;
+  const name = document.getElementById('es-name').value.trim();
+  const role = document.getElementById('es-role').value;
+  const prop = document.getElementById('es-property').value;
+  const pin  = document.getElementById('es-pin').value.trim();
+  if (pin && !/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits'; errEl.style.display = ''; return; }
+  const body = { name, role, property_id: prop || null };
+  if (pin) body.pin = pin;
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/update/' + id, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Failed to update'; errEl.style.display = ''; return; }
+    closeModal('edit-staff-modal');
+    await loadStaffList();
+  } catch(e) {
+    errEl.textContent = 'Network error. Try again.'; errEl.style.display = '';
+  }
+}
+
+async function deactivateStaff(id, name) {
+  if (!confirm(`Deactivate "${name}"? They won't be able to login.`)) return;
+  try {
+    const tok = localStorage.getItem('sd_token');
+    await fetch(getApiBase() + '/staff/delete/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + tok } });
+    await loadStaffList();
+  } catch(e) { alert('Failed. Try again.'); }
+}
+
+async function activateStaff(id) {
+  try {
+    const tok = localStorage.getItem('sd_token');
+    await fetch(getApiBase() + '/staff/update/' + id, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active' }),
+    });
+    await loadStaffList();
+  } catch(e) { alert('Failed. Try again.'); }
+}
+
+async function resolveIssue(id) {
+  try {
+    const tok = localStorage.getItem('sd_token');
+    await fetch(getApiBase() + '/staff/issues/' + id + '/resolve', { method: 'PUT', headers: { Authorization: 'Bearer ' + tok } });
+    await loadStaffIssues();
+  } catch(e) { alert('Failed. Try again.'); }
+}
+
+function openAddTaskModal() {
+  populateStaffPropertyDropdowns();
+  populateTaskStaffDropdown();
+  ['tk-title'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('tk-type').value = 'cleaning';
+  document.getElementById('tk-due').value = new Date().toISOString().split('T')[0];
+  document.getElementById('tk-err').style.display = 'none';
+  showModal('add-task-modal');
+}
+
+async function submitAddTask() {
+  const errEl = document.getElementById('tk-err');
+  errEl.style.display = 'none';
+  const title    = document.getElementById('tk-title').value.trim();
+  const type     = document.getElementById('tk-type').value;
+  const due      = document.getElementById('tk-due').value;
+  const prop     = document.getElementById('tk-property').value;
+  const staffId  = document.getElementById('tk-staff').value;
+  if (!title || !prop || !due) { errEl.textContent = 'Title, property and due date are required'; errEl.style.display = ''; return; }
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/tasks/create', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, task_type: type, due_date: due, property_id: prop, staff_id: staffId || null }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Failed'; errEl.style.display = ''; return; }
+    closeModal('add-task-modal');
+    await loadStaffTasks();
+  } catch(e) {
+    errEl.textContent = 'Network error. Try again.'; errEl.style.display = '';
+  }
+}
 </script>
 
 <!-- Add Booking Modal -->
