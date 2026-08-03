@@ -214,11 +214,14 @@ setInterval(runAutoStatusUpdate, 60 * 60 * 1000);     // phir har ghante
 // ── Start (MongoDB connect karke phir listen) ─────────
 const PORT = process.env.PORT || 5000;
 
+const { startScheduler } = require('./services/scheduler');
+
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`\n🚀 StayDekho Backend running on http://localhost:${PORT}`);
     console.log(`🍃 Database: MongoDB Atlas`);
     console.log(`📋 Routes: /api/auth, /api/properties, /api/bookings, /api/payments, /api/admin\n`);
+    startScheduler();
   });
 }).catch(err => {
   console.error('Startup failed:', err);

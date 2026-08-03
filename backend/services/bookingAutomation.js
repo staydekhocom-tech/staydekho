@@ -6,6 +6,7 @@
 const { DatePrice, CleaningTask, Booking } = require('../db/models');
 const { sendEmail, bookingConfirmedHtml, bookingCancelledHtml } = require('./email');
 const { sendSMS } = require('./sms');
+const { notifyGuestBookingConfirmed } = require('./whatsapp');
 
 function dateRange(checkin, checkout) {
   const dates = [];
@@ -64,6 +65,7 @@ async function notifyGuestBookingCreated(booking, propertyName) {
   if (booking.guest_phone) {
     const msg = `StayDekho: Booking confirmed at ${propertyName}! Check-in ${booking.checkin}, Check-out ${booking.checkout}. Thank you for choosing us.`;
     sendSMS(booking.guest_phone, msg).catch(e => console.error('Booking confirm SMS error:', e.message));
+    notifyGuestBookingConfirmed(booking, propertyName);
   }
 }
 
