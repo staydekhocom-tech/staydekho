@@ -287,8 +287,13 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
       <div class="profile-prop" id="profile-prop">—</div>
     </div>
     <div class="card">
+      <div class="card-header"><h2>Change PIN</h2></div>
       <div class="card-body">
-        <p style="font-size:12px;color:#aaa;margin-bottom:12px">Contact your admin to change your PIN or property assignment.</p>
+        <input class="issue-input" id="cp-current" type="password" inputmode="numeric" maxlength="4" placeholder="Current 4-digit PIN" style="margin-bottom:10px">
+        <input class="issue-input" id="cp-new"     type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN"     style="margin-bottom:10px">
+        <input class="issue-input" id="cp-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirm new PIN"      style="margin-bottom:10px">
+        <div id="cp-err" style="display:none;color:#dc2626;font-size:13px;margin-bottom:8px;padding:8px 12px;background:#fef2f2;border-radius:8px"></div>
+        <button class="btn-primary" id="cp-btn" onclick="submitPinChange()" style="margin-bottom:14px">Update PIN</button>
         <button class="btn-logout" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -482,8 +487,13 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
       <div class="profile-role">Sales Executive</div>
     </div>
     <div class="card">
+      <div class="card-header"><h2>Change PIN</h2></div>
       <div class="card-body">
-        <p style="font-size:12px;color:#aaa;margin-bottom:12px">Contact admin to update your PIN or property assignment.</p>
+        <input class="issue-input" id="scp-current" type="password" inputmode="numeric" maxlength="4" placeholder="Current 4-digit PIN" style="margin-bottom:10px">
+        <input class="issue-input" id="scp-new"     type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN"     style="margin-bottom:10px">
+        <input class="issue-input" id="scp-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirm new PIN"      style="margin-bottom:10px">
+        <div id="scp-err" style="display:none;color:#dc2626;font-size:13px;margin-bottom:8px;padding:8px 12px;background:#fef2f2;border-radius:8px"></div>
+        <button class="btn-primary" id="scp-btn" onclick="submitPinChange('s')" style="margin-bottom:14px">Update PIN</button>
         <button class="btn-logout" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -702,14 +712,20 @@ function renderDashboard() {
         const balBadge = bal > 0
           ? `<span style="background:#dcfce7;color:#166534;font-weight:600;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap">Collect ₹${bal.toLocaleString('en-IN')}</span>`
           : `<span style="background:#f0fdf4;color:#16a34a;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap">Fully Paid ✓</span>`;
+        const isCheckedIn = b.status === 'checked_in';
         return `
-        <div class="list-item" style="align-items:flex-start">
+        <div class="list-item" style="align-items:flex-start" id="ci-item-${b.id}">
           <div class="item-icon checkin" style="margin-top:2px">🛎</div>
           <div class="item-body" style="flex:1;min-width:0">
             <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
             <div class="item-sub">${b.guests} guest${b.guests > 1 ? 's' : ''} · Check-out: ${fmt(b.checkout)}${b.nights ? ' · '+b.nights+' night'+(b.nights>1?'s':'') : ''}</div>
+            ${b.guest_phone ? `<a href="tel:${b.guest_phone}" style="font-size:12px;color:#2563eb;text-decoration:none;display:inline-block;margin-top:2px">📞 ${b.guest_phone}</a>` : ''}
             ${b.notes ? `<div style="font-size:11.5px;color:#6b7280;margin-top:3px;font-style:italic">${b.notes}</div>` : ''}
-            <div style="margin-top:6px">${balBadge}</div>
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${balBadge}
+              ${isCheckedIn
+                ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:12px;padding:3px 8px;border-radius:20px">Checked In ✓</span>`
+                : `<button onclick="markBookingStatus('${b.id}','checked_in','ci-item-${b.id}')" style="background:#2563eb;color:#fff;border:none;font-size:12px;padding:4px 10px;border-radius:20px;cursor:pointer">Mark Checked In</button>`}
+            </div>
           </div>
           <button class="btn-sm btn-green" style="margin-top:2px;flex-shrink:0" onclick="showPage('ready')">Ready</button>
         </div>`;
@@ -717,15 +733,23 @@ function renderDashboard() {
     : '<div class="empty"><div class="empty-icon">🏠</div><p>No check-ins today</p></div>';
 
   document.getElementById('checkouts-list').innerHTML = checkouts.length
-    ? checkouts.map(b => `
-        <div class="list-item">
+    ? checkouts.map(b => {
+        const isCheckedOut = b.status === 'checked_out';
+        return `
+        <div class="list-item" id="co-item-${b.id}">
           <div class="item-icon checkout">🚪</div>
-          <div class="item-body">
+          <div class="item-body" style="flex:1;min-width:0">
             <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
             <div class="item-sub">Check-out: ${fmt(b.checkout)} · ${b.guests} guest${b.guests>1?'s':''}</div>
+            ${b.guest_phone ? `<a href="tel:${b.guest_phone}" style="font-size:12px;color:#2563eb;text-decoration:none;display:inline-block;margin-top:2px">📞 ${b.guest_phone}</a>` : ''}
+            <div style="margin-top:6px">
+              ${isCheckedOut
+                ? `<span style="background:#f3f4f6;color:#6b7280;font-size:12px;padding:3px 8px;border-radius:20px">Checked Out ✓</span>`
+                : `<button onclick="markBookingStatus('${b.id}','checked_out','co-item-${b.id}')" style="background:#6b7280;color:#fff;border:none;font-size:12px;padding:4px 10px;border-radius:20px;cursor:pointer">Mark Checked Out</button>`}
+            </div>
           </div>
-        </div>`)
-      .join('')
+        </div>`;
+      }).join('')
     : '<div class="empty"><div class="empty-icon">🚪</div><p>No check-outs today</p></div>';
 
   document.getElementById('upcoming-list').innerHTML = upcoming.length
@@ -995,9 +1019,10 @@ function renderBookingItem(b) {
         <span class="bk-status ${statusClass}">${b.status}</span>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6">
-      <button style="flex:1;padding:7px 4px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:12.5px;cursor:pointer" onclick="showBookingInvoice('${b.id}')">📄 Invoice</button>
-      ${canEdit ? `<button style="flex:1;padding:7px 4px;border:1px solid #3b82f6;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:12.5px;cursor:pointer" onclick="openEditBooking('${b.id}')">✏️ Edit</button>` : '<div style="flex:1"></div>'}
+    <div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;flex-wrap:wrap">
+      <button style="flex:1;min-width:70px;padding:7px 4px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:12px;cursor:pointer" onclick="showBookingInvoice('${b.id}')">📄 Invoice</button>
+      ${b.guest_phone ? `<a href="https://wa.me/91${b.guest_phone.replace(/\D/g,'')}?text=${encodeURIComponent('Hi '+b.guest_name+', your booking at '+b.property_name+' is confirmed. Check-in: '+b.checkin+', Check-out: '+b.checkout+'. Booking ID: SD-'+String(b.booking_no||0).padStart(4,'0'))}" target="_blank" style="flex:1;min-width:70px;padding:7px 4px;border:1px solid #16a34a;border-radius:8px;background:#f0fdf4;color:#15803d;font-size:12px;cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:3px">💬 WhatsApp</a>` : ''}
+      ${canEdit ? `<button style="flex:1;min-width:70px;padding:7px 4px;border:1px solid #3b82f6;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:12px;cursor:pointer" onclick="openEditBooking('${b.id}')">✏️ Edit</button>` : ''}
     </div>
   </div>`;
 }
@@ -1057,6 +1082,56 @@ function ebCalcBalance() {
   const total   = parseFloat(document.getElementById('eb-total').value)   || 0;
   const advance = parseFloat(document.getElementById('eb-advance').value) || 0;
   document.getElementById('eb-balance').value = Math.max(0, total - advance);
+}
+
+// ── Caretaker: mark check-in / check-out ──────────────────
+async function markBookingStatus(bookingId, status, itemId) {
+  try {
+    const r = await fetch(`${API}/api/staff/booking/${bookingId}/status`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Failed to update'); return; }
+    const label = status === 'checked_in' ? 'Checked In ✓' : 'Checked Out ✓';
+    const color = status === 'checked_in' ? '#dbeafe;color:#1d4ed8' : '#f3f4f6;color:#6b7280';
+    const btn = document.querySelector(`#${itemId} button[onclick*="${status}"]`);
+    if (btn) btn.outerHTML = `<span style="background:${color};font-size:12px;padding:3px 8px;border-radius:20px">${label}</span>`;
+    toast(label);
+  } catch { toast('Network error. Try again.'); }
+}
+
+// ── Staff: change PIN ──────────────────────────────────────
+async function submitPinChange(prefix = '') {
+  const pfx    = prefix ? prefix + 'cp' : 'cp';
+  const errEl  = document.getElementById(`${pfx}-err`);
+  const btn    = document.getElementById(`${pfx}-btn`);
+  errEl.style.display = 'none';
+
+  const current = document.getElementById(`${pfx}-current`).value;
+  const newPin  = document.getElementById(`${pfx}-new`).value;
+  const confirm = document.getElementById(`${pfx}-confirm`).value;
+
+  if (!current || !newPin || !confirm) { errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return; }
+  if (!/^\d{4}$/.test(newPin))         { errEl.textContent = 'New PIN must be exactly 4 digits'; errEl.style.display = 'block'; return; }
+  if (newPin !== confirm)               { errEl.textContent = 'New PINs do not match'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Updating…';
+  try {
+    const r = await fetch(`${API}/api/staff/change-pin`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_pin: current, new_pin: newPin }),
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Failed to update PIN'; errEl.style.display = 'block'; return; }
+    toast('PIN updated successfully ✅');
+    document.getElementById(`${pfx}-current`).value = '';
+    document.getElementById(`${pfx}-new`).value     = '';
+    document.getElementById(`${pfx}-confirm`).value = '';
+  } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Update PIN'; }
 }
 
 async function submitEditBooking() {

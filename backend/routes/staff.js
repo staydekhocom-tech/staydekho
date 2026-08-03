@@ -631,4 +631,52 @@ router.put('/edit-booking/:id', staffProtect, async (req, res) => {
   }
 });
 
+// ── Caretaker: mark booking checked_in / checked_out ────────
+router.put('/booking/:id/status', staffProtect, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['checked_in', 'checked_out'].includes(status))
+      return res.status(400).json({ error: 'Only checked_in or checked_out allowed' });
+
+    const propIds = staffPropIds(req.staff);
+    if (!propIds.length) return res.status(403).json({ error: 'No property assigned' });
+    const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
+
+    const booking = await Booking.findOne({ _id: req.params.id, property_id: propFilter });
+    if (!booking) return res.status(404).json({ error: 'Booking not found or not your property' });
+    if (booking.status === 'cancelled') return res.status(400).json({ error: 'Cannot update a cancelled booking' });
+
+    booking.status = status;
+    await booking.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Staff: change own PIN ────────────────────────────────────
+router.put('/change-pin', staffProtect, async (req, res) => {
+  try {
+    const { current_pin, new_pin } = req.body;
+    if (!current_pin || !new_pin) return res.status(400).json({ error: 'Both current and new PIN are required' });
+    if (!/^\d{4}$/.test(String(new_pin))) return res.status(400).json({ error: 'New PIN must be exactly 4 digits' });
+
+    const { Staff } = require('../db/models');
+    const staff = await Staff.findById(req.staff.id);
+    if (!staff) return res.status(404).json({ error: 'Staff not found' });
+
+    const isBcrypt   = staff.pin?.startsWith('$2');
+    const pinMatches = isBcrypt
+      ? bcrypt.compareSync(String(current_pin), staff.pin)
+      : staff.pin === String(current_pin);
+    if (!pinMatches) return res.status(400).json({ error: 'Current PIN is incorrect' });
+
+    staff.pin = bcrypt.hashSync(String(new_pin), 10);
+    await staff.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
