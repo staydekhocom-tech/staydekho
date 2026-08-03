@@ -513,8 +513,19 @@ router.post('/sales-booking', staffProtect, async (req, res) => {
     if (!property_id || !guest_name || !checkin || !checkout)
       return res.status(400).json({ error: 'property_id, guest_name, checkin, checkout are required' });
 
+    if (checkin >= checkout) return res.status(400).json({ error: 'Check-out must be after check-in' });
+
     const property = await Property.findById(property_id).lean();
     if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    // Double-booking check
+    const overlap = await Booking.findOne({
+      property_id,
+      status:   { $nin: ['cancelled', 'checked_out'] },
+      checkin:  { $lt: checkout },
+      checkout: { $gt: checkin },
+    }).lean();
+    if (overlap) return res.status(409).json({ error: 'These dates are already booked for this property. Please check the calendar and choose different dates.' });
 
     const bookingNo  = (await Booking.countDocuments()) + 1;
     const nights     = Math.max(1, Math.round((new Date(checkout) - new Date(checkin)) / 86400000));
