@@ -275,7 +275,7 @@ const staffSchema = new Schema({
   pin:         { type: String, required: true },
   property_id:  { type: Schema.Types.ObjectId, ref: 'Property', default: null },  // legacy single
   property_ids: [{ type: Schema.Types.ObjectId, ref: 'Property' }],              // multi-property
-  role:         { type: String, default: 'caretaker', enum: ['caretaker', 'housekeeping', 'manager', 'security', 'cook', 'sales'] },
+  role:         { type: String, default: 'caretaker', enum: ['caretaker', 'housekeeping', 'manager', 'security', 'cook', 'sales', 'listing_manager'] },
   status:      { type: String, default: 'active', enum: ['active', 'inactive'] },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 

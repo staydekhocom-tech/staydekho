@@ -559,6 +559,157 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     LISTING MANAGER PANEL
+══════════════════════════════════════════════════════ -->
+<div id="listing-app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Listing Manager</h1>
+      <p id="lm-topbar-name">Loading...</p>
+    </div>
+    <button class="icon-btn" onclick="showListingPage('lm-profile')">👤</button>
+  </div>
+
+  <!-- Home: property preview -->
+  <div class="page active" id="lm-page-home" style="padding-bottom:80px">
+    <div class="card">
+      <div class="card-header"><h2 id="lm-prop-name">—</h2><span id="lm-prop-status" class="badge"></span></div>
+      <div class="card-body" id="lm-prop-preview">
+        <div class="empty"><div class="empty-icon">⏳</div><p>Loading property...</p></div>
+      </div>
+    </div>
+    <div id="lm-photos-preview" style="margin-top:0"></div>
+  </div>
+
+  <!-- Edit Details -->
+  <div class="page" id="lm-page-edit" style="padding-bottom:80px">
+    <div class="card">
+      <div class="card-header"><h2>Edit Listing Details</h2></div>
+      <div class="card-body">
+        <div class="nb-field" style="margin-bottom:12px">
+          <label>Property Name *</label>
+          <input id="lm-name" type="text" placeholder="Property name">
+        </div>
+        <div class="nb-field" style="margin-bottom:12px">
+          <label>Location / Address *</label>
+          <input id="lm-location" type="text" placeholder="Full address">
+        </div>
+        <div class="nb-field" style="margin-bottom:12px">
+          <label>Description</label>
+          <textarea id="lm-desc" rows="4" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:14px;resize:none;box-sizing:border-box" placeholder="Describe your property..."></textarea>
+        </div>
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Price / Night (₹) *</label>
+            <input id="lm-price" type="number" inputmode="numeric" placeholder="4000">
+          </div>
+          <div class="nb-field">
+            <label>Max Guests</label>
+            <input id="lm-guests" type="number" inputmode="numeric" placeholder="10">
+          </div>
+        </div>
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Beds</label>
+            <input id="lm-beds" type="number" inputmode="numeric" placeholder="4">
+          </div>
+          <div class="nb-field">
+            <label>Bathrooms</label>
+            <input id="lm-bathrooms" type="number" inputmode="numeric" placeholder="3">
+          </div>
+        </div>
+        <div class="nb-row">
+          <div class="nb-field">
+            <label>Check-in Time</label>
+            <input id="lm-checkin-time" type="text" placeholder="2:00 PM">
+          </div>
+          <div class="nb-field">
+            <label>Check-out Time</label>
+            <input id="lm-checkout-time" type="text" placeholder="11:00 AM">
+          </div>
+        </div>
+        <div class="nb-field" style="margin-bottom:12px">
+          <label>Google Maps URL</label>
+          <input id="lm-map-url" type="url" placeholder="https://maps.google.com/...">
+        </div>
+        <div id="lm-edit-err" style="display:none;color:#dc2626;font-size:13px;margin-bottom:8px;padding:8px 12px;background:#fef2f2;border-radius:8px"></div>
+        <button class="btn-primary" id="lm-edit-btn" onclick="submitListingDetails()">Save Details</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Amenities & Rules -->
+  <div class="page" id="lm-page-amenities" style="padding-bottom:80px">
+    <div class="card">
+      <div class="card-header"><h2>Amenities</h2></div>
+      <div class="card-body">
+        <div id="lm-amenity-tags" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <input id="lm-amenity-input" type="text" placeholder="e.g. WiFi, AC, Pool..." style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:14px">
+          <button onclick="addAmenity()" style="padding:10px 16px;background:#8B1717;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-header"><h2>House Rules</h2></div>
+      <div class="card-body">
+        <div id="lm-rules-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <input id="lm-rule-input" type="text" placeholder="e.g. No smoking, No pets..." style="flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:14px">
+          <button onclick="addRule()" style="padding:10px 16px;background:#8B1717;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">Add</button>
+        </div>
+        <button class="btn-primary" style="margin-top:14px" id="lm-amenity-btn" onclick="submitAmenitiesRules()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photos -->
+  <div class="page" id="lm-page-photos" style="padding-bottom:80px">
+    <div class="card">
+      <div class="card-header"><h2>Property Photos</h2></div>
+      <div class="card-body">
+        <div id="lm-photo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+        <div style="border:2px dashed #e5e7eb;border-radius:10px;padding:16px;text-align:center">
+          <p style="font-size:13px;color:#6b7280;margin-bottom:10px">Add photo via URL (Cloudinary, Google Drive public link, etc.)</p>
+          <input id="lm-photo-url" type="url" placeholder="https://res.cloudinary.com/..." style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:13px;box-sizing:border-box;margin-bottom:8px">
+          <button onclick="addPhotoUrl()" style="width:100%;padding:10px;background:#8B1717;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">+ Add Photo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="page" id="lm-page-lm-profile" style="padding:16px;padding-bottom:80px">
+    <div class="profile-card">
+      <div class="profile-avatar" id="lm-profile-initials">?</div>
+      <div class="profile-name" id="lm-profile-name">—</div>
+      <div class="profile-role">Listing Manager</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <p style="font-size:12px;color:#aaa;margin-bottom:12px">Contact admin to update your PIN or property assignment.</p>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="lmnav-home" onclick="showListingPage('home')">
+      <span class="nav-icon">🏠</span>Preview
+    </button>
+    <button class="nav-item" id="lmnav-edit" onclick="showListingPage('edit')">
+      <span class="nav-icon">✏️</span>Details
+    </button>
+    <button class="nav-item" id="lmnav-amenities" onclick="showListingPage('amenities')">
+      <span class="nav-icon">⭐</span>Amenities
+    </button>
+    <button class="nav-item" id="lmnav-photos" onclick="showListingPage('photos')">
+      <span class="nav-icon">📸</span>Photos
+    </button>
+  </nav>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -626,6 +777,11 @@ function initApp() {
 
   if (staffData?.role === 'sales') {
     initSalesApp();
+    return;
+  }
+
+  if (staffData?.role === 'listing_manager') {
+    initListingApp();
     return;
   }
 
@@ -905,6 +1061,7 @@ function logout() {
   staffToken = null; staffData = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('sales-app').style.display = 'none';
+  document.getElementById('listing-app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-phone').value = '';
   document.getElementById('login-pin').value = '';
@@ -1296,6 +1453,263 @@ async function submitSalesBooking() {
     showSalesPage('home');
   } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
   finally { btn.disabled = false; btn.textContent = 'Confirm Booking'; }
+}
+
+// ══════════════════════════════════════════════════════
+//  LISTING MANAGER PANEL JS
+// ══════════════════════════════════════════════════════
+
+let listingData = null;
+let lmAmenities = [];
+let lmRules     = [];
+
+function initListingApp() {
+  document.getElementById('listing-app').style.display = 'block';
+  const name = staffData?.name || '?';
+  document.getElementById('lm-topbar-name').textContent = name;
+  document.getElementById('lm-profile-name').textContent = name;
+  document.getElementById('lm-profile-initials').textContent =
+    name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  showListingPage('home');
+  loadListing();
+}
+
+const lmPages = ['home', 'edit', 'amenities', 'photos', 'lm-profile'];
+function showListingPage(p) {
+  lmPages.forEach(id => {
+    const pg  = document.getElementById(`lm-page-${id}`);
+    const nav = document.getElementById(`lmnav-${id}`);
+    if (pg)  pg.classList.toggle('active', id === p);
+    if (nav) nav.classList.toggle('active', id === p);
+  });
+}
+
+async function loadListing() {
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Could not load listing'); return; }
+
+    listingData = data.property;
+    lmAmenities = Array.isArray(listingData.amenities) ? [...listingData.amenities] : [];
+    lmRules     = Array.isArray(listingData.rules)     ? [...listingData.rules]     : [];
+
+    renderListingPreview();
+    populateEditForm();
+    renderAmenityTags();
+    renderRulesList();
+    renderPhotoGrid();
+  } catch { toast('Network error loading listing'); }
+}
+
+function renderListingPreview() {
+  if (!listingData) return;
+  const p = listingData;
+  document.getElementById('lm-prop-name').textContent   = p.name || '—';
+  document.getElementById('lm-prop-status').textContent = p.status || '';
+
+  const preview = document.getElementById('lm-prop-preview');
+  preview.innerHTML = `
+    <div style="font-size:13px;color:#6b7280;margin-bottom:6px">📍 ${p.location || '—'}</div>
+    <div style="font-size:13px;color:#374151;margin-bottom:8px">${p.description ? p.description.slice(0, 120) + (p.description.length > 120 ? '…' : '') : '—'}</div>
+    <div style="display:flex;gap:16px;font-size:13px;font-weight:600;color:#8B1717">
+      <span>₹${(p.price || 0).toLocaleString('en-IN')}/night</span>
+      <span>👥 ${p.guests || 0} guests</span>
+      <span>🛏 ${p.beds || 0} beds</span>
+    </div>
+    ${p.checkin_time ? `<div style="font-size:12px;color:#6b7280;margin-top:6px">Check-in: ${p.checkin_time} · Check-out: ${p.checkout_time || '—'}</div>` : ''}
+  `;
+
+  // Photos preview strip (first 4)
+  const photos = Array.isArray(p.photos) ? p.photos : [];
+  const strip  = document.getElementById('lm-photos-preview');
+  if (photos.length) {
+    strip.innerHTML = `<div style="display:flex;gap:8px;overflow-x:auto;padding:4px 0">` +
+      photos.slice(0, 6).map(u => `<img src="${u}" style="width:90px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0">`).join('') +
+      `</div>`;
+  } else {
+    strip.innerHTML = `<p style="font-size:12px;color:#aaa;text-align:center;padding:8px 0">No photos yet</p>`;
+  }
+}
+
+function populateEditForm() {
+  if (!listingData) return;
+  const p = listingData;
+  document.getElementById('lm-name').value          = p.name          || '';
+  document.getElementById('lm-location').value      = p.location      || '';
+  document.getElementById('lm-desc').value          = p.description   || '';
+  document.getElementById('lm-price').value         = p.price         || '';
+  document.getElementById('lm-guests').value        = p.guests        || '';
+  document.getElementById('lm-beds').value          = p.beds          || '';
+  document.getElementById('lm-bathrooms').value     = p.bathrooms      || '';
+  document.getElementById('lm-checkin-time').value  = p.checkin_time  || '';
+  document.getElementById('lm-checkout-time').value = p.checkout_time || '';
+  document.getElementById('lm-map-url').value       = p.map_url       || '';
+}
+
+async function submitListingDetails() {
+  const errEl = document.getElementById('lm-edit-err');
+  errEl.style.display = 'none';
+
+  const name = document.getElementById('lm-name').value.trim();
+  if (!name) { errEl.textContent = 'Property name is required'; errEl.style.display = 'block'; return; }
+
+  const body = {
+    name,
+    location:      document.getElementById('lm-location').value.trim(),
+    description:   document.getElementById('lm-desc').value.trim(),
+    price:         parseFloat(document.getElementById('lm-price').value)     || 0,
+    guests:        parseInt(document.getElementById('lm-guests').value)      || 0,
+    beds:          parseInt(document.getElementById('lm-beds').value)        || 0,
+    bathrooms:     parseInt(document.getElementById('lm-bathrooms').value)   || 0,
+    checkin_time:  document.getElementById('lm-checkin-time').value.trim(),
+    checkout_time: document.getElementById('lm-checkout-time').value.trim(),
+    map_url:       document.getElementById('lm-map-url').value.trim(),
+  };
+
+  const btn = document.getElementById('lm-edit-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Failed to save'; errEl.style.display = 'block'; return; }
+
+    listingData = data.property;
+    renderListingPreview();
+    toast('Details saved ✅');
+    showListingPage('home');
+  } catch { errEl.textContent = 'Network error. Try again.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save Details'; }
+}
+
+// ── Amenities ──────────────────────────────────────────
+function renderAmenityTags() {
+  const container = document.getElementById('lm-amenity-tags');
+  container.innerHTML = lmAmenities.map((a, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;border-radius:20px;padding:4px 10px;font-size:13px">
+      ${a}
+      <button onclick="removeAmenity(${i})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px;line-height:1;padding:0">×</button>
+    </span>`
+  ).join('');
+}
+
+function addAmenity() {
+  const inp = document.getElementById('lm-amenity-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (!lmAmenities.includes(val)) lmAmenities.push(val);
+  inp.value = '';
+  renderAmenityTags();
+}
+
+function removeAmenity(idx) {
+  lmAmenities.splice(idx, 1);
+  renderAmenityTags();
+}
+
+// ── Rules ──────────────────────────────────────────────
+function renderRulesList() {
+  const container = document.getElementById('lm-rules-list');
+  container.innerHTML = lmRules.map((r, i) =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;background:#f9fafb;border-radius:8px;padding:8px 12px;font-size:13px">
+      <span>${r}</span>
+      <button onclick="removeRule(${i})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:18px;line-height:1;padding:0">×</button>
+    </div>`
+  ).join('');
+}
+
+function addRule() {
+  const inp = document.getElementById('lm-rule-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  lmRules.push(val);
+  inp.value = '';
+  renderRulesList();
+}
+
+function removeRule(idx) {
+  lmRules.splice(idx, 1);
+  renderRulesList();
+}
+
+async function submitAmenitiesRules() {
+  const btn = document.getElementById('lm-amenity-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amenities: lmAmenities, rules: lmRules }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Failed to save'); return; }
+    listingData = data.property;
+    toast('Amenities & rules saved ✅');
+  } catch { toast('Network error. Try again.'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+}
+
+// ── Photos ─────────────────────────────────────────────
+function renderPhotoGrid() {
+  const photos = Array.isArray(listingData?.photos) ? listingData.photos : [];
+  const grid   = document.getElementById('lm-photo-grid');
+  if (!photos.length) {
+    grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:#aaa;font-size:13px;padding:12px 0">No photos added yet</p>`;
+    return;
+  }
+  grid.innerHTML = photos.map((url, i) =>
+    `<div style="position:relative;border-radius:10px;overflow:hidden">
+      <img src="${url}" style="width:100%;height:100px;object-fit:cover;display:block">
+      <button onclick="removePhoto(${i})"
+        style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">×</button>
+    </div>`
+  ).join('');
+}
+
+async function addPhotoUrl() {
+  const inp = document.getElementById('lm-photo-url');
+  const url = inp.value.trim();
+  if (!url) return;
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing/photos`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add', url }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Failed to add photo'); return; }
+    listingData = data.property;
+    inp.value = '';
+    renderPhotoGrid();
+    renderListingPreview();
+    toast('Photo added ✅');
+  } catch { toast('Network error. Try again.'); }
+}
+
+async function removePhoto(idx) {
+  const photos = Array.isArray(listingData?.photos) ? listingData.photos : [];
+  const url    = photos[idx];
+  if (!url) return;
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing/photos`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove', url }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Failed to remove photo'); return; }
+    listingData = data.property;
+    renderPhotoGrid();
+    renderListingPreview();
+    toast('Photo removed');
+  } catch { toast('Network error. Try again.'); }
 }
 </script>
 </body>

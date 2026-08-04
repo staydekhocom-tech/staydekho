@@ -631,6 +631,69 @@ router.put('/edit-booking/:id', staffProtect, async (req, res) => {
   }
 });
 
+// ── Listing Manager: get own property details ─────────────
+router.get('/my-listing', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
+  const propId = req.staff.property_id;
+  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+  try {
+    const prop = await Property.findById(propId).lean();
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
+    res.json({ property: { ...prop, id: prop._id.toString() } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Listing Manager: update own property listing ───────────
+router.put('/my-listing', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
+  const propId = req.staff.property_id;
+  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+  try {
+    const ALLOWED = [
+      'name', 'location', 'description', 'price', 'guests', 'beds', 'bathrooms',
+      'checkin_time', 'checkout_time', 'amenities', 'rules', 'nearby_attractions',
+      'map_url', 'property_types',
+    ];
+    const updates = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nothing to update' });
+    const prop = await Property.findByIdAndUpdate(propId, { $set: updates }, { new: true, runValidators: true }).lean();
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
+    res.json({ success: true, property: { ...prop, id: prop._id.toString() } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Listing Manager: add / remove photo ───────────────────
+router.put('/my-listing/photos', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
+  const propId = req.staff.property_id;
+  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+  try {
+    const { action, url } = req.body; // action: 'add' | 'remove'
+    if (!action || !url) return res.status(400).json({ error: 'action and url required' });
+
+    const prop = await Property.findById(propId);
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
+
+    let images = [];
+    try { images = JSON.parse(prop.images || '[]'); } catch { images = []; }
+
+    if (action === 'add') {
+      if (!images.includes(url)) images.push(url);
+    } else if (action === 'remove') {
+      images = images.filter(u => u !== url);
+    } else {
+      return res.status(400).json({ error: 'action must be add or remove' });
+    }
+
+    prop.images = JSON.stringify(images);
+    await prop.save();
+    res.json({ success: true, images });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Caretaker: mark booking checked_in / checked_out ────────
 router.put('/booking/:id/status', staffProtect, async (req, res) => {
   try {
