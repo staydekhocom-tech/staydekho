@@ -151,6 +151,7 @@
     .fp-step.active { display: block; }
     .fp-back-btn { background: none; border: none; color: #8B1717; font-weight: 700; font-size: .82rem; cursor: pointer; font-family: inherit; padding: 0 0 16px; display: flex; align-items: center; gap: 4px; }
   </style>
+  <script src="https://auth.msg91.com/assets/Sdk/MobileVerification.min.js?ref=366866697567303933373537" id="366866697567303933373537"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -187,7 +188,7 @@
       <div class="otp-step active" id="step-phone">
         <div style="margin-bottom:20px">
           <div style="font-size:.82rem;color:#9a9590;margin-bottom:14px;line-height:1.5">
-            Enter your mobile number. We'll send a <strong style="color:#1a0a0a">6-digit OTP</strong> to verify.
+            Enter your mobile number. We'll send a <strong style="color:#1a0a0a">4-digit OTP</strong> to verify.
           </div>
           <label style="display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#716d68;margin-bottom:8px">Mobile Number</label>
           <div class="phone-wrap">
@@ -196,7 +197,7 @@
           </div>
           <div style="font-size:.72rem;color:#9a9590;margin-top:6px">We'll create your account automatically if you're new.</div>
         </div>
-        <button class="btn-otp" id="send-otp-btn" onclick="sendOtp()" disabled>
+        <button class="btn-otp" id="send-otp-btn" onclick="doSendOtp()" disabled>
           Send OTP
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
@@ -212,10 +213,8 @@
           <button class="otp-change-btn" onclick="goBackToPhone()">Change</button>
         </div>
 
-        <label style="display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#716d68;margin-bottom:10px;text-align:center">Enter 6-digit OTP</label>
+        <label style="display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#716d68;margin-bottom:10px;text-align:center">Enter 4-digit OTP</label>
         <div class="otp-boxes" id="otp-boxes">
-          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric"/>
-          <input class="otp-box" type="tel" maxlength="1" inputmode="numeric"/>
           <input class="otp-box" type="tel" maxlength="1" inputmode="numeric"/>
           <input class="otp-box" type="tel" maxlength="1" inputmode="numeric"/>
           <input class="otp-box" type="tel" maxlength="1" inputmode="numeric"/>
@@ -224,7 +223,7 @@
 
         <div class="otp-timer">
           <span id="timer-text">Resend in <strong id="timer-count">60</strong>s</span>
-          <button class="resend-btn" id="resend-btn" onclick="resendOtp()" style="display:none">Resend OTP</button>
+          <button class="resend-btn" id="resend-btn" onclick="doResendOtp()" style="display:none">Resend OTP</button>
         </div>
 
         <div id="new-user-section">
@@ -233,7 +232,7 @@
           <input type="text" id="new-user-name" placeholder="Enter your name" autocomplete="name"/>
         </div>
 
-        <button class="btn-otp" id="verify-otp-btn" onclick="verifyOtp()" style="margin-top:16px">
+        <button class="btn-otp" id="verify-otp-btn" onclick="doVerifyOtp()" style="margin-top:16px">
           Verify &amp; Login
         </button>
       </div>
@@ -417,31 +416,58 @@
   }
 
   let timerInterval = null;
+  const _MSG91_WIDGET_ID = '366866697567303933373537';
 
-  async function sendOtp() {
+  /* ── MSG91 Widget Init ────────────────────────────── */
+  function initMsg91Widget() {
+    if (typeof initSendOTP !== 'function') return;
+    initSendOTP({
+      widgetId: _MSG91_WIDGET_ID,
+      exposeMethods: true,
+      success: function(data) {
+        const token = (typeof data === 'string') ? data : (data.message || data.access_token || '');
+        loginWithMsg91Token(token);
+      },
+      failure: function(data) {
+        console.error('MSG91 OTP failure:', data);
+        showToast('OTP verification failed. Please try again.', 'error');
+        const btn = qs('verify-otp-btn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Verify & Login'; }
+      }
+    });
+  }
+
+  async function loginWithMsg91Token(accessToken) {
+    const btn = qs('verify-otp-btn');
+    try {
+      const res = await api.verifyMsg91Token(accessToken);
+      clearInterval(timerInterval);
+      if (res.is_new) showToast(`Welcome to StayDekho, ${res.user.name}! 🎉`, 'success');
+      else showToast(`Welcome back, ${res.user.name.split(' ')[0]}!`, 'success');
+      setTimeout(() => { window.location.href = nextUrl(res.user); }, 800);
+    } catch (err) {
+      showToast(err.message || 'Login failed', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Verify & Login'; }
+    }
+  }
+
+  /* ── Send OTP ─────────────────────────────────────── */
+  function doSendOtp() {
     const phone = qs('otp-phone').value.replace(/\D/g,'');
     if (phone.length < 10) { showToast('Enter a 10-digit mobile number', 'error'); return; }
+    if (typeof window.sendOtp !== 'function') {
+      showToast('OTP service loading. Please wait a moment.', 'error');
+      return;
+    }
     const btn = qs('send-otp-btn');
     btn.disabled = true;
     btn.innerHTML = 'Sending…';
-    try {
-      const res = await api.sendOtp(phone);
-      qs('step-phone').classList.remove('active');
-      qs('step-otp').classList.add('active');
-      qs('otp-display-phone').textContent = `+91 ${phone.slice(0,5)} ${phone.slice(5)}`;
-      if (res.otp) {
-        const boxes = document.querySelectorAll('.otp-box');
-        String(res.otp).split('').forEach((d, i) => { if (boxes[i]) { boxes[i].value = d; boxes[i].classList.add('filled'); } });
-        showToast(`Dev mode — OTP: ${res.otp}`, 'info');
-      }
-      startTimer();
-      const firstEmpty = [...document.querySelectorAll('.otp-box')].find(b => !b.value);
-      if (firstEmpty) firstEmpty.focus(); else document.querySelectorAll('.otp-box')[0].focus();
-    } catch (err) {
-      showToast(err.message || 'Failed to send OTP', 'error');
-      btn.disabled = false;
-      btn.innerHTML = 'Send OTP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
-    }
+    window.sendOtp('91' + phone);
+    qs('step-phone').classList.remove('active');
+    qs('step-otp').classList.add('active');
+    qs('otp-display-phone').textContent = `+91 ${phone.slice(0,5)} ${phone.slice(5)}`;
+    startTimer();
+    document.querySelectorAll('#otp-boxes .otp-box')[0].focus();
   }
 
   function startTimer(seconds = 60) {
@@ -457,67 +483,59 @@
     timerInterval = setInterval(tick, 1000);
   }
 
-  async function resendOtp() {
+  function doResendOtp() {
     const phone = qs('otp-display-phone').textContent.replace(/\D/g,'').slice(-10);
-    try {
-      const res = await api.sendOtp(phone);
-      if (res.otp) showToast(`Dev OTP: ${res.otp}`, 'info'); else showToast('OTP resent!', 'success');
-      document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
-      startTimer();
-      document.querySelectorAll('.otp-box')[0].focus();
-    } catch (err) { showToast(err.message || 'Failed', 'error'); }
+    document.querySelectorAll('#otp-boxes .otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
+    if (typeof window.sendOtp === 'function') window.sendOtp('91' + phone);
+    startTimer();
+    document.querySelectorAll('#otp-boxes .otp-box')[0].focus();
+    showToast('OTP resent!', 'info');
   }
 
   function goBackToPhone() {
     clearInterval(timerInterval);
-    document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
+    document.querySelectorAll('#otp-boxes .otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
     qs('new-user-section').style.display = 'none';
     qs('step-otp').classList.remove('active');
     qs('step-phone').classList.add('active');
-    qs('send-otp-btn').disabled = false;
-    qs('send-otp-btn').innerHTML = 'Send OTP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+    const btn = qs('send-otp-btn');
+    btn.disabled = false;
+    btn.innerHTML = 'Send OTP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
   }
 
-  /* ── OTP box keyboard navigation ─────────────────── */
-  document.querySelectorAll('.otp-box').forEach((box, i, boxes) => {
+  /* ── OTP box keyboard navigation (main boxes only) ── */
+  const _mainBoxes = Array.from(document.querySelectorAll('#otp-boxes .otp-box'));
+  _mainBoxes.forEach((box, i) => {
     box.addEventListener('input', () => {
       box.value = box.value.replace(/\D/g,'').slice(-1);
       box.classList.toggle('filled', !!box.value);
-      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+      if (box.value && i < _mainBoxes.length - 1) _mainBoxes[i + 1].focus();
     });
     box.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !box.value && i > 0) { boxes[i-1].focus(); boxes[i-1].value = ''; boxes[i-1].classList.remove('filled'); }
-      if (e.key === 'ArrowLeft'  && i > 0)               boxes[i-1].focus();
-      if (e.key === 'ArrowRight' && i < boxes.length-1)  boxes[i+1].focus();
+      if (e.key === 'Backspace' && !box.value && i > 0) { _mainBoxes[i-1].focus(); _mainBoxes[i-1].value = ''; _mainBoxes[i-1].classList.remove('filled'); }
+      if (e.key === 'ArrowLeft'  && i > 0)                _mainBoxes[i-1].focus();
+      if (e.key === 'ArrowRight' && i < _mainBoxes.length-1) _mainBoxes[i+1].focus();
     });
     box.addEventListener('paste', e => {
       e.preventDefault();
-      const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,6);
-      pasted.split('').forEach((d, j) => { if (boxes[i+j]) { boxes[i+j].value = d; boxes[i+j].classList.add('filled'); } });
-      const next = boxes[Math.min(i+pasted.length, boxes.length-1)];
+      const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,4);
+      pasted.split('').forEach((d, j) => { if (_mainBoxes[i+j]) { _mainBoxes[i+j].value = d; _mainBoxes[i+j].classList.add('filled'); } });
+      const next = _mainBoxes[Math.min(i+pasted.length, _mainBoxes.length-1)];
       if (next) next.focus();
     });
   });
 
   /* ── Verify OTP ─────────────────────────────────── */
-  async function verifyOtp() {
-    const phone = qs('otp-display-phone').textContent.replace(/\D/g,'').slice(-10);
-    const otp   = [...document.querySelectorAll('.otp-box')].map(b => b.value).join('');
-    const name  = qs('new-user-name').value.trim();
-    if (otp.length < 6) { showToast('Enter the 6-digit OTP', 'error'); return; }
+  function doVerifyOtp() {
+    const otp = _mainBoxes.map(b => b.value).join('');
+    if (otp.length < 4) { showToast('Enter the 4-digit OTP', 'error'); return; }
+    if (typeof window.verifyOtp !== 'function') {
+      showToast('OTP service not ready. Please refresh.', 'error');
+      return;
+    }
     const btn = qs('verify-otp-btn');
     btn.disabled = true; btn.textContent = 'Verifying…';
-    try {
-      const res = await api.verifyOtp(phone, otp, name);
-      if (res.is_new) showToast(`Welcome to StayDekho, ${res.user.name}! 🎉`, 'success');
-      else showToast(`Welcome back, ${res.user.name.split(' ')[0]}!`, 'success');
-      clearInterval(timerInterval);
-      setTimeout(() => { window.location.href = nextUrl(res.user); }, 800);
-    } catch (err) {
-      if (err.message?.toLowerCase().includes('name')) { qs('new-user-section').style.display = 'block'; qs('new-user-name').focus(); }
-      showToast(err.message || 'Verification failed', 'error');
-      btn.disabled = false; btn.textContent = 'Verify & Login';
-    }
+    window.verifyOtp(otp);
   }
 
   /* ── Email Login ─────────────────────────────────── */
@@ -666,11 +684,11 @@
 
   function triggerGoogleLogin() { showToast('Google login setup required. See .env instructions.', 'info'); }
 
-  window.addEventListener('load', initGoogle);
+  window.addEventListener('load', () => { initGoogle(); initMsg91Widget(); });
 
   /* ── Enter key support ──────────────────────────── */
   qs('otp-phone').addEventListener('input', updateSendBtn);
-  qs('otp-phone').addEventListener('keydown', e => { if (e.key === 'Enter' && !qs('send-otp-btn').disabled) sendOtp(); });
+  qs('otp-phone').addEventListener('keydown', e => { if (e.key === 'Enter' && !qs('send-otp-btn').disabled) doSendOtp(); });
 </script>
 </body>
 </html>
