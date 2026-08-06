@@ -452,16 +452,26 @@
   }
 
   /* ── Send OTP ─────────────────────────────────────── */
-  function doSendOtp() {
+  async function doSendOtp() {
     const phone = qs('otp-phone').value.replace(/\D/g,'');
     if (phone.length < 10) { showToast('Enter a 10-digit mobile number', 'error'); return; }
-    if (typeof window.sendOtp !== 'function') {
-      showToast('OTP service loading. Please wait a moment.', 'error');
-      return;
-    }
     const btn = qs('send-otp-btn');
     btn.disabled = true;
     btn.innerHTML = 'Sending…';
+
+    // Wait up to 5s for widget to expose window.sendOtp
+    for (let i = 0; i < 50; i++) {
+      if (typeof window.sendOtp === 'function') break;
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    if (typeof window.sendOtp !== 'function') {
+      showToast('OTP service failed to load. Please refresh the page.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = 'Send OTP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+      return;
+    }
+
     window.sendOtp('91' + phone);
     qs('step-phone').classList.remove('active');
     qs('step-otp').classList.add('active');
@@ -684,7 +694,9 @@
 
   function triggerGoogleLogin() { showToast('Google login setup required. See .env instructions.', 'info'); }
 
-  window.addEventListener('load', () => { initGoogle(); initMsg91Widget(); });
+  // Initialize widget immediately (script is synchronous in <head>, so initSendOTP is available now)
+  initMsg91Widget();
+  window.addEventListener('load', initGoogle);
 
   /* ── Enter key support ──────────────────────────── */
   qs('otp-phone').addEventListener('input', updateSendBtn);
