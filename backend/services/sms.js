@@ -23,18 +23,26 @@ async function sendSMS(phone, message) {
 
 async function sendOtpSMS(phone, otp) {
   const authKey    = process.env.MSG91_AUTH_KEY;
-  const templateId = process.env.MSG91_TEMPLATE_ID;
 
-  if (!authKey || !templateId) {
+  if (!authKey) {
     console.log(`\n📱 OTP for +91-${phone}: ${otp} (valid 10 min)\n`);
     return;
   }
 
-  await axios.post(
-    'https://api.msg91.com/api/v5/otp',
-    { template_id: templateId, mobile: `91${phone}`, otp },
-    { headers: { authkey: authKey, 'Content-Type': 'application/json' } }
-  );
+  const body = { mobile: `91${phone}`, otp };
+  if (process.env.MSG91_TEMPLATE_ID) body.template_id = process.env.MSG91_TEMPLATE_ID;
+
+  try {
+    const r = await axios.post(
+      'https://api.msg91.com/api/v5/otp',
+      body,
+      { headers: { authkey: authKey, 'Content-Type': 'application/json' } }
+    );
+    console.log(`✅ OTP SMS sent to +91-${phone}:`, r.data);
+  } catch (err) {
+    console.error(`❌ OTP SMS failed +91-${phone}:`, err.response?.data || err.message);
+    throw err;
+  }
 }
 
 module.exports = { sendSMS, sendOtpSMS };
