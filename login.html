@@ -427,7 +427,9 @@
     },
     failure: function(error) {
       console.error('MSG91 failure:', error);
-      showToast('OTP verification failed. Please try again.', 'error');
+      var detail = '';
+      try { detail = ' — ' + (error && (error.message || error.reason || error.code || JSON.stringify(error))); } catch(e) {}
+      showToast('OTP failed' + detail, 'error');
       var btn = qs('verify-otp-btn');
       if (btn) { btn.disabled = false; btn.textContent = 'Verify & Login'; }
     }

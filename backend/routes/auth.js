@@ -298,10 +298,10 @@ router.post('/verify-msg91-token', async (req, res) => {
   if (!access_token) return res.status(400).json({ error: 'Access token required' });
 
   try {
-    const r = await axios.get('https://auth.msg91.com/api/v5/widget/verifyAccessToken', {
-      params: { 'access-token': access_token },
-      headers: { authkey: process.env.MSG91_AUTH_KEY },
-    });
+    const r = await axios.post('https://api.msg91.com/api/v5/widget/verifyAccessToken',
+      { 'access-token': access_token },
+      { headers: { authkey: process.env.MSG91_AUTH_KEY } }
+    );
 
     if (r.data?.type !== 'success') {
       return res.status(401).json({ error: 'OTP verification failed. Please try again.' });
