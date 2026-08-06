@@ -151,7 +151,6 @@
     .fp-step.active { display: block; }
     .fp-back-btn { background: none; border: none; color: #8B1717; font-weight: 700; font-size: .82rem; cursor: pointer; font-family: inherit; padding: 0 0 16px; display: flex; align-items: center; gap: 4px; }
   </style>
-  <script src="https://auth.msg91.com/assets/Sdk/MobileVerification.min.js?ref=366866697567303933373537" id="366866697567303933373537"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -416,29 +415,40 @@
   }
 
   let timerInterval = null;
-  const _MSG91_WIDGET_ID = '366866697567303933373537';
 
-  /* ── MSG91 Widget Init ────────────────────────────── */
-  function initMsg91Widget() {
-    if (typeof initSendOTP !== 'function') return;
-    initSendOTP({
-      widgetId: _MSG91_WIDGET_ID,
-      exposeMethods: true,
-      success: function(data) {
-        const token = (typeof data === 'string') ? data : (data.message || data.access_token || '');
-        loginWithMsg91Token(token);
-      },
-      failure: function(data) {
-        console.error('MSG91 OTP failure:', data);
-        showToast('OTP verification failed. Please try again.', 'error');
-        const btn = qs('verify-otp-btn');
-        if (btn) { btn.disabled = false; btn.textContent = 'Verify & Login'; }
-      }
-    });
-  }
+  /* ── MSG91 Widget: load script + init ────────────── */
+  var _msg91Config = {
+    widgetId: '366866697567303933373537',
+    tokenAuth: '515157TKiU8lthb6a745258P1',
+    exposeMethods: true,
+    success: function(data) {
+      var token = (typeof data === 'string') ? data : (data.message || data.access_token || JSON.stringify(data));
+      loginWithMsg91Token(token);
+    },
+    failure: function(error) {
+      console.error('MSG91 failure:', error);
+      showToast('OTP verification failed. Please try again.', 'error');
+      var btn = qs('verify-otp-btn');
+      if (btn) { btn.disabled = false; btn.textContent = 'Verify & Login'; }
+    }
+  };
+
+  (function loadOtpScript(urls) {
+    var i = 0;
+    function attempt() {
+      var s = document.createElement('script');
+      s.src = urls[i];
+      s.async = true;
+      s.onload = function() {
+        if (typeof window.initSendOTP === 'function') window.initSendOTP(_msg91Config);
+      };
+      s.onerror = function() { i++; if (i < urls.length) attempt(); };
+      document.head.appendChild(s);
+    }
+    attempt();
+  })(['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js']);
 
   async function loginWithMsg91Token(accessToken) {
-    const btn = qs('verify-otp-btn');
     try {
       const res = await api.verifyMsg91Token(accessToken);
       clearInterval(timerInterval);
@@ -447,6 +457,7 @@
       setTimeout(() => { window.location.href = nextUrl(res.user); }, 800);
     } catch (err) {
       showToast(err.message || 'Login failed', 'error');
+      const btn = qs('verify-otp-btn');
       if (btn) { btn.disabled = false; btn.textContent = 'Verify & Login'; }
     }
   }
@@ -458,20 +469,17 @@
     const btn = qs('send-otp-btn');
     btn.disabled = true;
     btn.innerHTML = 'Sending…';
-
     // Wait up to 5s for widget to expose window.sendOtp
     for (let i = 0; i < 50; i++) {
       if (typeof window.sendOtp === 'function') break;
       await new Promise(r => setTimeout(r, 100));
     }
-
     if (typeof window.sendOtp !== 'function') {
-      showToast('OTP service failed to load. Please refresh the page.', 'error');
+      showToast('OTP service failed to load. Please refresh.', 'error');
       btn.disabled = false;
       btn.innerHTML = 'Send OTP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
       return;
     }
-
     window.sendOtp('91' + phone);
     qs('step-phone').classList.remove('active');
     qs('step-otp').classList.add('active');
@@ -513,7 +521,7 @@
     btn.innerHTML = 'Send OTP <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
   }
 
-  /* ── OTP box keyboard navigation (main boxes only) ── */
+  /* ── OTP box keyboard navigation ─────────────────── */
   const _mainBoxes = Array.from(document.querySelectorAll('#otp-boxes .otp-box'));
   _mainBoxes.forEach((box, i) => {
     box.addEventListener('input', () => {
@@ -523,7 +531,7 @@
     });
     box.addEventListener('keydown', e => {
       if (e.key === 'Backspace' && !box.value && i > 0) { _mainBoxes[i-1].focus(); _mainBoxes[i-1].value = ''; _mainBoxes[i-1].classList.remove('filled'); }
-      if (e.key === 'ArrowLeft'  && i > 0)                _mainBoxes[i-1].focus();
+      if (e.key === 'ArrowLeft'  && i > 0)               _mainBoxes[i-1].focus();
       if (e.key === 'ArrowRight' && i < _mainBoxes.length-1) _mainBoxes[i+1].focus();
     });
     box.addEventListener('paste', e => {
@@ -539,13 +547,14 @@
   function doVerifyOtp() {
     const otp = _mainBoxes.map(b => b.value).join('');
     if (otp.length < 4) { showToast('Enter the 4-digit OTP', 'error'); return; }
-    if (typeof window.verifyOtp !== 'function') {
-      showToast('OTP service not ready. Please refresh.', 'error');
-      return;
-    }
     const btn = qs('verify-otp-btn');
     btn.disabled = true; btn.textContent = 'Verifying…';
-    window.verifyOtp(otp);
+    if (typeof window.verifyOtp === 'function') {
+      window.verifyOtp(otp);
+    } else {
+      showToast('OTP service not ready. Please refresh.', 'error');
+      btn.disabled = false; btn.textContent = 'Verify & Login';
+    }
   }
 
   /* ── Email Login ─────────────────────────────────── */
@@ -694,8 +703,6 @@
 
   function triggerGoogleLogin() { showToast('Google login setup required. See .env instructions.', 'info'); }
 
-  // Initialize widget immediately (script is synchronous in <head>, so initSendOTP is available now)
-  initMsg91Widget();
   window.addEventListener('load', initGoogle);
 
   /* ── Enter key support ──────────────────────────── */
