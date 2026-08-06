@@ -1,6 +1,7 @@
 const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
+const axios   = require('axios');
 const { User, OTP } = require('../db/models');
 const { protect } = require('../middleware/auth');
 const { sendOtpSMS } = require('../services/sms');
@@ -285,6 +286,47 @@ router.post('/google', async (req, res) => {
   } catch (err) {
     console.error('Google auth error:', err.message);
     res.status(401).json({ error: 'Google verification failed' });
+  }
+});
+
+// ── MSG91 Widget: Verify Access Token ─────────────────
+// POST /api/auth/verify-msg91-token   body: { access_token }
+// MSG91 widget fires access_token on success — backend verifies it
+// and finds/creates user. MSG91_AUTH_KEY is NEVER exposed to frontend.
+router.post('/verify-msg91-token', async (req, res) => {
+  const { access_token } = req.body;
+  if (!access_token) return res.status(400).json({ error: 'Access token required' });
+
+  try {
+    const r = await axios.get('https://auth.msg91.com/api/v5/widget/verifyAccessToken', {
+      params: { 'access-token': access_token },
+      headers: { authkey: process.env.MSG91_AUTH_KEY },
+    });
+
+    if (r.data?.type !== 'success') {
+      return res.status(401).json({ error: 'OTP verification failed. Please try again.' });
+    }
+
+    const mobile = r.data.message?.mobile || r.data.message || '';
+    const ph = normalizePhone(String(mobile));
+    if (!ph) return res.status(401).json({ error: 'Phone number not returned by OTP verification.' });
+
+    let user = await User.findOne({ phone: ph }).lean();
+    const isNew = !user;
+
+    if (isNew) {
+      const dummyEmail = `${ph}@otp.staydekho.com`;
+      const dummyPass  = await bcrypt.hash(Math.random().toString(36) + Date.now(), 10);
+      const created = await User.create({ name: `User${ph.slice(-4)}`, email: dummyEmail, phone: ph, password: dummyPass });
+      user = created.toObject();
+      console.log(`✅ New user via MSG91 widget: +91-${ph}`);
+    }
+
+    const { password: _, ...safeUser } = user;
+    res.json({ token: signToken(user._id.toString()), user: safeUser, is_new: isNew });
+  } catch (err) {
+    console.error('MSG91 verify error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Verification failed. Please try again.' });
   }
 });
 
