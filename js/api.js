@@ -102,7 +102,7 @@ const api = {
     return d;
   }),
 
-  verifyMsg91Token: (access_token) => request('POST', '/auth/verify-msg91-token', { access_token }).then(d => {
+  verifyMsg91Token: (access_token, name) => request('POST', '/auth/verify-msg91-token', { access_token, name }).then(d => {
     localStorage.setItem('sd_token', d.token);
     localStorage.setItem('sd_user',  JSON.stringify(d.user));
     return d;

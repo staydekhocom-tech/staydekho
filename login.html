@@ -451,8 +451,9 @@
   })(['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js']);
 
   async function loginWithMsg91Token(accessToken) {
+    const name = (qs('new-user-name') && qs('new-user-name').value.trim()) || '';
     try {
-      const res = await api.verifyMsg91Token(accessToken);
+      const res = await api.verifyMsg91Token(accessToken, name);
       clearInterval(timerInterval);
       if (res.is_new) showToast(`Welcome to StayDekho, ${res.user.name}! 🎉`, 'success');
       else showToast(`Welcome back, ${res.user.name.split(' ')[0]}!`, 'success');
@@ -486,6 +487,7 @@
     qs('step-phone').classList.remove('active');
     qs('step-otp').classList.add('active');
     qs('otp-display-phone').textContent = `+91 ${phone.slice(0,5)} ${phone.slice(5)}`;
+    qs('new-user-section').style.display = 'block';
     startTimer();
     document.querySelectorAll('#otp-boxes .otp-box')[0].focus();
   }

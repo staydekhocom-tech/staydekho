@@ -294,7 +294,7 @@ router.post('/google', async (req, res) => {
 // MSG91 widget fires access_token on success — backend verifies it
 // and finds/creates user. MSG91_AUTH_KEY is NEVER exposed to frontend.
 router.post('/verify-msg91-token', async (req, res) => {
-  const { access_token } = req.body;
+  const { access_token, name } = req.body;
   if (!access_token) return res.status(400).json({ error: 'Access token required' });
 
   try {
@@ -317,7 +317,8 @@ router.post('/verify-msg91-token', async (req, res) => {
     if (isNew) {
       const dummyEmail = `${ph}@otp.staydekho.com`;
       const dummyPass  = await bcrypt.hash(Math.random().toString(36) + Date.now(), 10);
-      const created = await User.create({ name: `User${ph.slice(-4)}`, email: dummyEmail, phone: ph, password: dummyPass });
+      const userName   = (name && name.trim()) || `User${ph.slice(-4)}`;
+      const created = await User.create({ name: userName, email: dummyEmail, phone: ph, password: dummyPass });
       user = created.toObject();
       console.log(`✅ New user via MSG91 widget: +91-${ph}`);
     }
