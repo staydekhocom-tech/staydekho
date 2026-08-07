@@ -381,9 +381,9 @@ router.post('/booking', async (req, res) => {
     });
 
     // Run automation in background (don't await — don't block response)
-    blockCalendarForBooking(booking).catch(e => console.error('blockCalendar error:', e.message));
-    createCleaningTaskForCheckout(booking).catch(e => console.error('cleaningTask error:', e.message));
-    notifyTeamNewBooking(booking, property.name).catch(e => console.error('notifyTeam error:', e.message));
+    blockCalendarForBooking(booking.property_id, booking.checkin, booking.checkout).catch(e => console.error('blockCalendar error:', e.message));
+    createCleaningTaskForCheckout(booking.property_id, booking.checkout).catch(e => console.error('cleaningTask error:', e.message));
+    notifyTeamNewBooking(booking, property).catch(e => console.error('notifyTeam error:', e.message));
 
     res.status(201).json({ success: true, booking_id: booking._id.toString(), booking_no: bookingNo, status, nights, amount: finalAmount });
   } catch (err) {
