@@ -227,15 +227,19 @@
 
         <div id="new-user-section">
           <div class="new-user-badge">✨ New to StayDekho? Welcome!</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
             <div>
-              <label style="display:block;font-size:.72rem;font-weight:700;color:#8B1717;margin-bottom:4px">First Name</label>
+              <label style="display:block;font-size:.72rem;font-weight:700;color:#8B1717;margin-bottom:4px">First Name *</label>
               <input type="text" id="new-user-fname" placeholder="Arjun" autocomplete="given-name" style="width:100%;padding:9px 10px;border:1.5px solid #f8e0e0;border-radius:8px;font-size:.875rem;font-family:inherit;outline:none;background:#fff;box-sizing:border-box"/>
             </div>
             <div>
               <label style="display:block;font-size:.72rem;font-weight:700;color:#8B1717;margin-bottom:4px">Last Name</label>
               <input type="text" id="new-user-lname" placeholder="Sharma" autocomplete="family-name" style="width:100%;padding:9px 10px;border:1.5px solid #f8e0e0;border-radius:8px;font-size:.875rem;font-family:inherit;outline:none;background:#fff;box-sizing:border-box"/>
             </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#8B1717;margin-bottom:4px">Email (optional)</label>
+            <input type="email" id="new-user-email" placeholder="arjun@email.com" autocomplete="email" style="width:100%;padding:9px 10px;border:1.5px solid #f8e0e0;border-radius:8px;font-size:.875rem;font-family:inherit;outline:none;background:#fff;box-sizing:border-box"/>
           </div>
         </div>
 
@@ -461,9 +465,11 @@
   async function loginWithMsg91Token(accessToken) {
     const fname = (qs('new-user-fname') && qs('new-user-fname').value.trim()) || '';
     const lname = (qs('new-user-lname') && qs('new-user-lname').value.trim()) || '';
-    const name = [fname, lname].filter(Boolean).join(' ');
+    const name  = [fname, lname].filter(Boolean).join(' ');
+    const email = (qs('new-user-email') && qs('new-user-email').value.trim()) || '';
+    if (!fname) { showToast('Please enter your first name', 'error'); return; }
     try {
-      const res = await api.verifyMsg91Token(accessToken, name);
+      const res = await api.verifyMsg91Token(accessToken, name, email);
       clearInterval(timerInterval);
       if (res.is_new) showToast(`Welcome to StayDekho, ${res.user.name}! 🎉`, 'success');
       else showToast(`Welcome back, ${res.user.name.split(' ')[0]}!`, 'success');
