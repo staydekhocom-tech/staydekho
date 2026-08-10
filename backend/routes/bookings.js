@@ -551,7 +551,7 @@ router.get('/:id/invoice', async (req, res) => {
   <div class="notes">
     <h4>Terms &amp; Conditions</h4>
     <div class="terms-grid">
-      <p><b>1. Timing:</b> Check-in 2:00 PM · Check-out 11:00 AM. Early check-in / late check-out subject to availability &amp; may incur extra charges.</p>
+      <p><b>1. Timing:</b> Check-in 12:00 PM (Noon) · Check-out 10:00 AM. Early check-in / late check-out subject to availability &amp; may incur extra charges.</p>
       <p><b>2. ID Proof:</b> All guests must carry a valid government photo ID (Aadhaar / Passport / DL / Voter ID) at check-in. Primary guest must be 18+.</p>
       <p><b>3. Occupancy:</b> As per booked property limit. Extra guests need prior approval &amp; may incur additional charges.</p>
       <p><b>4. Advance Non-Refundable:</b> The advance amount is strictly non-refundable under all circumstances, including cancellation or no-show.</p>
@@ -605,21 +605,23 @@ router.get('/:id/owner-bill', (req, res, next) => {
     const PLATFORM_LABELS = { direct: 'Direct (Website)', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT / Goibibo', walkin: 'Walk-in' };
 
     // Base for the 70:30 split
-    // Direct/walk-in: no GST/occupancy tax charged — FULL guest amount split 70/30
-    let base, baseLabel;
+    let base, baseLabel, gstCollected = 0, gstRate = 0;
     if (isDirect) {
-      base = totalAmt;
-      baseLabel = 'Booking Amount';
+      // GST pehle strip karo (India hotel GST slabs: ≤₹7500/night → 12%, >₹7500 → 18%)
+      const perNightGross = totalAmt / nights;
+      gstRate   = (perNightGross / 1.12) > 7500 ? 18 : 12;
+      base      = Math.round(totalAmt / (1 + gstRate / 100)); // base fare (GST-free)
+      gstCollected = totalAmt - base;
+      baseLabel = 'Guest Paid (Total)';
     } else {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
       baseLabel = `${PLATFORM_LABELS[platform]} Net Payout (after platform deductions)`;
     }
-    // Remitted Occupancy Tax (Airbnb jaisa platform ye khud govt ko already de chuka hota hai) —
-    // 70/30 split se bahar rehta hai, pura StayDekho ke paas jaata hai (aage govt ko jama karne ke liye)
+    // OTA: Remitted Occupancy Tax bhi nikaal do (govt ka hissa)
     const remittedTax = isDirect ? 0 : (booking.remitted_tax || 0);
-    const splittable   = Math.max(0, base - remittedTax);
-    const ownerShare = Math.round(splittable * 0.70);
-    const sdShare    = (splittable - ownerShare) + remittedTax;
+    const netRevenue  = Math.max(0, base - remittedTax);
+    const ownerShare  = Math.round(netRevenue * 0.70);
+    const sdShare     = netRevenue - ownerShare; // pure 30%
 
     let bookingNo = booking.booking_no;
     if (!bookingNo) {
@@ -698,14 +700,17 @@ router.get('/:id/owner-bill', (req, res, next) => {
   </div>
 
   <div class="split">
-    <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${INR(base)}</span></div>
+    <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${INR(totalAmt)}</span></div>
+    ${isDirect && gstCollected > 0 ? `
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: GST ${gstRate}% (StayDekho govt ko jama karega)</span><span>− ${INR(gstCollected)}</span></div>
+    <div class="split-row" style="color:#555;font-size:12px;font-weight:600"><span class="lbl">Base Fare (70:30 split base)</span><span>${INR(base)}</span></div>
+    ` : ''}
     ${remittedTax > 0 ? `
     <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (${PLATFORM_LABELS[platform]} ne govt ko already jama kiya)</span><span>− ${INR(remittedTax)}</span></div>
-    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Splittable Amount (70:30 base)</span><span>${INR(splittable)}</span></div>
+    <div class="split-row" style="color:#555;font-size:12px;font-weight:600"><span class="lbl">Net Revenue (70:30 split base)</span><span>${INR(netRevenue)}</span></div>
     ` : ''}
     <div class="split-row owner"><span class="lbl">🏠 Owner Share (70%)</span><span>${INR(ownerShare)}</span></div>
-    <div class="split-row sd"><span class="lbl">StayDekho Share (30%${remittedTax > 0 ? ' + Remitted Tax' : ''})</span><span>${INR(sdShare)}</span></div>
-    ${remittedTax > 0 ? `<div style="font-size:11px;color:#999;margin-top:6px;padding:0 14px">💡 Remitted tax StayDekho ke paas rukega — aage government ko jama karna hai, ye StayDekho ka profit nahi hai.</div>` : ''}
+    <div class="split-row sd"><span class="lbl">StayDekho Share (30%)</span><span>${INR(sdShare)}</span></div>
   </div>
 
   <div class="footer">

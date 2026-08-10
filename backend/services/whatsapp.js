@@ -50,35 +50,34 @@ async function notifyTeamNewBooking(booking, property) {
   const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
   const INR  = n => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-  // Guest ka phone number sirf ADMIN ko jaata hai — owner/caretaker ko nahi
   const base =
-    `🏠 *Nayi Booking — ${property?.name || 'Property'}*\n\n` +
+    `🏠 *New Booking — ${property?.name || 'Property'}*\n\n` +
     `👤 Guest: ${booking.guest_name || '—'}\n` +
     `📅 Check-in: ${fmtD(booking.checkin)}\n` +
     `📅 Check-out: ${fmtD(booking.checkout)}\n` +
     `🌙 Nights: ${booking.nights || 1} | Guests: ${booking.guests || 1}\n`;
 
-  // Owner ko — amount ke saath (guest phone NAHI)
+  // Owner — booking amount (no guest phone)
   if (property?.owner_phone) {
     const msg = base +
-      `💰 Total: ${INR(booking.total_amount || booking.amount)}\n\n` +
+      `💰 Total Amount: ${INR(booking.total_amount || booking.amount)}\n\n` +
       `— StayDekho`;
     sendWhatsApp(property.owner_phone, msg).catch(() => {});
   }
 
-  // Caretaker ko — amount aur guest phone dono NAHI, sirf operations info
+  // Caretaker — operations info only
   if (property?.caretaker_phone) {
     const msg = base +
-      `\n🧹 Room taiyaar rakhna. Check-in 2 PM se.\n\n— StayDekho`;
+      `\n🧹 Please prepare the room. Check-in from 12:00 PM (Noon).\n\n— StayDekho`;
     sendWhatsApp(property.caretaker_phone, msg).catch(() => {});
   }
 
-  // Admin (Sanskar) ko — full detail (guest phone bhi)
+  // Admin — full details including guest phone
   if (process.env.ADMIN_WHATSAPP) {
     const msg = base +
       `📞 Guest Phone: ${booking.guest_phone || '—'}\n` +
       `💰 Total: ${INR(booking.total_amount || booking.amount)} | Advance: ${INR(booking.amount)}\n` +
-      `📌 Source: ${booking.platform || 'direct'}\n\n— StayDekho System`;
+      `📌 Source: ${booking.platform || 'direct'}\n\n— StayDekho`;
     sendWhatsApp(process.env.ADMIN_WHATSAPP, msg).catch(() => {});
   }
 }
@@ -87,9 +86,10 @@ async function notifyTeamNewBooking(booking, property) {
 async function notifyTeamBookingCancelled(booking, property) {
   const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); } catch { return s; } };
   const msg =
-    `❌ *Booking Cancel — ${property?.name || 'Property'}*\n\n` +
-    `👤 ${booking.guest_name || '—'} | ${fmtD(booking.checkin)} → ${fmtD(booking.checkout)}\n` +
-    `Calendar unblock ho gaya hai.\n\n— StayDekho`;
+    `❌ *Booking Cancelled — ${property?.name || 'Property'}*\n\n` +
+    `👤 Guest: ${booking.guest_name || '—'}\n` +
+    `📅 Check-in: ${fmtD(booking.checkin)} → Check-out: ${fmtD(booking.checkout)}\n\n` +
+    `Calendar dates have been unblocked.\n\n— StayDekho`;
 
   if (property?.owner_phone)     sendWhatsApp(property.owner_phone, msg).catch(() => {});
   if (property?.caretaker_phone) sendWhatsApp(property.caretaker_phone, msg).catch(() => {});

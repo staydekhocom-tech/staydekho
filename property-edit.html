@@ -383,12 +383,12 @@ function buildForm() {
         <div class="field-grid">
           <div class="field">
             <label>Check-in Time</label>
-            <input type="text" id="f-checkin" value="${esc(p.checkin_time||'2:00 PM')}" placeholder="2:00 PM"/>
+            <input type="text" id="f-checkin" value="${esc(p.checkin_time||'12:00 PM (Noon)')}" placeholder="12:00 PM (Noon)"/>
             <span class="hint">e.g. 1:00 PM, 2:00 PM, 3:00 PM</span>
           </div>
           <div class="field">
             <label>Check-out Time</label>
-            <input type="text" id="f-checkout" value="${esc(p.checkout_time||'11:00 AM')}" placeholder="11:00 AM"/>
+            <input type="text" id="f-checkout" value="${esc(p.checkout_time||'10:00 AM')}" placeholder="10:00 AM"/>
             <span class="hint">e.g. 10:00 AM, 11:00 AM, 12:00 PM</span>
           </div>
         </div>

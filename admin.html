@@ -1220,6 +1220,31 @@
   </div>
 </div>
 
+<div class="modal-bd" id="export-date-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hdr"><div class="modal-title">📊 Export Bookings — Date Range</div><button class="modal-close" onclick="closeModal('export-date-modal')">✕</button></div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Check-in From *</label><input class="form-ctrl" id="export-from" type="date"/></div>
+      <div class="form-grp"><label class="form-lbl">Check-in To *</label><input class="form-ctrl" id="export-to" type="date"/></div>
+    </div>
+    <div class="form-grp">
+      <label class="form-lbl">Status Filter</label>
+      <select class="form-ctrl" id="export-status">
+        <option value="">All (except cancelled)</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="checked_in">Checked In</option>
+        <option value="checked_out">Checked Out</option>
+        <option value="all">All including cancelled</option>
+      </select>
+    </div>
+    <p style="font-size:12px;color:var(--gray-400);margin:0 0 12px">Financial columns (commission, GST, TDS) are calculated using your platform settings.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-outline" onclick="closeModal('export-date-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doExportBookingsExcel()">⬇ Download CSV</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bd" id="reel-add-modal">
   <div class="modal" style="max-width:580px">
     <div class="modal-hdr"><div class="modal-title">Add Reel / Video</div><button class="modal-close" onclick="closeModal('reel-add-modal')">✕</button></div>
@@ -2111,7 +2136,7 @@ async function saveNewProperty() {
   try {
     const fomoB = document.getElementById('add-fomo-bookings').value; const fomoV = document.getElementById('add-fomo-viewers').value;
     const propTypes = ['pool','family','bachelor','party'].filter(t => { const cb = document.getElementById('add-type-'+t); return cb && cb.checked; });
-    await api.createProperty({ name, location, price: parseInt(document.getElementById('add-price').value) || 5000, guests: parseInt(document.getElementById('add-guests').value) || 10, beds: parseInt(document.getElementById('add-beds').value) || 4, bathrooms: parseInt(document.getElementById('add-baths').value) || 2, amenities: document.getElementById('add-amenities').value, description: document.getElementById('add-desc').value, status: 'Active', map_url: document.getElementById('add-map-url').value.trim(), checkin_time: document.getElementById('add-checkin').value.trim() || '2:00 PM', checkout_time: document.getElementById('add-checkout').value.trim() || '11:00 AM', rules: parseLines(document.getElementById('add-rules').value), addons: parseAddons(document.getElementById('add-addons').value), fomo_bookings: fomoB === '' ? null : Number(fomoB), fomo_viewers: fomoV === '' ? null : Number(fomoV), fomo_enabled: document.getElementById('add-fomo-enabled').checked, property_types: propTypes, images });
+    await api.createProperty({ name, location, price: parseInt(document.getElementById('add-price').value) || 5000, guests: parseInt(document.getElementById('add-guests').value) || 10, beds: parseInt(document.getElementById('add-beds').value) || 4, bathrooms: parseInt(document.getElementById('add-baths').value) || 2, amenities: document.getElementById('add-amenities').value, description: document.getElementById('add-desc').value, status: 'Active', map_url: document.getElementById('add-map-url').value.trim(), checkin_time: document.getElementById('add-checkin').value.trim() || '12:00 PM (Noon)', checkout_time: document.getElementById('add-checkout').value.trim() || '10:00 AM', rules: parseLines(document.getElementById('add-rules').value), addons: parseAddons(document.getElementById('add-addons').value), fomo_bookings: fomoB === '' ? null : Number(fomoB), fomo_viewers: fomoV === '' ? null : Number(fomoV), fomo_enabled: document.getElementById('add-fomo-enabled').checked, property_types: propTypes, images });
     closeModal('add-modal'); await initAdmin();
   } catch (err) { alert('Failed to create property: ' + err.message); } finally { if (btn) { btn.disabled = false; btn.textContent = 'Save Property'; } }
 }
@@ -2526,7 +2551,8 @@ async function loadBookingsLog() {
   } catch (e) { console.error(e); }
 }
 function renderBookingsLog() {
-  const rows = opsBookingsLog.map(b => {
+  const sorted = [...opsBookingsLog].sort((a, b) => new Date(b.checkin) - new Date(a.checkin));
+  const rows = sorted.map(b => {
     const bid = b._id || b.id;
     const isFullyPaid = b.balance_paid || b.status === 'checked_out' || !b.balance_amount || b.balance_amount <= 0;
     const proformaBtn = `<button class="btn btn-outline btn-sm" style="color:#c2410c;border-color:#fed7aa" onclick="window.open(getApiBase()+'/bookings/${bid}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')">📋 Proforma</button>`;
@@ -2701,36 +2727,133 @@ async function deleteBookingLogRow(id) {
 // ── EXPORT BOOKINGS TO EXCEL (CSV) ──
 function exportBookingsExcel() {
   if (!bookings || !bookings.length) { alert('Koi bookings nahi hain export karne ke liye'); return; }
+  // Default date range: current month
+  const now = new Date();
+  const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById('export-from').value = `${y}-${m}-01`;
+  document.getElementById('export-to').value = new Date(y, now.getMonth() + 1, 0).toISOString().slice(0, 10);
+  document.getElementById('export-status').value = '';
+  showModal('export-date-modal');
+}
+
+function doExportBookingsExcel() {
+  const from = document.getElementById('export-from').value;
+  const to   = document.getElementById('export-to').value;
+  const statusFilter = document.getElementById('export-status').value;
+  if (!from || !to) { alert('From aur To date dono required hain'); return; }
+  if (from > to) { alert('From date, To date se pehle honi chahiye'); return; }
+
+  // Get platform settings — live settings pehle, warna Excel defaults
+  const platSettings = (opsPlatformSettings && opsPlatformSettings.platforms) || {};
+  const getPlat = p => {
+    const live = platSettings[p];
+    const def  = EXCEL_PLATFORM_DEFAULTS[p] || { commission_pct: 0, gst_pct: 0, tds_pct: 0 };
+    return { commission_pct: live?.commission_pct ?? def.commission_pct, gst_pct: live?.gst_pct ?? def.gst_pct, tds_pct: live?.tds_pct ?? def.tds_pct };
+  };
 
   const PLATFORM_LABELS = { direct: 'StayDekho Direct', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT/Goibibo', walkin: 'Walk-in' };
+  const BOOKING_MODE = { airbnb: 'airbnb', booking_com: 'booking', agoda: 'otaGst', mmt_goibibo: 'otaGst', direct: 'direct', walkin: 'direct' };
+
+  // Filter by date range and status
+  const filtered = bookings.filter(b => {
+    if (b.isExternal) return false;
+    if (!b.checkin || b.checkin < from || b.checkin > to) return false;
+    if (statusFilter === 'all') return true;
+    if (!statusFilter) return b.status !== 'cancelled';
+    return b.status === statusFilter;
+  });
+
+  if (!filtered.length) { alert(`${from} se ${to} tak koi booking nahi mili (selected filter ke saath)`); return; }
+
+  // Financial calculation per booking
+  function calcFinancials(b) {
+    const total   = b.total_amount || b.amount || 0;
+    const nights  = b.nights || 1;
+    const plat    = b.platform || 'direct';
+    const mode    = BOOKING_MODE[plat] || 'direct';
+    const cfg     = getPlat(plat);
+    const commPct = cfg.commission_pct;
+    const gstPct  = (mode === 'airbnb')
+      ? ((total / nights) > (7500 * 1.05) ? 18 : 5)  // approx slab check
+      : cfg.gst_pct;
+    const tdsPct  = cfg.tds_pct;
+
+    // Back-calculate netRate from guest-paid total
+    let netRate;
+    if (mode === 'booking') {
+      netRate = total;                         // Booking.com: total is already net-of-GST
+    } else {
+      netRate = Math.round(total / (1 + gstPct / 100)); // GST was added on top
+    }
+
+    const commission = Math.round(netRate * commPct / 100);
+    const commGst    = (mode === 'airbnb') ? 0 : Math.round(commission * gstPct / 100);
+    const tds        = Math.round(netRate * tdsPct / 100);
+    const ownerRcvd  = Math.round(netRate - commission - commGst - tds);
+    const sdNet      = commission - commGst;  // StayDekho keeps this after paying GST
+
+    return { guestPaid: total, ownerRcvd, sdCommission: commission, gstToPay: commGst, remittedTax: tds, sdNet };
+  }
+
   const esc = v => {
     const s = String(v ?? '');
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
+  const inr = n => Math.round(n || 0);
 
-  const headers = ['Booking ID','Guest','Property','Platform','Check-in','Check-out','Guests','Total Amount','Advance','Balance','Balance Paid','Owner Paid','Status'];
-  const rows = bookings.map(b => [
-    b.id, b.guest, b.property,
-    PLATFORM_LABELS[b.platform] || b.platform,
-    b.checkin, b.checkout, b.guests,
-    b.total_amount, b.amount, b.balance_amount,
-    b.balance_paid ? 'Yes' : 'No',
-    b.owner_paid ? 'Yes' : 'No',
-    (b.status || '').replace('_', ' '),
-  ].map(esc).join(','));
+  const headers = [
+    'Booking ID', 'Customer Name', 'Check-in', 'Check-out', 'Nights',
+    'Property', 'Platform',
+    'Amount Guest Paid (₹)', 'Amount Owner Received (₹)',
+    'StayDekho Commission (₹)', 'GST to be Paid (₹)', 'Remitted Tax/TDS (₹)',
+    'Balance Paid', 'Owner Paid', 'Status',
+  ];
 
-  // BOM — isse Excel Hindi/₹ characters sahi dikhata hai
-  const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n');
+  const rows = filtered.map(b => {
+    const fin = calcFinancials(b);
+    return [
+      b.id, b.guest, b.checkin, b.checkout, b.nights || 1,
+      b.property, PLATFORM_LABELS[b.platform] || b.platform,
+      inr(fin.guestPaid), inr(fin.ownerRcvd),
+      inr(fin.sdCommission), inr(fin.gstToPay), inr(fin.remittedTax),
+      b.balance_paid ? 'Yes' : 'No',
+      b.owner_paid ? 'Yes' : 'No',
+      (b.status || '').replace('_', ' '),
+    ].map(esc).join(',');
+  });
+
+  // Summary row at bottom
+  const totals = filtered.reduce((acc, b) => {
+    const fin = calcFinancials(b);
+    acc.guestPaid    += fin.guestPaid;
+    acc.ownerRcvd    += fin.ownerRcvd;
+    acc.sdCommission += fin.sdCommission;
+    acc.gstToPay     += fin.gstToPay;
+    acc.remittedTax  += fin.remittedTax;
+    return acc;
+  }, { guestPaid: 0, ownerRcvd: 0, sdCommission: 0, gstToPay: 0, remittedTax: 0 });
+
+  const summaryRow = [
+    'TOTAL', `${filtered.length} bookings`, from, to, '',
+    '', '',
+    inr(totals.guestPaid), inr(totals.ownerRcvd),
+    inr(totals.sdCommission), inr(totals.gstToPay), inr(totals.remittedTax),
+    '', '', '',
+  ].map(esc).join(',');
+
+  // BOM — Excel Hindi/₹ characters sahi dikhata hai
+  const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n') + '\n' + summaryRow;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `staydekho-bookings-${new Date().toISOString().slice(0,10)}.csv`;
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `staydekho-bookings-${from}-to-${to}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast ? showToast(`${bookings.length} bookings export ho gayi!`, 'success') : null;
+  closeModal('export-date-modal');
+  showToast ? showToast(`${filtered.length} bookings export ho gayi! (${from} → ${to})`, 'success') : null;
 }
 
 // ── CLEANING TRACKER ──
@@ -3512,6 +3635,7 @@ async function loadStaffList() {
             ? `<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c" onclick="deactivateStaff('${s.id}','${s.name}')">Deactivate</button>`
             : `<button class="btn btn-sm" style="background:#dcfce7;color:#15803d" onclick="activateStaff('${s.id}')">Activate</button>`
           }
+          <button class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" onclick="deleteStaff('${s.id}','${s.name}')">Delete</button>
         </td>
       </tr>`).join('');
   } catch(e) {
@@ -3738,6 +3862,19 @@ async function activateStaff(id) {
     });
     await loadStaffList();
   } catch(e) { alert('Failed. Try again.'); }
+}
+
+async function deleteStaff(id, name) {
+  if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+  try {
+    const tok = localStorage.getItem('sd_token');
+    const res = await fetch(getApiBase() + '/staff/delete/' + id, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + tok },
+    });
+    if (!res.ok) throw new Error();
+    await loadStaffList();
+  } catch(e) { alert('Failed to delete. Try again.'); }
 }
 
 async function resolveIssue(id) {

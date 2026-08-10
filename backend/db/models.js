@@ -32,7 +32,7 @@ const propertySchema = new Schema({
   amenities:      { type: String, default: '' },
   images:         { type: String, default: '[]' },
   status:         { type: String, default: 'Active', enum: ['Active', 'Inactive'] },
-  checkin_time:   { type: String, default: '2:00 PM' },
+  checkin_time:   { type: String, default: '12:00 PM (Noon)' },
   checkout_time:  { type: String, default: '11:00 AM' },
   rules:          { type: String, default: '[]' },
   addons:         { type: String, default: '[]' },

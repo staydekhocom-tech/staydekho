@@ -1446,11 +1446,11 @@ function render(p, host, reviews) {
         <div class="checkinout-strip" style="display:flex;gap:12px;margin:14px 0 18px 0;flex-wrap:wrap">
           <div style="flex:1;min-width:160px;border:1px solid var(--gray-200,#e5e7eb);border-radius:12px;padding:14px 16px;background:#fafafa">
             <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--gray-500,#6b7280);font-weight:700">Check-in</div>
-            <div style="font-size:1.15rem;font-weight:800;margin-top:4px">${esc(p.checkin_time||'2:00 PM')}</div>
+            <div style="font-size:1.15rem;font-weight:800;margin-top:4px">${esc(p.checkin_time||'12:00 PM (Noon)')}</div>
           </div>
           <div style="flex:1;min-width:160px;border:1px solid var(--gray-200,#e5e7eb);border-radius:12px;padding:14px 16px;background:#fafafa">
             <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--gray-500,#6b7280);font-weight:700">Check-out</div>
-            <div style="font-size:1.15rem;font-weight:800;margin-top:4px">${esc(p.checkout_time||'11:00 AM')}</div>
+            <div style="font-size:1.15rem;font-weight:800;margin-top:4px">${esc(p.checkout_time||'10:00 AM')}</div>
           </div>
         </div>
 
@@ -1544,7 +1544,7 @@ function render(p, host, reviews) {
         <div class="prop-section">
           <h3>House Rules</h3>
           <ul class="rules-list">
-            ${renderRules(p.rules||[], p.checkin_time||'2:00 PM', p.checkout_time||'11:00 AM')}
+            ${renderRules(p.rules||[], p.checkin_time||'12:00 PM (Noon)', p.checkout_time||'10:00 AM')}
           </ul>
         </div>
 

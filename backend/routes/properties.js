@@ -38,7 +38,7 @@ function normalize(p) {
     fomo_enabled:   p.fomo_enabled !== false && p.fomo_enabled !== 0,
     fomo_bookings:  p.fomo_bookings,
     fomo_viewers:   p.fomo_viewers,
-    checkin_time:   p.checkin_time  || '2:00 PM',
+    checkin_time:   p.checkin_time  || '12:00 PM (Noon)',
     checkout_time:  p.checkout_time || '11:00 AM',
     rating:         null,
     review_count:   0,
@@ -191,7 +191,7 @@ router.post('/', protect, adminOnly, upload.array('images', 70), async (req, res
       brochure_url:   data.brochure_url   || '',
       rules:          JSON.stringify(data.rules  || []),
       addons:         JSON.stringify(data.addons || []),
-      checkin_time:   data.checkin_time   || '2:00 PM',
+      checkin_time:   data.checkin_time   || '12:00 PM (Noon)',
       checkout_time:  data.checkout_time  || '11:00 AM',
       fomo_bookings:  data.fomo_bookings  ?? null,
       fomo_viewers:   data.fomo_viewers   ?? null,
@@ -248,7 +248,7 @@ router.put('/:id', protect, adminOnly, upload.array('images', 70), async (req, r
       amenities:     data.amenities    ?? existing.amenities,
       images:        finalImages,
       status:        data.status       || existing.status,
-      checkin_time:  data.checkin_time  ?? existing.checkin_time  ?? '2:00 PM',
+      checkin_time:  data.checkin_time  ?? existing.checkin_time  ?? '12:00 PM (Noon)',
       checkout_time: data.checkout_time ?? existing.checkout_time ?? '11:00 AM',
       rules:         data.rules !== undefined
         ? (typeof data.rules === 'string' ? data.rules : JSON.stringify(data.rules || []))

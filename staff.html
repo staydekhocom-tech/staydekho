@@ -9,19 +9,25 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;color:#1a1a1a;padding-bottom:80px}
 
 /* ── Login ── */
-#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#fff}
-.login-logo{width:72px;height:72px;background:#8B1717;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
-.login-logo span{color:#fff;font-size:28px;font-weight:700}
-.login-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center}
-.login-sub{font-size:14px;color:#666;margin-bottom:32px;text-align:center}
+#login-screen{min-height:100vh;display:flex;flex-direction:column;background:#8B1717;position:relative;overflow:hidden}
+.login-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px 32px;position:relative;z-index:1}
+.login-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 50%,rgba(255,255,255,.08) 0%,transparent 60%);pointer-events:none}
+.login-brand-icon{width:76px;height:76px;background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;border:1.5px solid rgba(255,255,255,.25)}
+.login-brand-icon span{color:#fff;font-size:32px;font-weight:800;letter-spacing:-1px}
+.login-brand-name{font-size:28px;font-weight:800;color:#fff;letter-spacing:-.5px;margin-bottom:4px}
+.login-brand-sub{font-size:13px;color:rgba(255,255,255,.7);letter-spacing:.3px}
+.login-card{background:#fff;border-radius:28px 28px 0 0;padding:32px 24px 40px;box-shadow:0 -4px 32px rgba(0,0,0,.12)}
+.login-card-title{font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:4px}
+.login-card-sub{font-size:13px;color:#888;margin-bottom:24px}
 .field{width:100%;margin-bottom:14px}
-.field label{display:block;font-size:13px;font-weight:500;color:#444;margin-bottom:6px}
-.field input{width:100%;padding:13px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:16px;outline:none;transition:border .2s;background:#fff}
-.field input:focus{border-color:#8B1717}
-.btn-primary{width:100%;padding:14px;background:#8B1717;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-top:4px}
-.btn-primary:active{opacity:.85}
-.btn-primary:disabled{opacity:.5}
+.field label{display:block;font-size:12px;font-weight:600;color:#666;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input{width:100%;padding:14px 16px;border:1.5px solid #e8e8e8;border-radius:12px;font-size:16px;outline:none;transition:border .2s;background:#fafafa;color:#1a1a1a}
+.field input:focus{border-color:#8B1717;background:#fff}
+.btn-primary{width:100%;padding:15px;background:#8B1717;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;letter-spacing:.2px;box-shadow:0 4px 16px rgba(139,23,23,.3)}
+.btn-primary:active{opacity:.85;transform:scale(.99)}
+.btn-primary:disabled{opacity:.5;box-shadow:none}
 .login-err{color:#c0392b;font-size:13px;text-align:center;margin-top:10px;display:none}
+.login-footer{text-align:center;margin-top:20px;font-size:12px;color:#bbb}
 
 /* ── Top bar ── */
 .topbar{position:sticky;top:0;z-index:100;background:#8B1717;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
@@ -155,19 +161,26 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
 
 <!-- ── Login screen ── -->
 <div id="login-screen">
-  <div class="login-logo"><span>S</span></div>
-  <h1 class="login-title">Staff Login</h1>
-  <p class="login-sub">StayDekho Caretaker Panel</p>
-  <div class="field">
-    <label>Phone Number</label>
-    <input type="tel" id="login-phone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+  <div class="login-hero">
+    <div class="login-brand-icon"><span>SD</span></div>
+    <div class="login-brand-name">StayDekho</div>
+    <div class="login-brand-sub">Premium Homestays · Udaipur, Rajasthan</div>
   </div>
-  <div class="field">
-    <label>4-Digit PIN</label>
-    <input type="password" id="login-pin" placeholder="••••" maxlength="4" inputmode="numeric">
+  <div class="login-card">
+    <div class="login-card-title">Staff Login</div>
+    <div class="login-card-sub">Welcome back! Please enter your credentials.</div>
+    <div class="field">
+      <label>Phone Number</label>
+      <input type="tel" id="login-phone" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>4-Digit PIN</label>
+      <input type="password" id="login-pin" placeholder="••••" maxlength="4" inputmode="numeric">
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Login →</button>
+    <p class="login-err" id="login-err">Incorrect phone or PIN. Please try again.</p>
+    <div class="login-footer">StayDekho Staff Portal · Secure Access</div>
   </div>
-  <button class="btn-primary" id="login-btn" onclick="doLogin()">Login</button>
-  <p class="login-err" id="login-err">Incorrect phone or PIN. Please try again.</p>
 </div>
 
 <!-- ── Main app (hidden until login) ── -->
@@ -622,11 +635,11 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
         <div class="nb-row">
           <div class="nb-field">
             <label>Check-in Time</label>
-            <input id="lm-checkin-time" type="text" placeholder="2:00 PM">
+            <input id="lm-checkin-time" type="text" placeholder="12:00 PM (Noon)">
           </div>
           <div class="nb-field">
             <label>Check-out Time</label>
-            <input id="lm-checkout-time" type="text" placeholder="11:00 AM">
+            <input id="lm-checkout-time" type="text" placeholder="10:00 AM">
           </div>
         </div>
         <div class="nb-field" style="margin-bottom:12px">
