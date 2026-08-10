@@ -822,5 +822,20 @@ const sorted = sortProps(list);
   });
 
 </script>
+
+<!-- ── WhatsApp Floating Button ── -->
+<a id="wa-float" href="https://wa.me/918602591814?text=Hi%20StayDekho!%20I%27m%20looking%20for%20a%20villa%20%2F%20homestay%20in%20Udaipur.%20Can%20you%20help%3F%20%F0%9F%8F%A1" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.471 2.027 7.773L0 32l8.489-2.001A15.93 15.93 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0z" fill="#25D366"/><path d="M23.5 19.71c-.32-.16-1.89-.933-2.183-1.04-.293-.106-.507-.16-.72.16-.213.32-.827 1.04-1.013 1.253-.187.213-.373.24-.693.08-.32-.16-1.351-.498-2.573-1.587-.95-.847-1.592-1.893-1.778-2.213-.187-.32-.02-.493.14-.653.144-.143.32-.373.48-.56.16-.187.213-.32.32-.533.107-.213.053-.4-.027-.56-.08-.16-.72-1.733-.987-2.373-.26-.627-.52-.54-.72-.55l-.613-.013c-.213 0-.56.08-.853.4-.293.32-1.12 1.093-1.12 2.667s1.147 3.093 1.307 3.307c.16.213 2.253 3.44 5.46 4.827.763.327 1.36.523 1.823.667.767.24 1.467.207 2.02.127.616-.093 1.893-.773 2.16-1.52.267-.747.267-1.387.187-1.52-.08-.133-.293-.213-.613-.373z" fill="#fff"/></svg>
+  <span class="wa-label">Chat with us</span>
+</a>
+<style>
+#wa-float{position:fixed;bottom:24px;right:24px;z-index:9998;display:flex;align-items:center;gap:10px;background:#25D366;color:#fff;text-decoration:none;padding:12px 18px 12px 14px;border-radius:50px;box-shadow:0 4px 20px rgba(37,211,102,.45);font-family:inherit;font-size:14px;font-weight:600;transition:transform .2s,box-shadow .2s}
+#wa-float:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(37,211,102,.55)}
+#wa-float svg{width:26px;height:26px;flex-shrink:0}
+.wa-label{white-space:nowrap}
+#scroll-top{bottom:90px !important}
+@media(max-width:700px){#wa-float{bottom:20px;right:16px;padding:13px;border-radius:50%}.wa-label{display:none}#scroll-top{bottom:220px !important;right:16px}}
+</style>
+
 </body>
 </html>
