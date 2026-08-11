@@ -26,13 +26,18 @@ async function seedIfEmpty() {
   const { User, Property, SiteSetting, TravelGuide } = require('./models');
   const bcrypt = require('bcryptjs');
 
-  // ── Admin seed ──────────────────────────────────────
-  const adminExists = await User.findOne({ email: 'admin@staydekho.com' });
-  if (!adminExists) {
-    const adminPass = process.env.ADMIN_PASSWORD || 'StayDekho@2024!';
-    const hash = await bcrypt.hash(adminPass, 10);
-    await User.create({ name: 'Admin', email: 'admin@staydekho.com', phone: '+91 98765 00000', password: hash, role: 'admin' });
-    console.log(`✅ Admin seeded — email: admin@staydekho.com  password: ${adminPass}`);
+  // ── Admin seed — always sync credentials from env vars ──
+  const adminEmail = process.env.ADMIN_EMAIL    || 'info@staydekho.com';
+  const adminPass  = process.env.ADMIN_PASSWORD || 'Atharv17122024';
+  const adminPhone = process.env.ADMIN_PHONE    || '+91 86025 91814';
+  const hash = await bcrypt.hash(adminPass, 10);
+  const existingAdmin = await User.findOne({ role: 'admin' });
+  if (!existingAdmin) {
+    await User.create({ name: 'Sanskar Patidar', email: adminEmail, phone: adminPhone, password: hash, role: 'admin' });
+    console.log(`✅ Admin created — email: ${adminEmail}`);
+  } else {
+    await User.findByIdAndUpdate(existingAdmin._id, { email: adminEmail, phone: adminPhone, password: hash, name: 'Sanskar Patidar' });
+    console.log(`✅ Admin synced — email: ${adminEmail}`);
   }
 
   // ── Properties seed ─────────────────────────────────

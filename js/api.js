@@ -180,9 +180,11 @@ const api = {
   },
   getWishlist: () => JSON.parse(localStorage.getItem('sd_wishlist') || '[]'),
 
-  createOrder:   (booking_id) => request('POST', '/payments/create-order', { booking_id }),
-  verifyPayment: (body)       => request('POST', '/payments/verify', body),
-  listPayments:  ()           => request('GET',  '/payments'),
+  createOrder:      (booking_id) => request('POST', '/payments/create-order', { booking_id }),
+  verifyPayment:    (body)       => request('POST', '/payments/verify', body),
+  createGuestOrder: (body)       => request('POST', '/payments/create-guest-order', body),
+  confirmBooking:   (body)       => request('POST', '/payments/confirm-booking', body),
+  listPayments:     ()           => request('GET',  '/payments'),
 
   myListings:   ()    => api.listProperties(),
   hostBookings: ()    => api.listBookings(),

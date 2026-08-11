@@ -2024,46 +2024,67 @@ async function initiateBooking() {
   if (btn) { btn.disabled=true; btn.textContent='Processing…'; }
 
   try {
-    const bookingRes = await api.createBooking({ property_id:PROP.id, checkin:ci, checkout:co, guests:GUESTS });
-    const booking = bookingRes.booking;
-    const bookingId = booking.id || booking._id;   // MongoDB uses _id
-    let orderRes = null;
+    // Step 1: Create Razorpay order — NO booking created in DB yet
+    let orderRes;
     try {
-      orderRes = await api.createOrder(bookingId);
-      console.log('[Pay] orderRes:', JSON.stringify(orderRes));
+      orderRes = await api.createGuestOrder({ property_id: PROP.id, checkin: ci, checkout: co, guests: GUESTS });
     } catch(payErr) {
-      console.error('[Pay] createOrder error:', payErr.message, payErr);
-      const errMsg = payErr.message || 'createOrder failed';
-      // Common Razorpay misconfig hints
-      let hint = '';
-      if (errMsg.includes('key')) hint = ' (Check RAZORPAY_KEY_ID in Railway)';
-      else if (errMsg.includes('auth') || errMsg.includes('401')) hint = ' (Razorpay keys invalid — check Railway env vars)';
-      else if (errMsg.includes('amount')) hint = ' (Amount too small — Razorpay min is ₹1)';
-      showToast('Payment failed: ' + errMsg + hint, 'error');
+      const errMsg = payErr.message || 'Payment setup failed';
+      showToast(errMsg, 'error');
       if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
       return;
     }
 
-    // Validate we got everything Razorpay needs
-    if (orderRes?.order_id && orderRes?.key_id) {
-      if (typeof window.Razorpay === 'undefined') {
-        showToast('Razorpay script not loaded — try disabling ad-blocker.','error');
-        if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
-        return;
-      }
-      api.openRazorpay({
-        order_id:orderRes.order_id, amount:orderRes.amount,
-        currency:orderRes.currency||'INR', key_id:orderRes.key_id,
-        booking:orderRes.booking||booking,
-        onSuccess:()=>{ showToast('Advance paid! Booking confirmed ✅','success'); setTimeout(()=>{window.location.href=`guest-dashboard.html?booking_id=${bookingId}`;},1200); },
-        onError:(err)=>{ showToast(err.message||'Payment cancelled','error'); if(btn){btn.disabled=false;btn.textContent='Reserve Now (Pay 30%)';} }
-      });
-    } else {
-      // Got response but missing order_id / key_id
-      console.warn('[Pay] incomplete orderRes:', JSON.stringify(orderRes));
+    if (!orderRes?.order_id || !orderRes?.key_id) {
       showToast('Payment setup issue — please contact support.','error');
       if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+      return;
     }
+
+    if (typeof window.Razorpay === 'undefined') {
+      showToast('Razorpay script not loaded — try disabling ad-blocker.','error');
+      if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+      return;
+    }
+
+    // Step 2: Open Razorpay — booking is created ONLY after payment succeeds
+    const user = getUser();
+    const rzp = new window.Razorpay({
+      key:         orderRes.key_id,
+      amount:      orderRes.amount,
+      currency:    orderRes.currency || 'INR',
+      name:        'StayDekho',
+      description: `Booking — ${orderRes.property_name || PROP.title}`,
+      order_id:    orderRes.order_id,
+      prefill: { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
+      theme:       { color: '#8B1717' },
+      handler: async (response) => {
+        try {
+          // Step 3: Payment succeeded — NOW create the booking as 'confirmed'
+          const result = await api.confirmBooking({
+            razorpay_order_id:   response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature:  response.razorpay_signature,
+            booking_meta:        orderRes.booking_meta,
+            guest_name:          user?.name  || '',
+            guest_email:         user?.email || '',
+            guest_phone:         user?.phone || '',
+          });
+          showToast('Advance paid! Booking confirmed ✅', 'success');
+          setTimeout(() => { window.location.href = `guest-dashboard.html?booking_id=${result.booking_id}`; }, 1200);
+        } catch(err) {
+          showToast(err.message || 'Booking confirmation failed — contact support.', 'error');
+          if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          showToast('Payment cancelled', 'error');
+          if(btn){btn.disabled=false;btn.textContent='Reserve Now';}
+        }
+      }
+    });
+    rzp.open();
   } catch(err) {
     const msg = err.message || 'Booking failed. Please try again.';
     showToast(msg, 'error');
