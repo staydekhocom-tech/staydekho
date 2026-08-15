@@ -253,6 +253,7 @@
     <div class="sidebar-link" onclick="showPage('addons');closeSidebar()"><span class="icon">🧰</span> Add-on Requests</div>
     <div class="sidebar-link" onclick="showPage('blog');closeSidebar()"><span class="icon">📝</span> Blog Posts</div>
     <div class="nav-sec-lbl">Website Links</div>
+    <div class="sidebar-link" onclick="showPage('accounts');closeSidebar()"><span class="icon">💰</span> Accounts</div>
     <a class="sidebar-link" href="index.html" target="_blank"><span class="icon">🌐</span> Home Page</a>
     <a class="sidebar-link" href="listings.html" target="_blank"><span class="icon">🔍</span> Listings</a>
     <a class="sidebar-link" href="about.html" target="_blank"><span class="icon">ℹ️</span> About Us</a>
@@ -805,6 +806,129 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
+       ACCOUNTS PAGE
+  ══════════════════════════════════════════════════════ -->
+  <div class="page-view" id="page-accounts">
+    <div class="topbar">
+      <div><div class="page-title">Accounts</div><div class="page-subtitle">Booking ledger, owner payouts &amp; GST summary</div></div>
+      <button class="btn btn-outline" onclick="exportAccountsCSV()" style="font-size:13px">⬇ Export CSV</button>
+    </div>
+
+    <!-- Sub-tab buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="acc-tab-ledger"  onclick="switchAccTab('ledger')">📒 Booking Ledger</button>
+      <button class="btn btn-outline" id="acc-tab-payouts" onclick="switchAccTab('payouts')">🏠 Owner Payouts</button>
+      <button class="btn btn-outline" id="acc-tab-gst"     onclick="switchAccTab('gst')">📑 GST Report</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="card" style="margin-bottom:16px;padding:14px 18px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">MONTH</label>
+          <input type="month" id="acc-filter-month" class="form-ctrl" style="padding:6px 10px;font-size:13px;width:150px" onchange="loadAccountsData()"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">PLATFORM</label>
+          <select id="acc-filter-platform" class="form-ctrl" style="padding:6px 10px;font-size:13px;width:160px" onchange="loadAccountsData()">
+            <option value="">All Platforms</option>
+            <option value="direct">Direct (Website)</option>
+            <option value="airbnb">Airbnb</option>
+            <option value="booking_com">Booking.com</option>
+            <option value="agoda">Agoda</option>
+            <option value="mmt_goibibo">MMT / Goibibo</option>
+            <option value="walkin">Walk-in</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">STATUS</label>
+          <select id="acc-filter-status" class="form-ctrl" style="padding:6px 10px;font-size:13px;width:150px" onchange="loadAccountsData()">
+            <option value="">All</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="checked_in">Checked In</option>
+            <option value="checked_out">Checked Out</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('acc-filter-month').value='';document.getElementById('acc-filter-platform').value='';document.getElementById('acc-filter-status').value='';loadAccountsData()" style="margin-top:16px">Reset</button>
+      </div>
+    </div>
+
+    <!-- Summary tiles -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px" id="acc-summary-tiles">
+      <div class="card" style="padding:16px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em">Total Revenue</div><div style="font-size:22px;font-weight:800;color:var(--red-dark);margin-top:6px" id="acc-tile-revenue">—</div></div>
+      <div class="card" style="padding:16px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em">Owner Share (70%)</div><div style="font-size:22px;font-weight:800;color:#15803d;margin-top:6px" id="acc-tile-owner">—</div></div>
+      <div class="card" style="padding:16px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em">StayDekho (30%)</div><div style="font-size:22px;font-weight:800;color:#8B1717;margin-top:6px" id="acc-tile-sd">—</div></div>
+      <div class="card" style="padding:16px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em">GST Collected</div><div style="font-size:22px;font-weight:800;color:#1d4ed8;margin-top:6px" id="acc-tile-gst">—</div></div>
+      <div class="card" style="padding:16px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em">Balance Pending</div><div style="font-size:22px;font-weight:800;color:#d97706;margin-top:6px" id="acc-tile-pending">—</div></div>
+    </div>
+
+    <!-- LEDGER TAB -->
+    <div id="acc-panel-ledger">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Guest</th><th>Property</th><th>Platform</th>
+                <th>Check-in</th><th>Nights</th>
+                <th style="text-align:right">Total</th>
+                <th style="text-align:right">Advance</th>
+                <th style="text-align:right">Balance</th>
+                <th style="text-align:right">Owner (70%)</th>
+                <th style="text-align:right">SD (30%)</th>
+                <th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="acc-ledger-tbody"><tr><td colspan="13" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYOUTS TAB -->
+    <div id="acc-panel-payouts" style="display:none">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Property</th><th>Bookings</th>
+                <th style="text-align:right">Total Revenue</th>
+                <th style="text-align:right">Owner Share (70%)</th>
+                <th style="text-align:right">Balance Pending</th>
+                <th style="text-align:right">Owner Payout Due</th>
+              </tr>
+            </thead>
+            <tbody id="acc-payouts-tbody"><tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GST REPORT TAB -->
+    <div id="acc-panel-gst" style="display:none">
+      <div class="card">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px">GST is embedded in guest price (inclusive). Shown below is extracted GST per month for direct bookings. OTA platforms handle their own GST.</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th><th>Bookings</th>
+                <th style="text-align:right">Gross Revenue</th>
+                <th style="text-align:right">GST Rate</th>
+                <th style="text-align:right">GST Collected</th>
+                <th style="text-align:right">Base (ex-GST)</th>
+              </tr>
+            </thead>
+            <tbody id="acc-gst-tbody"><tr><td colspan="6" style="text-align:center;color:var(--gray-400)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
        STAFF PAGE
   ══════════════════════════════════════════════════════ -->
   <div class="page-view" id="page-staff">
@@ -1321,6 +1445,7 @@ function showPage(name) {
   if(name === 'blog') loadBlogPosts();
   if(name === 'operations') { loadOpsProps().then(loadOperationsHub); }
   if(name === 'staff') loadStaffPage();
+  if(name === 'accounts') loadAccountsData();
 }
 
 function showModal(id)  { document.getElementById(id).classList.add('open'); }
@@ -3998,6 +4123,239 @@ async function submitAddTask() {
     errEl.textContent = 'Network error. Try again.'; errEl.style.display = '';
   }
 }
+
+// ══════════════════════════════════════════════════════
+// ACCOUNTS MODULE
+// ══════════════════════════════════════════════════════
+let accBookings = [];
+let accActiveTab = 'ledger';
+
+const PLAT_LABEL = { direct:'Direct (Website)', airbnb:'Airbnb', booking_com:'Booking.com', agoda:'Agoda', mmt_goibibo:'MMT/Goibibo', walkin:'Walk-in' };
+const INR = n => '₹' + Number(n||0).toLocaleString('en-IN', { minimumFractionDigits:0, maximumFractionDigits:0 });
+
+function switchAccTab(tab) {
+  accActiveTab = tab;
+  ['ledger','payouts','gst'].forEach(t => {
+    document.getElementById('acc-panel-'+t).style.display = t === tab ? '' : 'none';
+    const btn = document.getElementById('acc-tab-'+t);
+    btn.className = t === tab ? 'btn btn-primary' : 'btn btn-outline';
+  });
+  renderAccounts();
+}
+
+async function loadAccountsData() {
+  const monthVal    = document.getElementById('acc-filter-month')?.value || '';
+  const platformVal = document.getElementById('acc-filter-platform')?.value || '';
+  const statusVal   = document.getElementById('acc-filter-status')?.value || '';
+
+  try {
+    const params = {};
+    if (platformVal) params.platform = platformVal;
+    if (statusVal)   params.status   = statusVal;
+    const d = await api.adminBookings(params);
+    let rows = d.bookings || [];
+
+    // Month filter (client-side on checkin)
+    if (monthVal) {
+      rows = rows.filter(b => (b.checkin || '').slice(0, 7) === monthVal);
+    }
+
+    accBookings = rows;
+    renderAccounts();
+  } catch(e) {
+    console.error('Accounts load error:', e.message);
+  }
+}
+
+function calcShares(b) {
+  const total   = Number(b.total_amount || b.amount || 0);
+  const nights  = Number(b.nights || 1);
+  const isDirect = !b.platform || b.platform === 'direct' || b.platform === 'walkin';
+
+  // GST extraction (inclusive pricing)
+  let gstAmt = 0;
+  if (isDirect && total > 0 && nights > 0) {
+    const perNight = total / nights;
+    const gstRate  = perNight > 7500 ? 18 : 5;
+    gstAmt = Math.round(total * gstRate / (100 + gstRate));
+  }
+
+  // Split base: for direct = total; for OTA = net_payout if set, else total
+  const splitBase  = isDirect ? total : Number(b.net_payout != null ? b.net_payout : total);
+  const remitted   = isDirect ? 0 : Number(b.remitted_tax || 0);
+  const netRevenue = Math.max(0, splitBase - remitted);
+  const ownerShare = Math.round(netRevenue * 0.70);
+  const sdShare    = netRevenue - ownerShare;
+
+  return { total, gstAmt, ownerShare, sdShare, splitBase, netRevenue };
+}
+
+function renderAccounts() {
+  // Only active + not cancelled for financial totals
+  const active = accBookings.filter(b => b.status !== 'cancelled');
+
+  let totalRev = 0, totalOwner = 0, totalSd = 0, totalGst = 0, totalPending = 0;
+  active.forEach(b => {
+    const { total, gstAmt, ownerShare, sdShare } = calcShares(b);
+    totalRev   += total;
+    totalOwner += ownerShare;
+    totalSd    += sdShare;
+    totalGst   += gstAmt;
+    if (!b.balance_paid) totalPending += Number(b.balance_amount || 0);
+  });
+
+  document.getElementById('acc-tile-revenue').textContent = INR(totalRev);
+  document.getElementById('acc-tile-owner').textContent   = INR(totalOwner);
+  document.getElementById('acc-tile-sd').textContent      = INR(totalSd);
+  document.getElementById('acc-tile-gst').textContent     = INR(totalGst);
+  document.getElementById('acc-tile-pending').textContent = INR(totalPending);
+
+  if (accActiveTab === 'ledger')  renderLedger();
+  if (accActiveTab === 'payouts') renderPayouts();
+  if (accActiveTab === 'gst')     renderGstReport();
+}
+
+function renderLedger() {
+  const tbody = document.getElementById('acc-ledger-tbody');
+  if (!accBookings.length) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--gray-400)">No bookings found</td></tr>'; return; }
+
+  const sorted = [...accBookings].sort((a,b) => new Date(b.checkin||0) - new Date(a.checkin||0));
+
+  tbody.innerHTML = sorted.map(b => {
+    const { total, ownerShare, sdShare } = calcShares(b);
+    const advance  = Number(b.amount || 0);
+    const balance  = Number(b.balance_amount || 0);
+    const statusColors = { confirmed:'#dcfce7;color:#15803d', pending:'#fef9c3;color:#a16207', checked_in:'#dbeafe;color:#1d4ed8', checked_out:'#f3f4f6;color:#374151', cancelled:'#fee2e2;color:#dc2626' };
+    const sc = statusColors[b.status] || '#f3f4f6;color:#374151';
+    const bookingId = b.id || b._id;
+    const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}); } catch{return s||'—';} };
+    return `<tr>
+      <td style="font-size:11px;color:var(--gray-400)">${b.booking_no ? 'SD-'+String(b.booking_no).padStart(4,'0') : '—'}</td>
+      <td><b>${esc(b.guest_name||'—')}</b><br/><span style="font-size:11px;color:var(--gray-400)">${esc(b.guest_phone||'')}</span></td>
+      <td style="font-size:12px">${esc(b.property_name||'—')}</td>
+      <td><span style="font-size:11px;background:#f0f4ff;color:#3b5bdb;padding:2px 7px;border-radius:12px">${PLAT_LABEL[b.platform]||b.platform||'Direct'}</span></td>
+      <td style="font-size:12px">${fmtD(b.checkin)}</td>
+      <td style="text-align:center">${b.nights||'—'}</td>
+      <td style="text-align:right;font-weight:700">${INR(total)}</td>
+      <td style="text-align:right;color:#15803d">${INR(advance)}</td>
+      <td style="text-align:right;color:${b.balance_paid?'#15803d':'#d97706'}">${INR(balance)}${b.balance_paid?' ✓':''}</td>
+      <td style="text-align:right;font-weight:700;color:#15803d">${INR(ownerShare)}</td>
+      <td style="text-align:right;font-weight:700;color:#8B1717">${INR(sdShare)}</td>
+      <td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${sc}">${(b.status||'').replace('_',' ')}</span></td>
+      <td><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:#f8fafc;border:1px solid #e2e8f0" onclick="window.open(getApiBase()+'/bookings/${bookingId}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')">Owner Bill</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPayouts() {
+  const tbody = document.getElementById('acc-payouts-tbody');
+  const active = accBookings.filter(b => b.status !== 'cancelled');
+
+  // Group by property
+  const byProp = {};
+  active.forEach(b => {
+    const pid  = b.property_id || 'unknown';
+    const name = b.property_name || 'Unknown Property';
+    if (!byProp[pid]) byProp[pid] = { name, bookings: 0, total: 0, ownerShare: 0, balancePending: 0 };
+    const { total, ownerShare } = calcShares(b);
+    byProp[pid].bookings++;
+    byProp[pid].total      += total;
+    byProp[pid].ownerShare += ownerShare;
+    if (!b.balance_paid) byProp[pid].balancePending += Number(b.balance_amount || 0);
+  });
+
+  const rows = Object.values(byProp).sort((a,b) => b.total - a.total);
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No data</td></tr>'; return; }
+
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td><b>${esc(r.name)}</b></td>
+    <td style="text-align:center">${r.bookings}</td>
+    <td style="text-align:right;font-weight:700">${INR(r.total)}</td>
+    <td style="text-align:right;font-weight:700;color:#15803d">${INR(r.ownerShare)}</td>
+    <td style="text-align:right;color:#d97706">${INR(r.balancePending)}</td>
+    <td style="text-align:right;font-weight:800;color:#8B1717">${INR(r.ownerShare)}</td>
+  </tr>`).join('');
+}
+
+function renderGstReport() {
+  const tbody = document.getElementById('acc-gst-tbody');
+  // Only direct bookings, not cancelled
+  const direct = accBookings.filter(b =>
+    b.status !== 'cancelled' &&
+    (!b.platform || b.platform === 'direct' || b.platform === 'walkin')
+  );
+
+  // Group by month
+  const byMonth = {};
+  direct.forEach(b => {
+    const month = (b.checkin || '').slice(0, 7);
+    if (!month) return;
+    if (!byMonth[month]) byMonth[month] = { count: 0, gross: 0, gst5: 0, gst18: 0 };
+    const total   = Number(b.total_amount || b.amount || 0);
+    const nights  = Number(b.nights || 1);
+    const perNight = total / nights;
+    if (perNight > 7500) {
+      byMonth[month].gst18 += Math.round(total * 18 / 118);
+    } else {
+      byMonth[month].gst5  += Math.round(total * 5 / 105);
+    }
+    byMonth[month].gross += total;
+    byMonth[month].count++;
+  });
+
+  const months = Object.keys(byMonth).sort().reverse();
+  if (!months.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400)">No direct bookings found</td></tr>'; return; }
+
+  tbody.innerHTML = months.map(m => {
+    const r    = byMonth[m];
+    const gst5 = r.gst5, gst18 = r.gst18, totalGst = gst5 + gst18;
+    const base = r.gross - totalGst;
+    const label = new Date(m+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    return `<tr>
+      <td><b>${label}</b></td>
+      <td style="text-align:center">${r.count}</td>
+      <td style="text-align:right;font-weight:700">${INR(r.gross)}</td>
+      <td style="text-align:right;font-size:12px">
+        ${gst5  > 0 ? `<span style="color:#1d4ed8">5%: ${INR(gst5)}</span>` : ''}
+        ${gst18 > 0 ? `<br/><span style="color:#7c3aed">18%: ${INR(gst18)}</span>` : ''}
+      </td>
+      <td style="text-align:right;font-weight:700;color:#1d4ed8">${INR(totalGst)}</td>
+      <td style="text-align:right">${INR(base)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportAccountsCSV() {
+  if (!accBookings.length) { alert('No data to export. Load accounts first.'); return; }
+  const sorted = [...accBookings].sort((a,b) => new Date(b.checkin||0) - new Date(a.checkin||0));
+  const header = ['Booking#','Guest','Phone','Property','Platform','Check-in','Check-out','Nights','Total','Advance','Balance','Balance Paid','Owner Share (70%)','SD Share (30%)','Status'];
+  const rows = sorted.map(b => {
+    const { total, ownerShare, sdShare } = calcShares(b);
+    return [
+      b.booking_no ? 'SD-'+String(b.booking_no).padStart(4,'0') : '',
+      b.guest_name||'', b.guest_phone||'', b.property_name||'',
+      PLAT_LABEL[b.platform]||b.platform||'Direct',
+      b.checkin||'', b.checkout||'', b.nights||'',
+      total, b.amount||0, b.balance_amount||0,
+      b.balance_paid ? 'Yes' : 'No',
+      ownerShare, sdShare, b.status||''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = [header.join(','), ...rows].join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: `staydekho-accounts-${new Date().toISOString().slice(0,10)}.csv` });
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+// Set current month as default filter on first load
+(function() {
+  const now = new Date();
+  const m   = now.toISOString().slice(0, 7);
+  setTimeout(() => {
+    const el = document.getElementById('acc-filter-month');
+    if (el && !el.value) el.value = m;
+  }, 100);
+})();
 </script>
 
 <!-- Add Booking Modal -->
