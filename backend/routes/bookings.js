@@ -607,11 +607,8 @@ router.get('/:id/owner-bill', (req, res, next) => {
     // Base for the 70:30 split
     let base, baseLabel, gstCollected = 0, gstRate = 0;
     if (isDirect) {
-      // GST pehle strip karo (India hotel GST slabs: ≤₹7500/night → 12%, >₹7500 → 18%)
-      const perNightGross = totalAmt / nights;
-      gstRate   = (perNightGross / 1.12) > 7500 ? 18 : 12;
-      base      = Math.round(totalAmt / (1 + gstRate / 100)); // base fare (GST-free)
-      gstCollected = totalAmt - base;
+      // Price is GST-inclusive — split full amount 70/30 directly (no separate GST deduction)
+      base      = totalAmt;
       baseLabel = 'Guest Paid (Total)';
     } else {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
@@ -702,11 +699,11 @@ router.get('/:id/owner-bill', (req, res, next) => {
   <div class="split">
     <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${INR(totalAmt)}</span></div>
     ${isDirect && gstCollected > 0 ? `
-    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: GST ${gstRate}% (StayDekho govt ko jama karega)</span><span>− ${INR(gstCollected)}</span></div>
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: GST ${gstRate}% (collected &amp; remitted to govt by StayDekho)</span><span>− ${INR(gstCollected)}</span></div>
     <div class="split-row" style="color:#555;font-size:12px;font-weight:600"><span class="lbl">Base Fare (70:30 split base)</span><span>${INR(base)}</span></div>
     ` : ''}
     ${remittedTax > 0 ? `
-    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (${PLATFORM_LABELS[platform]} ne govt ko already jama kiya)</span><span>− ${INR(remittedTax)}</span></div>
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (collected &amp; remitted to govt by ${PLATFORM_LABELS[platform]})</span><span>− ${INR(remittedTax)}</span></div>
     <div class="split-row" style="color:#555;font-size:12px;font-weight:600"><span class="lbl">Net Revenue (70:30 split base)</span><span>${INR(netRevenue)}</span></div>
     ` : ''}
     <div class="split-row owner"><span class="lbl">🏠 Owner Share (70%)</span><span>${INR(ownerShare)}</span></div>
