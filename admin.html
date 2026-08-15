@@ -811,7 +811,7 @@
   <div class="page-view" id="page-accounts">
     <div class="topbar">
       <div><div class="page-title">Accounts</div><div class="page-subtitle">Booking ledger, owner payouts &amp; GST summary</div></div>
-      <button class="btn btn-outline" onclick="exportAccountsCSV()" style="font-size:13px">⬇ Export CSV</button>
+      <button class="btn btn-outline" onclick="exportAccountsXLSX()" style="font-size:13px">⬇ Download Excel</button>
     </div>
 
     <!-- Sub-tab buttons -->
@@ -4325,26 +4325,104 @@ function renderGstReport() {
   }).join('');
 }
 
-function exportAccountsCSV() {
+function exportAccountsXLSX() {
   if (!accBookings.length) { alert('No data to export. Load accounts first.'); return; }
+  if (typeof XLSX === 'undefined') { alert('Excel library not loaded yet. Please wait a moment and try again.'); return; }
+
+  const wb   = XLSX.utils.book_new();
+  const date = new Date().toISOString().slice(0, 10);
+
+  // ── Sheet 1: Booking Ledger ──────────────────────────────
   const sorted = [...accBookings].sort((a,b) => new Date(b.checkin||0) - new Date(a.checkin||0));
-  const header = ['Booking#','Guest','Phone','Property','Platform','Check-in','Check-out','Nights','Total','Advance','Balance','Balance Paid','Owner Share (70%)','SD Share (30%)','Status'];
-  const rows = sorted.map(b => {
+  const ledgerHeader = ['Booking #','Guest Name','Phone','Property','Platform','Check-in','Check-out','Nights','Total (₹)','Advance (₹)','Balance (₹)','Balance Paid','Owner Share 70% (₹)','SD Share 30% (₹)','Status'];
+  const ledgerRows = sorted.map(b => {
     const { total, ownerShare, sdShare } = calcShares(b);
     return [
-      b.booking_no ? 'SD-'+String(b.booking_no).padStart(4,'0') : '',
+      b.booking_no ? 'SD-'+String(b.booking_no).padStart(4,'0') : '—',
       b.guest_name||'', b.guest_phone||'', b.property_name||'',
       PLAT_LABEL[b.platform]||b.platform||'Direct',
-      b.checkin||'', b.checkout||'', b.nights||'',
-      total, b.amount||0, b.balance_amount||0,
+      b.checkin||'', b.checkout||'',
+      Number(b.nights||0),
+      total, Number(b.amount||0), Number(b.balance_amount||0),
       b.balance_paid ? 'Yes' : 'No',
-      ownerShare, sdShare, b.status||''
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+      ownerShare, sdShare,
+      (b.status||'').replace('_',' ')
+    ];
   });
-  const csv = [header.join(','), ...rows].join('\n');
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: `staydekho-accounts-${new Date().toISOString().slice(0,10)}.csv` });
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  const ws1 = XLSX.utils.aoa_to_sheet([ledgerHeader, ...ledgerRows]);
+  // Column widths
+  ws1['!cols'] = [10,20,14,22,16,12,12,7,12,12,12,12,16,14,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Booking Ledger');
+
+  // ── Sheet 2: Owner Payouts ───────────────────────────────
+  const active = accBookings.filter(b => b.status !== 'cancelled');
+  const byProp = {};
+  active.forEach(b => {
+    const pid = b.property_id||'unknown';
+    if (!byProp[pid]) byProp[pid] = { name: b.property_name||'Unknown', bookings:0, total:0, ownerShare:0, balancePending:0 };
+    const { total, ownerShare } = calcShares(b);
+    byProp[pid].bookings++;
+    byProp[pid].total      += total;
+    byProp[pid].ownerShare += ownerShare;
+    if (!b.balance_paid) byProp[pid].balancePending += Number(b.balance_amount||0);
+  });
+  const payoutHeader = ['Property','Bookings','Total Revenue (₹)','Owner Share 70% (₹)','Balance Pending (₹)','Owner Payout Due (₹)'];
+  const payoutRows = Object.values(byProp).sort((a,b)=>b.total-a.total).map(r=>[
+    r.name, r.bookings, r.total, r.ownerShare, r.balancePending, r.ownerShare
+  ]);
+  const ws2 = XLSX.utils.aoa_to_sheet([payoutHeader, ...payoutRows]);
+  ws2['!cols'] = [28,10,18,20,18,20].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Owner Payouts');
+
+  // ── Sheet 3: GST Report ──────────────────────────────────
+  const direct = accBookings.filter(b => b.status!=='cancelled' && (!b.platform||b.platform==='direct'||b.platform==='walkin'));
+  const byMonth = {};
+  direct.forEach(b => {
+    const month = (b.checkin||'').slice(0,7);
+    if (!month) return;
+    if (!byMonth[month]) byMonth[month] = { count:0, gross:0, gst5:0, gst18:0 };
+    const total   = Number(b.total_amount||b.amount||0);
+    const nights  = Number(b.nights||1);
+    const perNight = total / nights;
+    if (perNight > 7500) byMonth[month].gst18 += Math.round(total * 18 / 118);
+    else                 byMonth[month].gst5  += Math.round(total *  5 / 105);
+    byMonth[month].gross += total;
+    byMonth[month].count++;
+  });
+  const gstHeader = ['Month','Bookings','Gross Revenue (₹)','GST @5% (₹)','GST @18% (₹)','Total GST (₹)','Base ex-GST (₹)'];
+  const gstRows = Object.keys(byMonth).sort().reverse().map(m => {
+    const r = byMonth[m];
+    const totalGst = r.gst5 + r.gst18;
+    const label = new Date(m+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    return [label, r.count, r.gross, r.gst5, r.gst18, totalGst, r.gross - totalGst];
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet([gstHeader, ...gstRows]);
+  ws3['!cols'] = [18,10,18,14,14,14,16].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws3, 'GST Report');
+
+  // ── Summary sheet ────────────────────────────────────────
+  const totRev = active.reduce((s,b)=>s+calcShares(b).total,0);
+  const totOwn = active.reduce((s,b)=>s+calcShares(b).ownerShare,0);
+  const totSd  = active.reduce((s,b)=>s+calcShares(b).sdShare,0);
+  const totGst = active.reduce((s,b)=>s+calcShares(b).gstAmt,0);
+  const totPend= accBookings.filter(b=>b.status!=='cancelled'&&!b.balance_paid).reduce((s,b)=>s+Number(b.balance_amount||0),0);
+  const ws0 = XLSX.utils.aoa_to_sheet([
+    ['StayDekho Accounts Summary'],
+    ['Generated on', date],
+    [],
+    ['Metric','Amount (₹)'],
+    ['Total Revenue',        totRev],
+    ['Owner Share (70%)',    totOwn],
+    ['StayDekho Share (30%)', totSd],
+    ['GST Collected',        totGst],
+    ['Balance Pending',      totPend],
+  ]);
+  ws0['!cols'] = [{wch:24},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws0, 'Summary');
+  // Move Summary to first position
+  wb.SheetNames = ['Summary', 'Booking Ledger', 'Owner Payouts', 'GST Report'];
+
+  XLSX.writeFile(wb, `StayDekho-Accounts-${date}.xlsx`);
 }
 
 // Set current month as default filter on first load
@@ -4426,5 +4504,6 @@ function exportAccountsCSV() {
   </div>
 </div>
 
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </body>
 </html>
