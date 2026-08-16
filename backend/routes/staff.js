@@ -631,23 +631,40 @@ router.put('/edit-booking/:id', staffProtect, async (req, res) => {
   }
 });
 
-// ── Listing Manager: get own property details ─────────────
+// ── Listing Manager: get assigned properties list + one property detail ──
 router.get('/my-listing', staffProtect, async (req, res) => {
   if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
-  const propId = req.staff.property_id;
-  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+  const allIds = staffPropIds(req.staff);
+  if (!allIds.length) return res.status(400).json({ error: 'No property assigned' });
+
+  const allIdStrs = allIds.map(id => id.toString());
+  const selectedId = req.query.property_id && allIdStrs.includes(req.query.property_id)
+    ? req.query.property_id
+    : allIdStrs[0];
+
   try {
-    const prop = await Property.findById(propId).lean();
+    const [prop, allProps] = await Promise.all([
+      Property.findById(selectedId).lean(),
+      Property.find({ _id: { $in: allIds } }, 'name status').lean(),
+    ]);
     if (!prop) return res.status(404).json({ error: 'Property not found' });
-    res.json({ property: { ...prop, id: prop._id.toString() } });
+    res.json({
+      property:       { ...prop, id: prop._id.toString() },
+      all_properties: allProps.map(p => ({ id: p._id.toString(), name: p.name, status: p.status })),
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Listing Manager: update own property listing ───────────
+// ── Listing Manager: update property details ──────────────
 router.put('/my-listing', staffProtect, async (req, res) => {
   if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
-  const propId = req.staff.property_id;
-  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+  const allIds = staffPropIds(req.staff).map(id => id.toString());
+  if (!allIds.length) return res.status(400).json({ error: 'No property assigned' });
+
+  const propId = req.body.property_id && allIds.includes(req.body.property_id.toString())
+    ? req.body.property_id
+    : allIds[0];
+
   try {
     const ALLOWED = [
       'name', 'location', 'description', 'price', 'guests', 'beds', 'bathrooms',
@@ -665,13 +682,18 @@ router.put('/my-listing', staffProtect, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Listing Manager: add / remove photo ───────────────────
+// ── Listing Manager: add / remove photo (URL) ────────────
 router.put('/my-listing/photos', staffProtect, async (req, res) => {
   if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
-  const propId = req.staff.property_id;
-  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+  const allIds = staffPropIds(req.staff).map(id => id.toString());
+  if (!allIds.length) return res.status(400).json({ error: 'No property assigned' });
+
+  const propId = req.body.property_id && allIds.includes(req.body.property_id.toString())
+    ? req.body.property_id
+    : allIds[0];
+
   try {
-    const { action, url } = req.body; // action: 'add' | 'remove'
+    const { action, url } = req.body;
     if (!action || !url) return res.status(400).json({ error: 'action and url required' });
 
     const prop = await Property.findById(propId);
@@ -679,19 +701,76 @@ router.put('/my-listing/photos', staffProtect, async (req, res) => {
 
     let images = [];
     try { images = JSON.parse(prop.images || '[]'); } catch { images = []; }
-
-    if (action === 'add') {
-      if (!images.includes(url)) images.push(url);
-    } else if (action === 'remove') {
-      images = images.filter(u => u !== url);
-    } else {
-      return res.status(400).json({ error: 'action must be add or remove' });
-    }
+    if (action === 'add')    { if (!images.includes(url)) images.push(url); }
+    else if (action === 'remove') { images = images.filter(u => u !== url); }
+    else return res.status(400).json({ error: 'action must be add or remove' });
 
     prop.images = JSON.stringify(images);
     await prop.save();
-    res.json({ success: true, images });
+    const photos = JSON.parse(prop.images || '[]');
+    res.json({ success: true, property: { ...(prop.toObject()), id: prop._id.toString(), photos } });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Listing Manager: direct photo upload (file → Cloudinary) ─
+const multer = require('multer');
+const lmUpload = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    const ok = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
+    const ext = require('path').extname(file.originalname).toLowerCase();
+    ok.includes(ext) ? cb(null, true) : cb(new Error('Only image files allowed'));
+  },
+});
+router.post('/my-listing/upload-photo', staffProtect, lmUpload.single('photo'), async (req, res) => {
+  if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const allIds = staffPropIds(req.staff).map(id => id.toString());
+  if (!allIds.length) return res.status(400).json({ error: 'No property assigned' });
+  const propId = req.body.property_id && allIds.includes(req.body.property_id.toString())
+    ? req.body.property_id
+    : allIds[0];
+
+  try {
+    let url;
+    try {
+      const { v2: cld } = require('cloudinary');
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'your_cloud_name') {
+        cld.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
+        url = await new Promise((resolve, reject) => {
+          const stream = cld.uploader.upload_stream(
+            { folder: 'staydekho/properties', resource_type: 'image',
+              transformation: [{ width: 1400, height: 900, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }] },
+            (err, result) => err ? reject(err) : resolve(result.secure_url)
+          );
+          stream.end(req.file.buffer);
+        });
+      }
+    } catch(e) { /* Cloudinary not available */ }
+
+    if (!url) {
+      const fs   = require('fs');
+      const path = require('path');
+      const imgDir = path.join(__dirname, '..', 'uploads', 'images');
+      if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+      const ext  = require('path').extname(req.file.originalname).toLowerCase();
+      const name = `lm_${Date.now()}_${Math.random().toString(36).slice(2,7)}${ext}`;
+      fs.writeFileSync(path.join(imgDir, name), req.file.buffer);
+      url = `${req.protocol}://${req.get('host')}/uploads/images/${name}`;
+    }
+
+    const prop = await Property.findById(propId);
+    if (!prop) return res.status(404).json({ error: 'Property not found' });
+    let images = [];
+    try { images = JSON.parse(prop.images || '[]'); } catch { images = []; }
+    images.push(url);
+    prop.images = JSON.stringify(images);
+    await prop.save();
+
+    res.json({ success: true, url, property: { ...(prop.toObject()), id: prop._id.toString(), photos: images } });
+  } catch (err) { res.status(500).json({ error: err.message || 'Upload failed' }); }
 });
 
 // ── Caretaker: mark booking checked_in / checked_out ────────
