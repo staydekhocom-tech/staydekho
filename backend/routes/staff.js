@@ -773,6 +773,77 @@ router.post('/my-listing/upload-photo', staffProtect, lmUpload.single('photo'), 
   } catch (err) { res.status(500).json({ error: err.message || 'Upload failed' }); }
 });
 
+// ── Listing Manager: calendar — bookings + blocked dates ─────
+router.get('/my-listing/calendar', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
+  const allIds = staffPropIds(req.staff).map(id => id.toString());
+  if (!allIds.length) return res.status(400).json({ error: 'No property assigned' });
+
+  const propId    = req.query.property_id && allIds.includes(req.query.property_id) ? req.query.property_id : allIds[0];
+  const month     = req.query.month || new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+  const monthStart = `${month}-01`;
+  const nextMonth  = new Date(`${month}-01`);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const monthEnd   = nextMonth.toISOString().slice(0, 10);
+
+  try {
+    const [bookings, datePrices] = await Promise.all([
+      Booking.find({
+        property_id: propId,
+        status:      { $in: ['confirmed', 'checked_in', 'checked_out', 'pending'] },
+        checkin:     { $lt: monthEnd },
+        checkout:    { $gt: monthStart },
+      }).select('guest_name checkin checkout status guests booking_no').lean(),
+      DatePrice.find({
+        property_id: propId,
+        date:        { $gte: monthStart, $lt: monthEnd },
+      }).select('date blocked note').lean(),
+    ]);
+
+    // Expand bookings into day map
+    const dayMap = {}; // { 'YYYY-MM-DD': { type:'booked'|'blocked', ... } }
+    for (const b of bookings) {
+      const s = new Date(b.checkin), e = new Date(b.checkout);
+      for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().slice(0, 10);
+        if (key >= monthStart && key < monthEnd) {
+          dayMap[key] = { type: 'booked', guest: b.guest_name, booking_no: b.booking_no, status: b.status, guests: b.guests };
+        }
+      }
+    }
+    for (const dp of datePrices) {
+      if (dp.blocked && !dayMap[dp.date]) {
+        dayMap[dp.date] = { type: 'blocked', note: dp.note || '' };
+      }
+    }
+
+    res.json({ property_id: propId, month, days: dayMap });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Listing Manager: block / unblock dates ────────────────────
+router.post('/my-listing/block-dates', staffProtect, async (req, res) => {
+  if (req.staff.role !== 'listing_manager') return res.status(403).json({ error: 'listing_manager role required' });
+  const allIds = staffPropIds(req.staff).map(id => id.toString());
+  const propId = req.body.property_id && allIds.includes(req.body.property_id.toString()) ? req.body.property_id : allIds[0];
+  if (!propId) return res.status(400).json({ error: 'No property assigned' });
+
+  const { dates, blocked, note } = req.body; // dates: ['YYYY-MM-DD', ...]
+  if (!Array.isArray(dates) || !dates.length) return res.status(400).json({ error: 'dates array required' });
+
+  try {
+    for (const date of dates) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      await DatePrice.findOneAndUpdate(
+        { property_id: propId, date },
+        { $set: { property_id: propId, date, blocked: !!blocked, note: note || '' } },
+        { upsert: true, new: true }
+      );
+    }
+    res.json({ success: true, updated: dates.length });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Caretaker: mark booking checked_in / checked_out ────────
 router.put('/booking/:id/status', staffProtect, async (req, res) => {
   try {

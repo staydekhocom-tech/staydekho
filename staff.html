@@ -713,6 +713,37 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
     </div>
   </div>
 
+  <!-- Calendar -->
+  <div class="page" id="lm-page-calendar" style="padding:12px 12px 80px">
+    <div class="card">
+      <div class="card-body" style="padding:12px">
+        <!-- Property selector injected by renderPropSwitcher() -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <button onclick="lmCalNav(-1)" style="background:none;border:1.5px solid #ddd;border-radius:8px;padding:6px 14px;font-size:18px;cursor:pointer;color:#444;line-height:1">‹</button>
+          <span id="lm-cal-title" style="font-size:16px;font-weight:700">—</span>
+          <button onclick="lmCalNav(1)"  style="background:none;border:1.5px solid #ddd;border-radius:8px;padding:6px 14px;font-size:18px;cursor:pointer;color:#444;line-height:1">›</button>
+        </div>
+        <div class="cal-grid" style="margin-bottom:6px">
+          <div class="cal-day-label">Sun</div><div class="cal-day-label">Mon</div><div class="cal-day-label">Tue</div>
+          <div class="cal-day-label">Wed</div><div class="cal-day-label">Thu</div><div class="cal-day-label">Fri</div><div class="cal-day-label">Sat</div>
+        </div>
+        <div id="lm-cal-grid" class="cal-grid" style="gap:4px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:11px;color:#555">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fee2e2;margin-right:3px"></span>Booked</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fef9c3;margin-right:3px"></span>Blocked by you</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dcfce7;margin-right:3px"></span>Available</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block / info panel -->
+    <div id="lm-cal-action" style="display:none" class="card">
+      <div class="card-body">
+        <div id="lm-cal-action-content"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Profile -->
   <div class="page" id="lm-page-lm-profile" style="padding:16px;padding-bottom:80px">
     <div class="profile-card">
@@ -734,6 +765,9 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
     </button>
     <button class="nav-item" id="lmnav-edit" onclick="showListingPage('edit')">
       <span class="nav-icon">✏️</span>Details
+    </button>
+    <button class="nav-item" id="lmnav-calendar" onclick="showListingPage('calendar')">
+      <span class="nav-icon">📅</span>Calendar
     </button>
     <button class="nav-item" id="lmnav-amenities" onclick="showListingPage('amenities')">
       <span class="nav-icon">⭐</span>Amenities
@@ -1510,7 +1544,7 @@ function initListingApp() {
   loadListing();
 }
 
-const lmPages = ['home', 'edit', 'amenities', 'photos', 'lm-profile'];
+const lmPages = ['home', 'edit', 'calendar', 'amenities', 'photos', 'lm-profile'];
 function showListingPage(p) {
   lmPages.forEach(id => {
     const pg  = document.getElementById(`lm-page-${id}`);
@@ -1518,6 +1552,8 @@ function showListingPage(p) {
     if (pg)  pg.classList.toggle('active', id === p);
     if (nav) nav.classList.toggle('active', id === p);
   });
+  if (p === 'calendar') loadLmCalendar();
+  if (p === 'calendar' || p === 'home' || p === 'edit' || p === 'amenities' || p === 'photos') renderPropSwitcher();
 }
 
 async function loadListing(propId) {
@@ -1839,6 +1875,177 @@ async function removePhoto(idx) {
     renderPhotoGrid();
     renderListingPreview();
     toast('Photo removed');
+  } catch { toast('Network error. Try again.'); }
+}
+
+// ══════════════════════════════════════════════════════
+// LISTING MANAGER — CALENDAR
+// ══════════════════════════════════════════════════════
+let lmCalMonth = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+let lmCalData  = {};   // { 'YYYY-MM-DD': { type, guest, ... } }
+let lmSelDates = new Set(); // selected available dates for bulk block
+
+function lmCalNav(dir) {
+  const d = new Date(lmCalMonth + '-01');
+  d.setMonth(d.getMonth() + dir);
+  lmCalMonth = d.toISOString().slice(0, 7);
+  loadLmCalendar();
+}
+
+async function loadLmCalendar() {
+  document.getElementById('lm-cal-action').style.display = 'none';
+  lmSelDates.clear();
+  const url = `${API}/api/staff/my-listing/calendar?property_id=${currentLmPropId}&month=${lmCalMonth}`;
+  try {
+    const r    = await fetch(url, { headers: { Authorization: `Bearer ${staffToken}` } });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Could not load calendar'); return; }
+    lmCalData = data.days || {};
+    renderLmCalendar();
+  } catch { toast('Network error loading calendar'); }
+}
+
+function renderLmCalendar() {
+  const [year, month] = lmCalMonth.split('-').map(Number);
+  const label = new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  document.getElementById('lm-cal-title').textContent = label;
+
+  const today  = new Date().toISOString().slice(0, 10);
+  const grid   = document.getElementById('lm-cal-grid');
+  const first  = new Date(year, month - 1, 1).getDay(); // 0=Sun
+  const days   = new Date(year, month, 0).getDate();
+
+  let html = '';
+  for (let i = 0; i < first; i++) html += `<div class="cal-day empty"></div>`;
+
+  for (let d = 1; d <= days; d++) {
+    const key  = `${lmCalMonth}-${String(d).padStart(2,'0')}`;
+    const info = lmCalData[key];
+    const isToday = key === today;
+    const isPast  = key < today;
+    const isSel   = lmSelDates.has(key);
+
+    let bg = '#f0fdf4', color = '#166534', label = String(d), title = '';
+    if (isPast) { bg = 'transparent'; color = '#d1d5db'; }
+    else if (info?.type === 'booked') {
+      bg = '#fee2e2'; color = '#dc2626';
+      const initials = (info.guest || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      label = `<span style="font-size:9px;line-height:1;display:block">${d}</span><span style="font-size:8px;font-weight:700;color:#b91c1c">${initials}</span>`;
+      title = info.guest;
+    } else if (info?.type === 'blocked') {
+      bg = '#fef9c3'; color = '#a16207';
+      label = `<span style="font-size:9px">${d}</span><span style="font-size:8px;display:block">🔒</span>`;
+    }
+    if (isSel) { bg = '#dbeafe'; color = '#1d4ed8'; }
+
+    const outline = isToday ? 'outline:2px solid #8B1717;outline-offset:-2px;' : '';
+    const cursor  = isPast ? '' : 'cursor:pointer;';
+    const onclick = isPast ? '' : `onclick="lmCalDayTap('${key}')"`;
+
+    html += `<div class="cal-day" style="background:${bg};color:${color};${outline}${cursor}font-weight:600;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;aspect-ratio:1;user-select:none" title="${title}" ${onclick}>${label}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function lmCalDayTap(key) {
+  const info = lmCalData[key];
+  if (!info || info.type === 'booked') {
+    // Show booking info or block option for free date
+    showLmCalAction(key, info);
+    return;
+  }
+  if (info.type === 'blocked') {
+    showLmCalAction(key, info);
+    return;
+  }
+  // Available — toggle selection for bulk block
+  if (lmSelDates.has(key)) lmSelDates.delete(key);
+  else lmSelDates.add(key);
+  renderLmCalendar();
+  if (lmSelDates.size > 0) showBulkBlockPanel();
+  else document.getElementById('lm-cal-action').style.display = 'none';
+}
+
+function showLmCalAction(key, info) {
+  lmSelDates.clear();
+  renderLmCalendar();
+  const panel   = document.getElementById('lm-cal-action');
+  const content = document.getElementById('lm-cal-action-content');
+  const fmtDate = d => new Date(d).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'long' });
+
+  if (info?.type === 'booked') {
+    const sdNo = info.booking_no ? `SD-${String(info.booking_no).padStart(4,'0')}` : '';
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:40px;height:40px;background:#fee2e2;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🏠</div>
+        <div><div style="font-weight:700;font-size:15px">${info.guest || 'Guest'}</div>
+        <div style="font-size:12px;color:#6b7280">${sdNo} · ${info.guests || 1} guests · ${info.status || ''}</div></div>
+      </div>
+      <div style="background:#f9fafb;border-radius:8px;padding:10px;font-size:13px;color:#374151">
+        📅 <b>${fmtDate(key)}</b> — part of a booked stay
+      </div>`;
+  } else if (info?.type === 'blocked') {
+    content.innerHTML = `
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">🔒 ${fmtDate(key)}</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:12px">${info.note ? `Note: ${info.note}` : 'Manually blocked'}</div>
+      <button onclick="lmUnblockDate('${key}')" style="width:100%;padding:12px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✓ Unblock this date</button>`;
+  } else {
+    // Available — quick single-date block
+    content.innerHTML = `
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">📅 ${fmtDate(key)}</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:10px">Block this date so guests can't book it?</div>
+      <input id="lm-block-note" type="text" placeholder="Reason (e.g. personal use, maintenance…)" style="width:100%;padding:10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box">
+      <button onclick="lmBlockDates(['${key}'])" style="width:100%;padding:12px;background:#8B1717;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🔒 Block this date</button>`;
+  }
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showBulkBlockPanel() {
+  const panel   = document.getElementById('lm-cal-action');
+  const content = document.getElementById('lm-cal-action-content');
+  const dates   = [...lmSelDates].sort();
+  content.innerHTML = `
+    <div style="font-weight:700;font-size:15px;margin-bottom:6px">🔒 Block ${dates.length} date${dates.length > 1 ? 's' : ''}</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:10px">${dates.map(d => new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'})).join(', ')}</div>
+    <input id="lm-block-note" type="text" placeholder="Reason (e.g. Airbnb booking, maintenance…)" style="width:100%;padding:10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box">
+    <div style="display:flex;gap:8px">
+      <button onclick="lmSelDates.clear();renderLmCalendar();document.getElementById('lm-cal-action').style.display='none'" style="flex:1;padding:12px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancel</button>
+      <button onclick="lmBlockDates([...lmSelDates])" style="flex:2;padding:12px;background:#8B1717;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🔒 Block Selected</button>
+    </div>`;
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function lmBlockDates(dates) {
+  const note = (document.getElementById('lm-block-note')?.value || '').trim();
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing/block-dates`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ property_id: currentLmPropId, dates, blocked: true, note }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Failed to block dates'); return; }
+    toast(`${dates.length} date${dates.length > 1 ? 's' : ''} blocked ✅`);
+    lmSelDates.clear();
+    document.getElementById('lm-cal-action').style.display = 'none';
+    loadLmCalendar();
+  } catch { toast('Network error. Try again.'); }
+}
+
+async function lmUnblockDate(date) {
+  try {
+    const r = await fetch(`${API}/api/staff/my-listing/block-dates`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ property_id: currentLmPropId, dates: [date], blocked: false }),
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error || 'Failed to unblock'); return; }
+    toast('Date unblocked ✅');
+    document.getElementById('lm-cal-action').style.display = 'none';
+    loadLmCalendar();
   } catch { toast('Network error. Try again.'); }
 }
 </script>
