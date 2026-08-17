@@ -96,30 +96,40 @@ router.get('/dashboard', staffProtect, async (req, res) => {
   try {
     const propIds  = staffPropIds(req.staff);
     const todayStr = today();
+    const d        = new Date(); d.setDate(d.getDate() + 1);
+    const tomorrowStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
-    if (!propIds.length) return res.json({ checkins: [], checkouts: [], upcoming: [], tasks: [], issues: [] });
+    if (!propIds.length) return res.json({ checkins: [], checkouts: [], tomorrow_checkins: [], staying: [], upcoming: [], tasks: [], issues: [] });
 
     const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
+    const fields = 'guest_name guest_phone checkin checkout guests nights booking_no balance_amount balance_paid notes status property_id';
 
-    const [checkins, checkouts, upcoming, tasks, issues] = await Promise.all([
-      Booking.find({ property_id: propFilter, checkin: todayStr, status: 'confirmed' })
-        .select('guest_name guest_phone checkin checkout guests nights booking_no balance_amount notes status').lean(),
+    const [checkins, checkouts, tomorrow_checkins, staying, upcoming, tasks, issues] = await Promise.all([
+      Booking.find({ property_id: propFilter, checkin: todayStr, status: { $in: ['confirmed', 'pending'] } })
+        .populate('property_id', 'name').select(fields).lean(),
       Booking.find({ property_id: propFilter, checkout: todayStr, status: { $in: ['confirmed', 'checked_in'] } })
-        .select('guest_name guest_phone checkin checkout guests nights booking_no balance_amount status').lean(),
-      Booking.find({ property_id: propFilter, checkin: { $gt: todayStr }, status: 'confirmed' })
-        .select('guest_name checkin checkout guests nights booking_no balance_amount').sort({ checkin: 1 }).limit(5).lean(),
+        .populate('property_id', 'name').select(fields).lean(),
+      Booking.find({ property_id: propFilter, checkin: tomorrowStr, status: { $in: ['confirmed', 'pending'] } })
+        .populate('property_id', 'name').select(fields).lean(),
+      Booking.find({ property_id: propFilter, checkin: { $lt: todayStr }, checkout: { $gt: todayStr }, status: 'checked_in' })
+        .populate('property_id', 'name').select(fields).lean(),
+      Booking.find({ property_id: propFilter, checkin: { $gt: todayStr }, status: { $in: ['confirmed', 'pending'] } })
+        .populate('property_id', 'name').select(fields).sort({ checkin: 1 }).limit(10).lean(),
       StaffTask.find({ property_id: propFilter, status: { $ne: 'done' }, due_date: { $gte: todayStr } })
         .sort({ due_date: 1 }).limit(10).lean(),
       StaffIssue.find({ property_id: propFilter, status: 'open' })
         .sort({ created_at: -1 }).limit(5).lean(),
     ]);
 
+    const flatB = b => ({ ...b, id: b._id.toString(), property_name: b.property_id?.name || '' });
     res.json({
-      checkins:  checkins.map(b => ({ ...b, id: b._id.toString() })),
-      checkouts: checkouts.map(b => ({ ...b, id: b._id.toString() })),
-      upcoming:  upcoming.map(b => ({ ...b, id: b._id.toString() })),
-      tasks:     tasks.map(t => ({ ...t, id: t._id.toString() })),
-      issues:    issues.map(i => ({ ...i, id: i._id.toString() })),
+      checkins:          checkins.map(flatB),
+      checkouts:         checkouts.map(flatB),
+      tomorrow_checkins: tomorrow_checkins.map(flatB),
+      staying:           staying.map(flatB),
+      upcoming:          upcoming.map(flatB),
+      tasks:             tasks.map(t => ({ ...t, id: t._id.toString() })),
+      issues:            issues.map(i => ({ ...i, id: i._id.toString() })),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

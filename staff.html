@@ -197,39 +197,82 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
 
   <!-- ── Home ── -->
   <div class="page active" id="page-home">
-    <div class="snapshot">
-      <div class="snap-card">
-        <div class="snap-num" id="snap-checkins">0</div>
-        <div class="snap-label">Today's Check-ins</div>
+
+    <!-- Snapshot tiles -->
+    <div class="snapshot" style="grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px">
+      <div class="snap-card" style="background:#fff;border-left:4px solid #2563eb">
+        <div class="snap-num" id="snap-checkins" style="color:#2563eb">0</div>
+        <div class="snap-label">Today Check-in</div>
       </div>
-      <div class="snap-card">
-        <div class="snap-num" id="snap-checkouts">0</div>
-        <div class="snap-label">Today's Check-outs</div>
+      <div class="snap-card" style="background:#fff;border-left:4px solid #dc2626">
+        <div class="snap-num" id="snap-checkouts" style="color:#dc2626">0</div>
+        <div class="snap-label">Today Check-out</div>
       </div>
-      <div class="snap-card">
-        <div class="snap-num" id="snap-tasks">0</div>
-        <div class="snap-label">Pending Tasks</div>
+      <div class="snap-card" style="background:#fff;border-left:4px solid #f59e0b">
+        <div class="snap-num" id="snap-tomorrow" style="color:#f59e0b">0</div>
+        <div class="snap-label">Tomorrow Check-in</div>
       </div>
-      <div class="snap-card">
-        <div class="snap-num" id="snap-upcoming">0</div>
-        <div class="snap-label">Upcoming Bookings</div>
+      <div class="snap-card" style="background:#fff;border-left:4px solid #7c3aed">
+        <div class="snap-num" id="snap-staying" style="color:#7c3aed">0</div>
+        <div class="snap-label">Currently Staying</div>
       </div>
     </div>
 
-    <div class="card" id="checkins-card">
-      <div class="card-header"><h2>Today's Check-ins</h2><span class="badge badge-checkin" id="checkins-badge">0</span></div>
-      <div class="card-body" id="checkins-list"><div class="empty"><div class="empty-icon">🏠</div><p>No check-ins today</p></div></div>
-    </div>
-
-    <div class="card" id="checkouts-card">
-      <div class="card-header"><h2>Today's Check-outs</h2><span class="badge badge-checkout" id="checkouts-badge">0</span></div>
-      <div class="card-body" id="checkouts-list"><div class="empty"><div class="empty-icon">🚪</div><p>No check-outs today</p></div></div>
-    </div>
-
+    <!-- Today's Check-ins -->
     <div class="card">
-      <div class="card-header"><h2>Upcoming Bookings</h2></div>
-      <div class="card-body" id="upcoming-list"><div class="empty"><div class="empty-icon">📅</div><p>No upcoming bookings</p></div></div>
+      <div class="card-header" style="background:#eff6ff">
+        <h2 style="color:#1d4ed8">🛎 Today's Check-ins</h2>
+        <span class="badge badge-checkin" id="checkins-badge">0</span>
+      </div>
+      <div class="card-body" id="checkins-list">
+        <div class="empty"><div class="empty-icon">🏠</div><p>No check-ins today</p></div>
+      </div>
     </div>
+
+    <!-- Today's Check-outs -->
+    <div class="card">
+      <div class="card-header" style="background:#fff7ed">
+        <h2 style="color:#c2410c">🚪 Today's Check-outs</h2>
+        <span class="badge badge-checkout" id="checkouts-badge">0</span>
+      </div>
+      <div class="card-body" id="checkouts-list">
+        <div class="empty"><div class="empty-icon">🚪</div><p>No check-outs today</p></div>
+      </div>
+    </div>
+
+    <!-- Currently Staying -->
+    <div class="card" id="staying-card">
+      <div class="card-header" style="background:#f5f3ff">
+        <h2 style="color:#6d28d9">🏡 Currently Staying</h2>
+        <span class="badge" id="staying-badge" style="background:#ede9fe;color:#6d28d9">0</span>
+      </div>
+      <div class="card-body" id="staying-list">
+        <div class="empty"><div class="empty-icon">🏡</div><p>No guests currently staying</p></div>
+      </div>
+    </div>
+
+    <!-- Tomorrow's Check-ins -->
+    <div class="card">
+      <div class="card-header" style="background:#fffbeb">
+        <h2 style="color:#b45309">⏰ Tomorrow's Check-ins</h2>
+        <span class="badge" id="tomorrow-badge" style="background:#fef3c7;color:#92400e">0</span>
+      </div>
+      <div class="card-body" id="tomorrow-list">
+        <div class="empty"><div class="empty-icon">⏰</div><p>No check-ins tomorrow</p></div>
+      </div>
+    </div>
+
+    <!-- Upcoming Bookings -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📅 Upcoming Bookings</h2>
+        <span class="badge" id="upcoming-badge" style="background:#f3f4f6;color:#374151">0</span>
+      </div>
+      <div class="card-body" id="upcoming-list">
+        <div class="empty"><div class="empty-icon">📅</div><p>No upcoming bookings</p></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ── Tasks ── -->
@@ -910,76 +953,139 @@ async function loadDashboard() {
   } catch { toast('Could not load dashboard'); }
 }
 
-function renderDashboard() {
-  const { checkins = [], checkouts = [], upcoming = [], tasks = [] } = dashData;
+function sdNo(b) {
+  return b.booking_no ? ` <span style="color:#9ca3af;font-weight:400;font-size:11px">SD-${String(b.booking_no).padStart(4,'0')}</span>` : '';
+}
+function propTag(b) {
+  return b.property_name ? `<span style="font-size:11px;background:#f0f4ff;color:#3730a3;padding:1px 7px;border-radius:10px;margin-left:4px">${b.property_name}</span>` : '';
+}
+function balBadge(b) {
+  const bal = parseFloat(b.balance_amount) || 0;
+  if (b.balance_paid || bal <= 0) return `<span style="background:#dcfce7;color:#166534;font-size:11.5px;padding:2px 8px;border-radius:20px">Fully Paid ✓</span>`;
+  return `<span style="background:#fef9c3;color:#854d0e;font-weight:600;font-size:11.5px;padding:2px 8px;border-radius:20px">Collect ₹${bal.toLocaleString('en-IN')}</span>`;
+}
+function phoneLink(b) {
+  return b.guest_phone ? `<a href="tel:${b.guest_phone}" style="font-size:12px;color:#2563eb;text-decoration:none;display:inline-block;margin-top:3px">📞 ${b.guest_phone}</a>` : '';
+}
+function nightsLabel(b) {
+  const parts = [];
+  if (b.guests) parts.push(`${b.guests} guest${b.guests > 1 ? 's' : ''}`);
+  if (b.nights) parts.push(`${b.nights} night${b.nights > 1 ? 's' : ''}`);
+  return parts.join(' · ');
+}
 
+function renderDashboard() {
+  const { checkins=[], checkouts=[], tomorrow_checkins=[], staying=[], upcoming=[], tasks=[] } = dashData;
+
+  // Tiles
   document.getElementById('snap-checkins').textContent  = checkins.length;
   document.getElementById('snap-checkouts').textContent = checkouts.length;
-  document.getElementById('snap-tasks').textContent     = tasks.length;
-  document.getElementById('snap-upcoming').textContent  = upcoming.length;
+  document.getElementById('snap-tomorrow').textContent  = tomorrow_checkins.length;
+  document.getElementById('snap-staying').textContent   = staying.length;
   document.getElementById('checkins-badge').textContent  = checkins.length;
   document.getElementById('checkouts-badge').textContent = checkouts.length;
+  document.getElementById('tomorrow-badge').textContent  = tomorrow_checkins.length;
+  document.getElementById('staying-badge').textContent   = staying.length;
+  document.getElementById('upcoming-badge').textContent  = upcoming.length;
 
+  // ── Today's Check-ins ──
   document.getElementById('checkins-list').innerHTML = checkins.length
     ? checkins.map(b => {
-        const bal = parseFloat(b.balance_amount) || 0;
-        const balBadge = bal > 0
-          ? `<span style="background:#dcfce7;color:#166534;font-weight:600;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap">Collect ₹${bal.toLocaleString('en-IN')}</span>`
-          : `<span style="background:#f0fdf4;color:#16a34a;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap">Fully Paid ✓</span>`;
-        const isCheckedIn = b.status === 'checked_in';
-        return `
-        <div class="list-item" style="align-items:flex-start" id="ci-item-${b.id}">
-          <div class="item-icon checkin" style="margin-top:2px">🛎</div>
+        const isCI = b.status === 'checked_in';
+        return `<div class="list-item" style="align-items:flex-start" id="ci-item-${b.id}">
+          <div class="item-icon checkin" style="margin-top:2px;background:#dbeafe">🛎</div>
           <div class="item-body" style="flex:1;min-width:0">
-            <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
-            <div class="item-sub">${b.guests} guest${b.guests > 1 ? 's' : ''} · Check-out: ${fmt(b.checkout)}${b.nights ? ' · '+b.nights+' night'+(b.nights>1?'s':'') : ''}</div>
-            ${b.guest_phone ? `<a href="tel:${b.guest_phone}" style="font-size:12px;color:#2563eb;text-decoration:none;display:inline-block;margin-top:2px">📞 ${b.guest_phone}</a>` : ''}
-            ${b.notes ? `<div style="font-size:11.5px;color:#6b7280;margin-top:3px;font-style:italic">${b.notes}</div>` : ''}
-            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${balBadge}
-              ${isCheckedIn
-                ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:12px;padding:3px 8px;border-radius:20px">Checked In ✓</span>`
-                : `<button onclick="markBookingStatus('${b.id}','checked_in','ci-item-${b.id}')" style="background:#2563eb;color:#fff;border:none;font-size:12px;padding:4px 10px;border-radius:20px;cursor:pointer">Mark Checked In</button>`}
+            <div class="item-title" style="font-size:15px;font-weight:700">${b.guest_name}${sdNo(b)}${propTag(b)}</div>
+            <div class="item-sub" style="margin-top:3px">${nightsLabel(b)} · Check-out: <b>${fmt(b.checkout)}</b></div>
+            ${phoneLink(b)}
+            ${b.notes ? `<div style="font-size:11.5px;color:#6b7280;margin-top:3px;font-style:italic">📝 ${b.notes}</div>` : ''}
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
+              ${balBadge(b)}
+              ${isCI
+                ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:11.5px;padding:2px 8px;border-radius:20px">Checked In ✓</span>`
+                : `<button onclick="markBookingStatus('${b.id}','checked_in','ci-item-${b.id}')" style="background:#2563eb;color:#fff;border:none;font-size:12px;padding:4px 12px;border-radius:20px;cursor:pointer;font-weight:600">✓ Mark Checked In</button>`}
             </div>
           </div>
-          <button class="btn-sm btn-green" style="margin-top:2px;flex-shrink:0" onclick="showPage('ready')">Ready</button>
         </div>`;
       }).join('')
-    : '<div class="empty"><div class="empty-icon">🏠</div><p>No check-ins today</p></div>';
+    : `<div class="empty"><div class="empty-icon">🛎</div><p>No check-ins today</p></div>`;
 
+  // ── Today's Check-outs ──
   document.getElementById('checkouts-list').innerHTML = checkouts.length
     ? checkouts.map(b => {
-        const isCheckedOut = b.status === 'checked_out';
-        return `
-        <div class="list-item" id="co-item-${b.id}">
-          <div class="item-icon checkout">🚪</div>
+        const isCO = b.status === 'checked_out';
+        const bal  = parseFloat(b.balance_amount) || 0;
+        const hasBal = !b.balance_paid && bal > 0;
+        return `<div class="list-item" id="co-item-${b.id}">
+          <div class="item-icon checkout" style="background:#fee2e2">🚪</div>
           <div class="item-body" style="flex:1;min-width:0">
-            <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
-            <div class="item-sub">Check-out: ${fmt(b.checkout)} · ${b.guests} guest${b.guests>1?'s':''}</div>
-            ${b.guest_phone ? `<a href="tel:${b.guest_phone}" style="font-size:12px;color:#2563eb;text-decoration:none;display:inline-block;margin-top:2px">📞 ${b.guest_phone}</a>` : ''}
-            <div style="margin-top:6px">
-              ${isCheckedOut
-                ? `<span style="background:#f3f4f6;color:#6b7280;font-size:12px;padding:3px 8px;border-radius:20px">Checked Out ✓</span>`
-                : `<button onclick="markBookingStatus('${b.id}','checked_out','co-item-${b.id}')" style="background:#6b7280;color:#fff;border:none;font-size:12px;padding:4px 10px;border-radius:20px;cursor:pointer">Mark Checked Out</button>`}
+            <div class="item-title" style="font-size:15px;font-weight:700">${b.guest_name}${sdNo(b)}${propTag(b)}</div>
+            <div class="item-sub" style="margin-top:3px">${nightsLabel(b)} · Checked in: ${fmt(b.checkin)}</div>
+            ${phoneLink(b)}
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
+              ${hasBal ? `<span style="background:#fef9c3;color:#854d0e;font-weight:700;font-size:11.5px;padding:2px 8px;border-radius:20px">⚠️ Collect ₹${bal.toLocaleString('en-IN')}</span>` : `<span style="background:#dcfce7;color:#166534;font-size:11.5px;padding:2px 8px;border-radius:20px">Paid ✓</span>`}
+              ${isCO
+                ? `<span style="background:#f3f4f6;color:#6b7280;font-size:11.5px;padding:2px 8px;border-radius:20px">Checked Out ✓</span>`
+                : `<button onclick="markBookingStatus('${b.id}','checked_out','co-item-${b.id}')" style="background:#6b7280;color:#fff;border:none;font-size:12px;padding:4px 12px;border-radius:20px;cursor:pointer;font-weight:600">✓ Mark Checked Out</button>`}
             </div>
           </div>
         </div>`;
       }).join('')
-    : '<div class="empty"><div class="empty-icon">🚪</div><p>No check-outs today</p></div>';
+    : `<div class="empty"><div class="empty-icon">🚪</div><p>No check-outs today</p></div>`;
 
+  // ── Currently Staying ──
+  document.getElementById('staying-list').innerHTML = staying.length
+    ? staying.map(b => {
+        const co = fmt(b.checkout);
+        return `<div class="list-item">
+          <div class="item-icon" style="background:#ede9fe;font-size:18px">🏡</div>
+          <div class="item-body">
+            <div class="item-title" style="font-size:15px;font-weight:700">${b.guest_name}${sdNo(b)}${propTag(b)}</div>
+            <div class="item-sub" style="margin-top:3px">${nightsLabel(b)} · Check-out: <b>${co}</b></div>
+            ${phoneLink(b)}
+          </div>
+        </div>`;
+      }).join('')
+    : `<div class="empty"><div class="empty-icon">🏡</div><p>No guests currently staying</p></div>`;
+
+  // ── Tomorrow's Check-ins ──
+  document.getElementById('tomorrow-list').innerHTML = tomorrow_checkins.length
+    ? tomorrow_checkins.map(b => {
+        const bal = parseFloat(b.balance_amount) || 0;
+        return `<div class="list-item">
+          <div class="item-icon" style="background:#fef3c7;font-size:18px">⏰</div>
+          <div class="item-body">
+            <div class="item-title" style="font-size:15px;font-weight:700">${b.guest_name}${sdNo(b)}${propTag(b)}</div>
+            <div class="item-sub" style="margin-top:3px">${nightsLabel(b)} · Check-out: ${fmt(b.checkout)}</div>
+            ${phoneLink(b)}
+            ${b.notes ? `<div style="font-size:11.5px;color:#6b7280;margin-top:3px;font-style:italic">📝 ${b.notes}</div>` : ''}
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+              ${balBadge(b)}
+              <span style="background:#fef3c7;color:#92400e;font-size:11.5px;padding:2px 8px;border-radius:20px">Prepare room today</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div class="empty"><div class="empty-icon">⏰</div><p>No check-ins tomorrow</p></div>`;
+
+  // ── Upcoming Bookings ──
   document.getElementById('upcoming-list').innerHTML = upcoming.length
     ? upcoming.map(b => {
         const bal = parseFloat(b.balance_amount) || 0;
-        return `
-        <div class="list-item">
-          <div class="item-icon checkin">📅</div>
+        const daysAway = Math.ceil((new Date(b.checkin) - new Date()) / 86400000);
+        return `<div class="list-item">
+          <div class="item-icon" style="background:#f3f4f6;font-size:18px">📅</div>
           <div class="item-body">
-            <div class="item-title">${b.guest_name}${b.booking_no ? ' <span style="color:#9ca3af;font-weight:400;font-size:12px">SD-'+String(b.booking_no).padStart(4,'0')+'</span>' : ''}</div>
-            <div class="item-sub">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${b.guests} guest${b.guests>1?'s':''}${b.nights?' · '+b.nights+' night'+(b.nights>1?'s':''):''}</div>
-            ${bal > 0 ? `<div style="margin-top:4px"><span style="background:#fef9c3;color:#854d0e;font-size:11.5px;padding:2px 7px;border-radius:20px">Collect ₹${bal.toLocaleString('en-IN')} at arrival</span></div>` : ''}
+            <div class="item-title" style="font-size:14px;font-weight:700">${b.guest_name}${sdNo(b)}${propTag(b)}</div>
+            <div class="item-sub" style="margin-top:3px">${fmt(b.checkin)} → ${fmt(b.checkout)} · ${nightsLabel(b)}</div>
+            <div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">
+              <span style="background:#f0f4ff;color:#3730a3;font-size:11px;padding:2px 7px;border-radius:20px">in ${daysAway} day${daysAway!==1?'s':''}</span>
+              ${!b.balance_paid && bal > 0 ? `<span style="background:#fef9c3;color:#854d0e;font-size:11px;padding:2px 7px;border-radius:20px">Collect ₹${bal.toLocaleString('en-IN')}</span>` : ''}
+            </div>
           </div>
         </div>`;
       }).join('')
-    : '<div class="empty"><div class="empty-icon">📅</div><p>No upcoming bookings</p></div>';
+    : `<div class="empty"><div class="empty-icon">📅</div><p>No upcoming bookings</p></div>`;
 }
 
 // ── Tasks ──────────────────────────────────────────────────
