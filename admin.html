@@ -1882,7 +1882,7 @@ function openCalBookingPopup(dateStr) {
       </div>
       ${!b.isExternal ? `<div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-outline btn-sm" onclick="closeModal('cal-booking-modal');showPage('bookings')">Open in Bookings</button>
-        <button class="btn btn-outline btn-sm" style="color:#c2410c" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')">📋 Proforma</button>
+        <button class="btn btn-outline btn-sm" style="color:#c2410c" onclick="openInvoiceBlank('${b.id}','proforma')">📋 Proforma</button>
       </div>` : ''}
     </div>`).join('');
   showModal('cal-booking-modal');
@@ -2680,11 +2680,11 @@ function renderBookingsLog() {
   const rows = sorted.map(b => {
     const bid = b._id || b.id;
     const isFullyPaid = b.balance_paid || b.status === 'checked_out' || !b.balance_amount || b.balance_amount <= 0;
-    const proformaBtn = `<button class="btn btn-outline btn-sm" style="color:#c2410c;border-color:#fed7aa" onclick="window.open(getApiBase()+'/bookings/${bid}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')">📋 Proforma</button>`;
+    const proformaBtn = `<button class="btn btn-outline btn-sm" style="color:#c2410c;border-color:#fed7aa" onclick="openInvoiceBlank('${bid}','proforma')">📋 Proforma</button>`;
     const finalBtn = isFullyPaid
-      ? `<button class="btn btn-outline btn-sm" style="color:#15803d;border-color:#86efac" onclick="window.open(getApiBase()+'/bookings/${bid}/invoice?type=final&token='+localStorage.getItem('sd_token'),'_blank')">🧾 Final Bill</button>`
+      ? `<button class="btn btn-outline btn-sm" style="color:#15803d;border-color:#86efac" onclick="openInvoiceBlank('${bid}','final')">🧾 Final Bill</button>`
       : '';
-    const ownerBtn = `<button class="btn btn-outline btn-sm" style="color:#1d4ed8;border-color:#bfdbfe" onclick="window.open(getApiBase()+'/bookings/${bid}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')">🏠 Owner</button>`;
+    const ownerBtn = `<button class="btn btn-outline btn-sm" style="color:#1d4ed8;border-color:#bfdbfe" onclick="openInvoiceBlank('${bid}','owner')">🏠 Owner</button>`;
     return `
     <tr>
       <td><strong>${b.guest_name}</strong></td>
@@ -3481,8 +3481,8 @@ async function openPropDash(id) {
         const acts = [];
         if (st === 'pending') acts.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="updateBookingStatus('${b.id}','confirmed');openPropDash('${id}')">✓</button>`);
         if (st !== 'cancelled') acts.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled');openPropDash('${id}')">✕</button>`);
-        acts.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')" title="Proforma Invoice (Advance)">📋 Proforma</button>`);
-        if (b.balance_paid || b.status === 'checked_out') acts.push(`<button class="btn btn-sm" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=final&token='+localStorage.getItem('sd_token'),'_blank')" title="Final Tax Invoice">🧾 Final Invoice</button>`);
+        acts.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="openInvoiceBlank('${b.id}','proforma')" title="Proforma Invoice (Advance)">📋 Proforma</button>`);
+        if (b.balance_paid || b.status === 'checked_out') acts.push(`<button class="btn btn-sm" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 8px" onclick="openInvoiceBlank('${b.id}','final')" title="Final Tax Invoice">🧾 Final Invoice</button>`);
         return `<tr>
           <td><b>${b.guest}</b></td>
           <td>${fmtDate(b.checkin)}</td><td>${fmtDate(b.checkout)}</td>
@@ -3559,15 +3559,15 @@ function filterByStatus(s) { bookingStatusQ = s || ''; applyBookingFilters(); }
 function filterUsers(q) { renderUsers(users.filter(u => (u.name || '').toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase()))); }
 
 function renderProps(list) { document.getElementById('prop-grid').innerHTML = list.map(p => { const imgs = p.images && p.images.length ? p.images : (p.img ? [p.img] : []); const cover = imgs[0] || 'https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'; const count = imgs.length; const thumbs = imgs.slice(1, 4).map(src => `<img src="${src}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;border:2px solid #fff" onerror="this.style.display='none'"/>`).join(''); return `<div class="prop-card"><div style="position:relative"><img class="prop-img" src="${cover}" alt="${p.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1613977257365-aaae5a9817ff?w=600&q=80'"/>${count > 1 ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px">📷 ${count} photos</span>` : ''}</div><div class="prop-body"><div class="prop-name">${p.name}</div><div class="prop-loc">📍 ${p.location}</div>${count > 1 ? `<div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">${thumbs}${count>4?`<span style="font-size:11px;color:var(--gray-400);margin-left:2px">+${count-4} more</span>`:''}` + `</div>` : ''}<div class="prop-meta"><div><div class="prop-price">₹${p.price.toLocaleString('en-IN')}<span style="font-weight:400;color:var(--gray-400);font-size:12px">/night</span></div><div class="prop-info">👤 ${p.guests} guests · 🛏 ${p.beds} beds</div></div><span class="badge ${p.status==='Active'?'b-active':'b-inactive'}">${p.status}</span></div><div class="prop-actions"><button class="btn btn-primary btn-sm" style="flex:1" onclick="openPropDash('${p.id}')">📊 Details</button><button class="btn btn-outline btn-sm" style="flex:1" onclick="editProp('${p.id}')">✏️ Edit</button><button class="btn btn-outline btn-sm" style="color:#b91c1c" onclick="deleteProp('${p.id}')">🗑</button></div></div></div>`; }).join(''); }
-function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="confirmBookingWithCheck('${b.id}',${!!b.razorpay_payment_id})">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=proforma&token='+localStorage.getItem('sd_token'),'_blank')" title="Proforma Invoice">📋 Proforma</button>`);
-  actions.push(`<button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')" title="Owner Payout Statement">🏠 Owner</button>`);
+function renderBookings(list) { const rows = list.filter(b=>!b.isExternal); document.getElementById('bookings-tbody').innerHTML = rows.map(b => { const st = b.status || 'pending'; const actions = []; if (st === 'pending') actions.push(`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:4px 8px" onclick="confirmBookingWithCheck('${b.id}',${!!b.razorpay_payment_id})">✓ Confirm</button>`); if (st !== 'cancelled') actions.push(`<button class="btn-icon" title="Cancel" onclick="updateBookingStatus('${b.id}','cancelled')">✕</button>`); actions.push(`<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:4px 8px" onclick="openInvoiceBlank('${b.id}','proforma')" title="Proforma Invoice">📋 Proforma</button>`);
+  actions.push(`<button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:4px 8px" onclick="openInvoiceBlank('${b.id}','owner')" title="Owner Payout Statement">🏠 Owner</button>`);
   // Balance pending button
   const balanceAmt = b.balance_amount || b.balanceAmount;
   const balancePaid = b.balance_paid || b.balancePaid;
   const totalAmt = b.total_amount || b.totalAmount;
   if (st === 'confirmed' && balanceAmt && !balancePaid) actions.push(`<button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:none;padding:4px 8px" onclick="markBalancePaid('${b.id}')" title="Mark balance collected at check-in">💰 ₹${Number(balanceAmt).toLocaleString('en-IN')} Due</button>`);
-  if (st === 'confirmed' && balanceAmt && balancePaid) { actions.push(`<span class="badge b-confirmed" style="font-size:10px">✓ Balance Paid</span>`); actions.push(`<button class="btn btn-sm" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=final&token='+localStorage.getItem('sd_token'),'_blank')" title="Final Tax Invoice">🧾 Final Invoice</button>`); }
-  if (st === 'checked_out') actions.push(`<button class="btn btn-sm" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 8px" onclick="window.open(getApiBase()+'/bookings/${b.id}/invoice?type=final&token='+localStorage.getItem('sd_token'),'_blank')" title="Final Tax Invoice">🧾 Final Invoice</button>`);
+  if (st === 'confirmed' && balanceAmt && balancePaid) { actions.push(`<span class="badge b-confirmed" style="font-size:10px">✓ Balance Paid</span>`); actions.push(`<button class="btn btn-sm" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 8px" onclick="openInvoiceBlank('${b.id}','final')" title="Final Tax Invoice">🧾 Final Invoice</button>`); }
+  if (st === 'checked_out') actions.push(`<button class="btn btn-sm" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:4px 8px" onclick="openInvoiceBlank('${b.id}','final')" title="Final Tax Invoice">🧾 Final Invoice</button>`);
   const remainingAmt = balancePaid ? 0 : (balanceAmt || 0);
   const amtDisplay = totalAmt
     ? `<div style="font-size:10px;color:var(--gray-400)">Adv: ₹${Number(b.amount||0).toLocaleString('en-IN')}</div><div style="font-weight:600">Total: ₹${Number(totalAmt).toLocaleString('en-IN')}</div>${remainingAmt > 0 ? `<div style="font-size:10px;color:#dc2626;font-weight:600">Remaining: ₹${Number(remainingAmt).toLocaleString('en-IN')}</div>` : `<div style="font-size:10px;color:#16a34a;font-weight:600">✓ Fully Paid</div>`}`
@@ -3626,15 +3626,36 @@ async function confirmBookingWithCheck(id, isPaid) {
 }
 
 // ── Add Booking Modal ─────────────────────────────────
+// ── Open invoice/bill in blank window (prevents API URL showing in printed PDF) ──
+async function openInvoiceBlank(bookingId, type) {
+  const token = localStorage.getItem('sd_token');
+  const url   = type === 'owner'
+    ? `${getApiBase()}/bookings/${bookingId}/owner-bill?token=${token}`
+    : `${getApiBase()}/bookings/${bookingId}/invoice?type=${type}&token=${token}`;
+  try {
+    const res  = await fetch(url);
+    if (!res.ok) { alert('Could not load document'); return; }
+    const html = await res.text();
+    const win  = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+  } catch (e) {
+    alert('Document load failed: ' + e.message);
+  }
+}
+
 function openAddBookingModal() {
   const sel = document.getElementById('ab-property');
   sel.innerHTML = properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   document.getElementById('ab-form').reset();
+  // restore defaults after reset
+  document.getElementById('ab-guests').value = 2;
   const today = new Date().toISOString().split('T')[0];
   const tom   = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   document.getElementById('ab-checkin').value  = today;
   document.getElementById('ab-checkout').value = tom;
   document.getElementById('ab-pending-warn').style.display = 'none';
+  document.getElementById('ab-summary').style.display = 'none';
   abCalcAmount();
   showModal('add-booking-modal');
 }
@@ -3643,19 +3664,41 @@ function abCalcAmount() {
   const propId  = document.getElementById('ab-property').value;
   const cin     = document.getElementById('ab-checkin').value;
   const cout    = document.getElementById('ab-checkout').value;
-  const method  = document.getElementById('ab-payment').value;
+  const method  = document.getElementById('ab-payment')?.value || 'upi';
   const prop    = properties.find(p => p.id === propId);
   const hint    = document.getElementById('ab-amount-hint');
   const warn    = document.getElementById('ab-pending-warn');
+  const summary = document.getElementById('ab-summary');
 
   warn.style.display = method === 'pending' ? 'block' : 'none';
 
-  if (prop && cin && cout && cin < cout) {
-    const nights = Math.ceil((new Date(cout) - new Date(cin)) / 86400000);
-    const total  = prop.price * nights;
-    document.getElementById('ab-amount').placeholder = `Auto: ₹${total.toLocaleString('en-IN')} (${nights} nights × ₹${prop.price.toLocaleString('en-IN')})`;
-    if (hint) hint.textContent = `${nights} night${nights > 1 ? 's' : ''} × ₹${prop.price.toLocaleString('en-IN')}/night`;
-  }
+  if (!prop || !cin || !cout || cin >= cout) { summary.style.display = 'none'; return; }
+
+  const nights  = Math.ceil((new Date(cout) - new Date(cin)) / 86400000);
+  const manualTotal = parseInt(document.getElementById('ab-amount').value) || 0;
+  const total   = manualTotal || (prop.price * nights);
+
+  if (hint) hint.textContent = `${nights} night${nights !== 1 ? 's' : ''} × ₹${prop.price.toLocaleString('en-IN')}/night`;
+  document.getElementById('ab-amount').placeholder = `₹${total.toLocaleString('en-IN')} (auto)`;
+
+  if (method === 'pending') { summary.style.display = 'none'; return; }
+
+  const advance = Math.round(total * 0.3);
+  const balance = total - advance;
+  document.getElementById('ab-advance').value   = advance;
+  document.getElementById('ab-sum-total').textContent   = '₹' + total.toLocaleString('en-IN');
+  document.getElementById('ab-sum-advance').textContent = '₹' + advance.toLocaleString('en-IN');
+  document.getElementById('ab-sum-balance').textContent = '₹' + balance.toLocaleString('en-IN');
+  summary.style.display = '';
+}
+
+function abUpdateBalance() {
+  const totalEl = document.getElementById('ab-sum-total').textContent.replace(/[₹,]/g,'');
+  const total   = parseInt(totalEl) || 0;
+  const advance = parseInt(document.getElementById('ab-advance').value) || 0;
+  const balance = Math.max(0, total - advance);
+  document.getElementById('ab-sum-advance').textContent = '₹' + advance.toLocaleString('en-IN');
+  document.getElementById('ab-sum-balance').textContent = '₹' + balance.toLocaleString('en-IN');
 }
 
 async function saveAdminBooking() {
@@ -3668,7 +3711,10 @@ async function saveAdminBooking() {
     checkout:       document.getElementById('ab-checkout').value,
     guests:         parseInt(document.getElementById('ab-guests').value) || 1,
     amount:         document.getElementById('ab-amount').value || null,
+    advance_amount: document.getElementById('ab-advance')?.value || null,
     payment_method: document.getElementById('ab-payment').value,
+    notes:          document.getElementById('ab-notes').value.trim(),
+    source:         document.getElementById('ab-source').value,
   };
 
   if (!body.guest_name) { alert('Guest name is required'); return; }
@@ -3686,13 +3732,19 @@ async function saveAdminBooking() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to save booking');
+
     closeModal('add-booking-modal');
-    showAdminToast(`Booking created! ${data.status === 'pending' ? '(Pending — confirm once payment received)' : 'Confirmed ✅'}`, 'success');
+    showAdminToast(`Booking SD-${String(data.booking_no).padStart(4,'0')} created! ${data.status === 'pending' ? '(Pending)' : '✅ Confirmed'}`, 'success');
     await initAdmin();
+
+    // Auto-open proforma invoice in blank window (no API URL in print)
+    if (data.booking_id && data.status !== 'pending') {
+      setTimeout(() => openInvoiceBlank(data.booking_id, 'proforma'), 400);
+    }
   } catch (e) {
     alert(e.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'Save Booking';
+    btn.disabled = false; btn.textContent = '💾 Save & Generate Invoice';
   }
 }
 
@@ -4242,7 +4294,7 @@ function renderLedger() {
       <td style="text-align:right;font-weight:700;color:#15803d">${INR(ownerShare)}</td>
       <td style="text-align:right;font-weight:700;color:#8B1717">${INR(sdShare)}</td>
       <td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${sc}">${(b.status||'').replace('_',' ')}</span></td>
-      <td><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:#f8fafc;border:1px solid #e2e8f0" onclick="window.open(getApiBase()+'/bookings/${bookingId}/owner-bill?token='+localStorage.getItem('sd_token'),'_blank')">Owner Bill</button></td>
+      <td><button class="btn btn-sm" style="font-size:11px;padding:3px 8px;background:#f8fafc;border:1px solid #e2e8f0" onclick="openInvoiceBlank('${bookingId}','owner')">Owner Bill</button></td>
     </tr>`;
   }).join('');
 }
@@ -4438,12 +4490,13 @@ function exportAccountsXLSX() {
 
 <!-- Add Booking Modal -->
 <div class="modal-bd" id="add-booking-modal">
-  <div class="modal" style="max-width:520px">
+  <div class="modal" style="max-width:560px">
     <div class="modal-hdr">
-      <div class="modal-title">Add Booking</div>
+      <div class="modal-title">➕ New Booking</div>
       <button class="modal-close" onclick="closeModal('add-booking-modal')">✕</button>
     </div>
     <form id="ab-form" onsubmit="return false" style="padding:4px 0">
+      <!-- Guest Info -->
       <div class="form-row">
         <div class="form-grp" style="flex:2">
           <label class="form-lbl">Guest Name *</label>
@@ -4464,6 +4517,7 @@ function exportAccountsXLSX() {
           <input class="form-ctrl" id="ab-email" type="email" placeholder="guest@email.com">
         </div>
       </div>
+      <!-- Property + Dates -->
       <div class="form-grp">
         <label class="form-lbl">Property *</label>
         <select class="form-ctrl" id="ab-property" onchange="abCalcAmount()"></select>
@@ -4478,27 +4532,68 @@ function exportAccountsXLSX() {
           <input class="form-ctrl" id="ab-checkout" type="date" onchange="abCalcAmount()" required>
         </div>
       </div>
+      <!-- Amount + Payment -->
       <div class="form-row">
         <div class="form-grp">
-          <label class="form-lbl">Amount (₹) <span id="ab-amount-hint" style="color:var(--gray-400);font-weight:400"></span></label>
-          <input class="form-ctrl" id="ab-amount" type="number" min="0" placeholder="Leave blank for auto-calculate">
+          <label class="form-lbl">Total Amount (₹) <span id="ab-amount-hint" style="color:var(--gray-400);font-weight:400;font-size:11px"></span></label>
+          <input class="form-ctrl" id="ab-amount" type="number" min="0" placeholder="Auto-calculated" oninput="abCalcAmount()">
         </div>
         <div class="form-grp">
-          <label class="form-lbl">Payment Method *</label>
-          <select class="form-ctrl" id="ab-payment" onchange="abCalcAmount()">
-            <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-            <option value="bank">Bank Transfer</option>
-            <option value="pending">Pending (no payment yet)</option>
+          <label class="form-lbl">Source</label>
+          <select class="form-ctrl" id="ab-source">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="walkin">Walk-in</option>
+            <option value="call">Phone Call</option>
+            <option value="website">Website</option>
+            <option value="referral">Referral</option>
+            <option value="ota">OTA (MakeMyTrip/Airbnb)</option>
           </select>
         </div>
       </div>
-      <div id="ab-pending-warn" style="display:none;background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:10px">
-        ⚠️ Booking will be saved as <strong>Pending</strong>. Confirm it from the bookings table once payment is received.
+      <!-- PMS Summary Box -->
+      <div id="ab-summary" style="display:none;background:#f8faff;border:1.5px solid #c7d7f5;border-radius:10px;padding:14px 16px;margin:10px 0">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#3730a3;margin-bottom:10px">💰 Booking Summary</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:12px">
+          <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e0e7ff">
+            <div style="font-size:16px;font-weight:800;color:#1e1b4b" id="ab-sum-total">₹0</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Total Amount</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #d1fae5">
+            <div style="font-size:16px;font-weight:800;color:#15803d" id="ab-sum-advance">₹0</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Advance Paid</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #fee2e2">
+            <div style="font-size:16px;font-weight:800;color:#dc2626" id="ab-sum-balance">₹0</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Due at Check-in</div>
+          </div>
+        </div>
+        <div class="form-row" style="margin:0">
+          <div class="form-grp">
+            <label class="form-lbl" style="font-size:11.5px">Advance Amount (₹)</label>
+            <input class="form-ctrl" id="ab-advance" type="number" min="0" placeholder="30% by default" oninput="abUpdateBalance()" style="font-size:13px;font-weight:600">
+          </div>
+          <div class="form-grp">
+            <label class="form-lbl" style="font-size:11.5px">Payment Method</label>
+            <select class="form-ctrl" id="ab-payment" onchange="abCalcAmount()">
+              <option value="upi">UPI</option>
+              <option value="cash">Cash</option>
+              <option value="bank">Bank Transfer</option>
+              <option value="pending">Pending (collect later)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="ab-pending-warn" style="display:none;background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:8px">
+        ⚠️ Booking will be saved as <strong>Pending</strong>. Confirm from bookings table once payment received.
+      </div>
+      <!-- Notes -->
+      <div class="form-grp">
+        <label class="form-lbl">Booking Notes <span style="color:var(--gray-400);font-weight:400;font-size:11px">(special requests, early check-in, etc.)</span></label>
+        <textarea class="form-ctrl" id="ab-notes" rows="2" placeholder="e.g. Early check-in, top floor room..." style="resize:vertical;font-size:13px"></textarea>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px">
         <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('add-booking-modal')">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm" id="ab-save-btn" onclick="saveAdminBooking()">Save Booking</button>
+        <button type="button" class="btn btn-primary btn-sm" id="ab-save-btn" onclick="saveAdminBooking()">💾 Save &amp; Generate Invoice</button>
       </div>
     </form>
   </div>

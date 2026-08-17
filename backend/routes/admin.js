@@ -345,7 +345,7 @@ router.delete('/users/:id', async (req, res) => {
 // POST /api/admin/booking  — admin manually creates a booking
 router.post('/booking', async (req, res) => {
   try {
-    const { guest_name, guest_phone, guest_email, property_id, checkin, checkout, guests, amount, payment_method, notes } = req.body;
+    const { guest_name, guest_phone, guest_email, property_id, checkin, checkout, guests, amount, advance_amount, payment_method, notes, source } = req.body;
 
     if (!guest_name || !property_id || !checkin || !checkout)
       return res.status(400).json({ error: 'guest_name, property_id, checkin, checkout are required' });
@@ -358,8 +358,16 @@ router.post('/booking', async (req, res) => {
     if (cout <= cin) return res.status(400).json({ error: 'Check-out must be after check-in' });
     const nights = Math.ceil((cout - cin) / (1000 * 60 * 60 * 24));
 
-    const finalAmount = amount ? parseInt(amount) : property.price * nights;
-    const status = payment_method === 'pending' ? 'pending' : 'confirmed';
+    const totalAmt   = amount ? parseInt(amount) : property.price * nights;
+    const isPending  = payment_method === 'pending';
+    const status     = isPending ? 'pending' : 'confirmed';
+
+    // Advance: admin can specify; default = 30% of total (or full if payment_method=pending → 0)
+    const advAmt     = isPending ? 0
+      : (advance_amount !== undefined && advance_amount !== '' ? parseInt(advance_amount) : Math.round(totalAmt * 0.3));
+    const balAmt     = Math.max(0, totalAmt - advAmt);
+
+    const platform   = source || 'walkin';
 
     const bookingNo = (await Booking.countDocuments()) + 1;
     const booking = await Booking.create({
@@ -373,10 +381,12 @@ router.post('/booking', async (req, res) => {
       checkout,
       guests:         guests || 1,
       nights,
-      amount:         finalAmount,
-      total_amount:   finalAmount,
+      amount:         isPending ? totalAmt : advAmt,
+      total_amount:   totalAmt,
+      balance_amount: balAmt,
+      balance_paid:   balAmt === 0 && !isPending,
       status,
-      platform:       'walkin',
+      platform,
       notes:          notes || '',
     });
 
@@ -401,7 +411,7 @@ router.post('/booking', async (req, res) => {
       sendWhatsApp(booking.guest_phone, guestMsg).catch(e => console.error('notifyGuest error:', e.message));
     }
 
-    res.status(201).json({ success: true, booking_id: booking._id.toString(), booking_no: bookingNo, status, nights, amount: finalAmount });
+    res.status(201).json({ success: true, booking_id: booking._id.toString(), booking_no: bookingNo, status, nights, total_amount: totalAmt, advance_amount: advAmt, balance_amount: balAmt });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
