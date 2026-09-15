@@ -345,7 +345,7 @@ router.delete('/users/:id', async (req, res) => {
 // POST /api/admin/booking  — admin manually creates a booking
 router.post('/booking', async (req, res) => {
   try {
-    const { guest_name, guest_phone, guest_email, property_id, checkin, checkout, guests, amount, advance_amount, payment_method, notes, source } = req.body;
+    const { guest_name, guest_phone, guest_email, property_id, checkin, checkout, guests, amount, advance_amount, payment_method, notes, source, net_payout, remitted_tax } = req.body;
 
     if (!guest_name || !property_id || !checkin || !checkout)
       return res.status(400).json({ error: 'guest_name, property_id, checkin, checkout are required' });
@@ -388,6 +388,8 @@ router.post('/booking', async (req, res) => {
       status,
       platform,
       notes:          notes || '',
+      net_payout:     net_payout     ? Number(net_payout)   : null,
+      remitted_tax:   remitted_tax   ? Number(remitted_tax) : 0,
     });
 
     // Run automation in background (don't await — don't block response)

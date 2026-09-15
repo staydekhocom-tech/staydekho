@@ -3692,6 +3692,13 @@ function abCalcAmount() {
   summary.style.display = '';
 }
 
+const OTA_PLATFORMS = ['airbnb','booking_com','agoda','mmt_goibibo'];
+function abToggleOTA() {
+  const src = document.getElementById('ab-source').value;
+  const isOTA = OTA_PLATFORMS.includes(src);
+  document.getElementById('ab-ota-fields').style.display = isOTA ? 'block' : 'none';
+}
+
 function abUpdateBalance() {
   const totalEl = document.getElementById('ab-sum-total').textContent.replace(/[₹,]/g,'');
   const total   = parseInt(totalEl) || 0;
@@ -3715,6 +3722,8 @@ async function saveAdminBooking() {
     payment_method: document.getElementById('ab-payment').value,
     notes:          document.getElementById('ab-notes').value.trim(),
     source:         document.getElementById('ab-source').value,
+    net_payout:     document.getElementById('ab-net-payout')?.value  || null,
+    remitted_tax:   document.getElementById('ab-remitted-tax')?.value || null,
   };
 
   if (!body.guest_name) { alert('Guest name is required'); return; }
@@ -4539,16 +4548,36 @@ function exportAccountsXLSX() {
           <input class="form-ctrl" id="ab-amount" type="number" min="0" placeholder="Auto-calculated" oninput="abCalcAmount()">
         </div>
         <div class="form-grp">
-          <label class="form-lbl">Source</label>
-          <select class="form-ctrl" id="ab-source">
-            <option value="whatsapp">WhatsApp</option>
+          <label class="form-lbl">Source / Platform</label>
+          <select class="form-ctrl" id="ab-source" onchange="abToggleOTA()">
             <option value="walkin">Walk-in</option>
+            <option value="direct">StayDekho Direct</option>
+            <option value="whatsapp">WhatsApp</option>
             <option value="call">Phone Call</option>
             <option value="website">Website</option>
             <option value="referral">Referral</option>
-            <option value="ota">OTA (MakeMyTrip/Airbnb)</option>
+            <option value="airbnb">Airbnb</option>
+            <option value="booking_com">Booking.com</option>
+            <option value="agoda">Agoda</option>
+            <option value="mmt_goibibo">MMT / Goibibo</option>
           </select>
         </div>
+      </div>
+
+      <!-- OTA Fields — only visible when OTA platform selected -->
+      <div id="ab-ota-fields" style="display:none;background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin:8px 0">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;margin-bottom:10px">🌐 OTA Booking Details</div>
+        <div class="form-row" style="margin:0">
+          <div class="form-grp">
+            <label class="form-lbl" style="font-size:11.5px">Platform Net Payout (₹) <span style="color:#6b7280;font-weight:400">amount we receive</span></label>
+            <input class="form-ctrl" id="ab-net-payout" type="number" min="0" placeholder="After platform commission" style="font-size:13px">
+          </div>
+          <div class="form-grp">
+            <label class="form-lbl" style="font-size:11.5px">Remitted Tax (₹) <span style="color:#6b7280;font-weight:400">platform ne govt ko diya</span></label>
+            <input class="form-ctrl" id="ab-remitted-tax" type="number" min="0" placeholder="Occupancy tax" style="font-size:13px">
+          </div>
+        </div>
+        <div style="font-size:11px;color:#3b82f6;margin-top:6px">Owner payout = (Net Payout − Remitted Tax) × 70%</div>
       </div>
       <!-- PMS Summary Box -->
       <div id="ab-summary" style="display:none;background:#f8faff;border:1.5px solid #c7d7f5;border-radius:10px;padding:14px 16px;margin:10px 0">
