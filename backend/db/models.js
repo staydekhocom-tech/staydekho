@@ -51,6 +51,9 @@ const propertySchema = new Schema({
   owner_phone:       { type: String, default: '' },   // WhatsApp notifications ke liye
   caretaker_name:    { type: String, default: '' },
   caretaker_phone:   { type: String, default: '' },   // WhatsApp notifications ke liye
+  manager_name:      { type: String, default: '' },
+  manager_phone:     { type: String, default: '' },   // WhatsApp notifications ke liye
+  travel_guide_url:  { type: String, default: '' },   // Area guide PDF/link — checkin reminder mein jaata hai
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 // ── 3. Booking ─────────────────────────────────────────

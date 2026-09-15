@@ -64,6 +64,9 @@ app.use('/api/operations',    require('./routes/operations'));
 app.use('/api/staff',         require('./routes/staff'));
 app.use('/api/checkin',       require('./routes/checkin'));
 
+// ── Public invoice & payout pages (no auth needed) ───
+app.use('/',                  require('./routes/invoice'));
+
 // ── Dynamic Sitemap ───────────────────────────────────
 app.get('/api/sitemap.xml', async (req, res) => {
   const { BlogPost, TravelGuide, Property } = require('./db/models');

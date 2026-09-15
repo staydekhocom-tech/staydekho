@@ -463,6 +463,18 @@ function buildForm() {
             <label>Caretaker WhatsApp Number</label>
             <input type="tel" id="f-caretaker-phone" value="${esc(p.caretaker_phone || '')}" placeholder="e.g. 9876543210"/>
           </div>
+          <div class="field">
+            <label>Manager Name <span class="hint">(optional)</span></label>
+            <input type="text" id="f-manager-name" value="${esc(p.manager_name || '')}" placeholder="e.g. Ankit"/>
+          </div>
+          <div class="field">
+            <label>Manager WhatsApp Number <span class="hint">(optional)</span></label>
+            <input type="tel" id="f-manager-phone" value="${esc(p.manager_phone || '')}" placeholder="e.g. 9876543210"/>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>📄 Area Travel Guide URL <span class="hint">(Google Drive PDF ya koi link — checkin reminder mein guest ko jaata hai)</span></label>
+            <input type="text" id="f-travel-guide-url" value="${esc(p.travel_guide_url || '')}" placeholder="https://drive.google.com/file/..."/>
+          </div>
         </div>
       </div>
     </div>
@@ -991,10 +1003,13 @@ async function saveAll() {
     lat: document.getElementById('f-lat')?.value ? parseFloat(document.getElementById('f-lat').value) : null,
     lng: document.getElementById('f-lng')?.value ? parseFloat(document.getElementById('f-lng').value) : null,
     nearby_attractions: JSON.stringify(getNearbyAttractions()),
-    owner_name:      document.getElementById('f-owner-name')?.value.trim()      || '',
-    owner_phone:     document.getElementById('f-owner-phone')?.value.trim()     || '',
-    caretaker_name:  document.getElementById('f-caretaker-name')?.value.trim()  || '',
-    caretaker_phone: document.getElementById('f-caretaker-phone')?.value.trim() || '',
+    owner_name:        document.getElementById('f-owner-name')?.value.trim()        || '',
+    owner_phone:       document.getElementById('f-owner-phone')?.value.trim()       || '',
+    caretaker_name:    document.getElementById('f-caretaker-name')?.value.trim()    || '',
+    caretaker_phone:   document.getElementById('f-caretaker-phone')?.value.trim()   || '',
+    manager_name:      document.getElementById('f-manager-name')?.value.trim()      || '',
+    manager_phone:     document.getElementById('f-manager-phone')?.value.trim()     || '',
+    travel_guide_url:  document.getElementById('f-travel-guide-url')?.value.trim()  || '',
   };
 
   try {

@@ -2,6 +2,7 @@
 // ║  Daily WhatsApp Reminder Scheduler                    ║
 // ║  10:00 AM IST (04:30 UTC) every day                  ║
 // ║  • Check-in reminder → guests checking in tomorrow   ║
+// ║  • Caretaker alert   → caretaker for tomorrow's stay ║
 // ║  • Balance reminder  → balance_amount > 0            ║
 // ║  • Review request    → guests who checked out today  ║
 // ╚══════════════════════════════════════════════════════╝
@@ -9,8 +10,10 @@ const cron = require('node-cron');
 const { Booking } = require('../db/models');
 const {
   notifyGuestCheckinReminder,
+  notifyCaretakerCheckinReminder,
   notifyGuestBalanceDue,
   notifyGuestReviewRequest,
+  notifyGuestStayCheckin,
 } = require('./whatsapp');
 
 function istDate(offsetDays = 0) {
@@ -30,14 +33,23 @@ async function runDailyReminders() {
       checkin:     tomorrow,
       status:      'confirmed',
       guest_phone: { $exists: true, $ne: '' },
-    }).populate('property_id', 'name phone').lean();
+    }).populate('property_id', 'name caretaker_name caretaker_phone manager_name manager_phone map_url travel_guide_url').lean();
 
     for (const b of arriving) {
-      const propName  = b.property_id?.name  || 'StayDekho Property';
-      const propPhone = b.property_id?.phone || process.env.BUSINESS_PHONE || '';
-      await notifyGuestCheckinReminder(b, propName, propPhone).catch(() => {});
+      const prop = b.property_id || {};
+      await notifyGuestCheckinReminder(b, prop).catch(() => {});
       if (b.balance_amount > 0) {
-        await notifyGuestBalanceDue(b, propName).catch(() => {});
+        await notifyGuestBalanceDue(b, prop.name || 'StayDekho Property').catch(() => {});
+      }
+      // Caretaker gets the same-day guest details
+      await notifyCaretakerCheckinReminder(b, prop).catch(() => {});
+      // Manager also gets caretaker-style reminder (reuse same function, same template)
+      if (prop.manager_phone) {
+        await notifyCaretakerCheckinReminder(b, {
+          ...prop,
+          caretaker_name:  prop.manager_name  || prop.caretaker_name,
+          caretaker_phone: prop.manager_phone,
+        }).catch(() => {});
       }
     }
 
@@ -59,10 +71,35 @@ async function runDailyReminders() {
   }
 }
 
-function startScheduler() {
-  // 04:30 UTC = 10:00 AM IST
-  cron.schedule('30 4 * * *', runDailyReminders, { timezone: 'UTC' });
-  console.log('⏰ Daily WhatsApp scheduler started — runs 10:00 AM IST every day');
+async function runEveningWelfare() {
+  try {
+    const today = istDate(0);
+    console.log(`🌅 Evening welfare check: checkin_today=${today}`);
+
+    const checkedInToday = await Booking.find({
+      checkin:     today,
+      status:      { $in: ['confirmed', 'checked_in'] },
+      guest_phone: { $exists: true, $ne: '' },
+    }).populate('property_id', 'name caretaker_phone').lean();
+
+    for (const b of checkedInToday) {
+      const propName     = b.property_id?.name || 'StayDekho Property';
+      const contactPhone = b.property_id?.caretaker_phone || process.env.BUSINESS_PHONE || '';
+      await notifyGuestStayCheckin(b, propName, contactPhone).catch(() => {});
+    }
+
+    console.log(`✅ Evening welfare done — ${checkedInToday.length} guests`);
+  } catch (err) {
+    console.error('❌ Evening welfare scheduler error:', err.message);
+  }
 }
 
-module.exports = { startScheduler, runDailyReminders };
+function startScheduler() {
+  // 04:30 UTC = 10:00 AM IST — morning reminders + caretaker alerts
+  cron.schedule('30 4 * * *', runDailyReminders, { timezone: 'UTC' });
+  // 12:30 UTC = 6:00 PM IST — evening welfare check
+  cron.schedule('30 12 * * *', runEveningWelfare, { timezone: 'UTC' });
+  console.log('⏰ WhatsApp schedulers started — 10:00 AM & 6:00 PM IST daily');
+}
+
+module.exports = { startScheduler, runDailyReminders, runEveningWelfare };

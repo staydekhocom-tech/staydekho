@@ -5,7 +5,7 @@ const { Booking, Property, Payment, DatePrice, User, Staff } = require('../db/mo
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
 const { blockCalendarForBooking, unblockCalendarIfFree, createCleaningTaskForCheckout, notifyGuestBookingCancelled } = require('../services/bookingAutomation');
-const { notifyTeamBookingCancelled } = require('../services/whatsapp');
+const { notifyTeamBookingCancelled, notifyGuestPaymentReceived } = require('../services/whatsapp');
 
 function getRazorpay() {
   const key_id     = process.env.RAZORPAY_KEY_ID;
@@ -188,15 +188,26 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// PUT /api/bookings/:id/balance-paid  — admin marks balance collected at check-in
+// PUT /api/bookings/:id/balance-paid  — admin/caretaker marks balance collected at check-in
 router.put('/:id/balance-paid', protect, adminOnly, async (req, res) => {
   try {
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { balance_paid: true, balance_paid_at: new Date() },
       { new: true }
-    ).lean();
+    ).populate('property_id', 'name').lean();
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    // 1 hour baad guest ko payment received confirmation
+    if (booking.guest_phone) {
+      const propName = booking.property_id?.name || 'StayDekho Property';
+      setTimeout(() => {
+        notifyGuestPaymentReceived(booking, propName).catch(e =>
+          console.error('paymentReceived WA error:', e.message)
+        );
+      }, 60 * 60 * 1000); // 1 hour
+    }
+
     res.json({ message: 'Balance marked as collected', booking });
   } catch (err) {
     res.status(500).json({ error: err.message });

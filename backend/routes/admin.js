@@ -4,7 +4,7 @@ const { User, Property, Booking, Review } = require('../db/models');
 const { protect, adminOnly } = require('../middleware/auth');
 const { notifyStaffNewBooking } = require('../services/notify');
 const { blockCalendarForBooking, createCleaningTaskForCheckout } = require('../services/bookingAutomation');
-const { notifyTeamNewBooking, sendWhatsApp } = require('../services/whatsapp');
+const { notifyTeamNewBooking, notifyGuestBookingConfirmed } = require('../services/whatsapp');
 
 // All admin routes require auth + admin role
 router.use(protect, adminOnly);
@@ -394,22 +394,7 @@ router.post('/booking', async (req, res) => {
     blockCalendarForBooking(booking.property_id, booking.checkin, booking.checkout).catch(e => console.error('blockCalendar error:', e.message));
     createCleaningTaskForCheckout(booking.property_id, booking.checkout).catch(e => console.error('cleaningTask error:', e.message));
     notifyTeamNewBooking(booking, property).catch(e => console.error('notifyTeam error:', e.message));
-    if (booking.guest_phone) {
-      const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
-      const bookingCode = `SD-${String(bookingNo).padStart(4, '0')}`;
-      const guestMsg =
-        `✅ *Booking Confirmed — StayDekho*\n\n` +
-        `Namaste ${booking.guest_name}! Aapki booking confirm ho gayi hai. 🏠\n\n` +
-        `📌 Booking ID: ${bookingCode}\n` +
-        `🏡 Property: ${property.name}\n` +
-        `📅 Check-in: ${fmtD(booking.checkin)}\n` +
-        `📅 Check-out: ${fmtD(booking.checkout)}\n` +
-        `🌙 Nights: ${nights} | Guests: ${booking.guests}\n` +
-        `💰 Total: ₹${Number(finalAmount).toLocaleString('en-IN')}\n\n` +
-        `Kisi bhi sahayta ke liye: ${process.env.BUSINESS_PHONE || '+91 87699 05983'}\n\n` +
-        `Dhanyavaad! — StayDekho`;
-      sendWhatsApp(booking.guest_phone, guestMsg).catch(e => console.error('notifyGuest error:', e.message));
-    }
+    notifyGuestBookingConfirmed(booking, property).catch(e => console.error('notifyGuest error:', e.message));
 
     res.status(201).json({ success: true, booking_id: booking._id.toString(), booking_no: bookingNo, status, nights, total_amount: totalAmt, advance_amount: advAmt, balance_amount: balAmt });
   } catch (err) {

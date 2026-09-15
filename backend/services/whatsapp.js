@@ -44,56 +44,81 @@ async function sendWhatsApp(phone, message) {
   }
 }
 
-// ── Booking notification: owner + caretaker + admin ────
-// property: { name, owner_name, owner_phone, caretaker_name, caretaker_phone }
+// ── Booking notification: owner + caretaker + manager ──
 async function notifyTeamNewBooking(booking, property) {
   const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
-  const INR  = n => '₹' + Number(n || 0).toLocaleString('en-IN');
+  const INR  = n => Number(n || 0).toLocaleString('en-IN');
 
-  const base =
-    `🏠 *New Booking — ${property?.name || 'Property'}*\n\n` +
-    `👤 Guest: ${booking.guest_name || '—'}\n` +
-    `📅 Check-in: ${fmtD(booking.checkin)}\n` +
-    `📅 Check-out: ${fmtD(booking.checkout)}\n` +
-    `🌙 Nights: ${booking.nights || 1} | Guests: ${booking.guests || 1}\n`;
-
-  // Owner — booking amount (no guest phone)
+  // Owner — template (payout breakdown)
   if (property?.owner_phone) {
-    const msg = base +
-      `💰 Total Amount: ${INR(booking.total_amount || booking.amount)}\n\n` +
-      `— StayDekho`;
-    sendWhatsApp(property.owner_phone, msg).catch(() => {});
+    const total      = Number(booking.total_amount || booking.amount || 0);
+    const remitted   = Number(booking.remitted_tax || 0);
+    const net        = total - remitted;
+    const ownerShare = Math.round(net * 0.7);
+    sendWhatsAppTemplate(property.owner_phone, 'staydekho_owner_new_booking', [
+      property.owner_name || 'ji',
+      property.name || 'Property',
+      booking.guest_name || '—',
+      fmtD(booking.checkin),
+      fmtD(booking.checkout),
+      String(booking.nights || 1),
+      String(booking.guests || 1),
+      INR(net),
+      INR(ownerShare),
+      `${process.env.FRONTEND_URL || 'https://staydekho.com'}/payout/${booking._id}`,
+    ]).catch(() => {});
   }
 
-  // Caretaker — operations info only
+  // Caretaker — template (Hinglish)
   if (property?.caretaker_phone) {
-    const msg = base +
-      `\n🧹 Please prepare the room. Check-in from 12:00 PM (Noon).\n\n— StayDekho`;
-    sendWhatsApp(property.caretaker_phone, msg).catch(() => {});
+    sendWhatsAppTemplate(property.caretaker_phone, 'staydekho_caretaker_new_booking', [
+      property.caretaker_name || 'ji',
+      property.name || 'Property',
+      booking.guest_name || '—',
+      booking.guest_phone || '—',
+      fmtD(booking.checkin),
+      fmtD(booking.checkout),
+      String(booking.guests || 1),
+    ]).catch(() => {});
   }
 
-  // Admin — full details including guest phone
-  if (process.env.ADMIN_WHATSAPP) {
-    const msg = base +
-      `📞 Guest Phone: ${booking.guest_phone || '—'}\n` +
-      `💰 Total: ${INR(booking.total_amount || booking.amount)} | Advance: ${INR(booking.amount)}\n` +
-      `📌 Source: ${booking.platform || 'direct'}\n\n— StayDekho`;
-    sendWhatsApp(process.env.ADMIN_WHATSAPP, msg).catch(() => {});
+  // Manager — same as caretaker template
+  if (property?.manager_phone) {
+    sendWhatsAppTemplate(property.manager_phone, 'staydekho_caretaker_new_booking', [
+      property.manager_name || 'ji',
+      property.name || 'Property',
+      booking.guest_name || '—',
+      booking.guest_phone || '—',
+      fmtD(booking.checkin),
+      fmtD(booking.checkout),
+      String(booking.guests || 1),
+    ]).catch(() => {});
   }
 }
 
 // ── Cancellation notification ───────────────────────────
 async function notifyTeamBookingCancelled(booking, property) {
-  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); } catch { return s; } };
-  const msg =
-    `❌ *Booking Cancelled — ${property?.name || 'Property'}*\n\n` +
-    `👤 Guest: ${booking.guest_name || '—'}\n` +
-    `📅 Check-in: ${fmtD(booking.checkin)} → Check-out: ${fmtD(booking.checkout)}\n\n` +
-    `Calendar dates have been unblocked.\n\n— StayDekho`;
+  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+  const params = [
+    property?.owner_name || 'ji',
+    property?.name || 'Property',
+    booking.guest_name || '—',
+    fmtD(booking.checkin),
+    fmtD(booking.checkout),
+  ];
+  const careParams = [
+    property?.caretaker_name || 'ji',
+    property?.name || 'Property',
+    booking.guest_name || '—',
+    fmtD(booking.checkin),
+    fmtD(booking.checkout),
+  ];
 
-  if (property?.owner_phone)     sendWhatsApp(property.owner_phone, msg).catch(() => {});
-  if (property?.caretaker_phone) sendWhatsApp(property.caretaker_phone, msg).catch(() => {});
-  if (process.env.ADMIN_WHATSAPP) sendWhatsApp(process.env.ADMIN_WHATSAPP, msg).catch(() => {});
+  if (property?.owner_phone)     sendWhatsAppTemplate(property.owner_phone, 'staydekho_owner_cancelled', params).catch(() => {});
+  if (property?.caretaker_phone) sendWhatsAppTemplate(property.caretaker_phone, 'staydekho_caretaker_cancelled', careParams).catch(() => {});
+  if (property?.manager_phone)   sendWhatsAppTemplate(property.manager_phone, 'staydekho_caretaker_cancelled', [
+    property.manager_name || 'ji', ...careParams.slice(1)
+  ]).catch(() => {});
 }
 
 // ── Template message sender (for guest outbound messages) ─
@@ -152,32 +177,65 @@ async function sendWhatsAppTemplate(phone, templateName, params = []) {
 }
 
 // ── Guest: booking confirmed ───────────────────────────────
-async function notifyGuestBookingConfirmed(booking, propertyName) {
+// property can be a Property object or just a name string (backwards compat)
+async function notifyGuestBookingConfirmed(booking, property) {
   if (!booking.guest_phone) return;
   const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+  const INR  = n => Number(n || 0).toLocaleString('en-IN');
+  const prop        = typeof property === 'string' ? { name: property } : (property || {});
+  const propName    = prop.name || 'StayDekho Property';
   const bookingCode = `SD-${String(booking.booking_no || 0).padStart(4, '0')}`;
-  const contact = process.env.BUSINESS_PHONE || '+91 87699 05983';
+  const contact     = process.env.BUSINESS_PHONE || '+91 87699 05983';
+  const invoiceUrl  = `${process.env.FRONTEND_URL || 'https://staydekho.com'}/invoice/${booking._id || bookingCode}`;
   sendWhatsAppTemplate(booking.guest_phone, 'staydekho_booking_confirmed', [
-    booking.guest_name || 'Guest',
-    propertyName,
-    fmtD(booking.checkin),
-    fmtD(booking.checkout),
-    String(booking.nights || 1),
-    String(booking.guests || 1),
-    bookingCode,
-    contact,
+    booking.guest_name || 'Guest',          // {{1}}
+    propName,                                // {{2}}
+    fmtD(booking.checkin),                   // {{3}}
+    fmtD(booking.checkout),                  // {{4}}
+    String(booking.nights || 1),             // {{5}}
+    String(booking.guests || 1),             // {{6}}
+    bookingCode,                             // {{7}}
+    INR(booking.amount || 0),                // {{8}} advance paid
+    INR(booking.balance_amount || 0),        // {{9}} balance
+    invoiceUrl,                              // {{10}} invoice link
+    prop.caretaker_name || 'StayDekho Team', // {{11}}
+    prop.caretaker_phone || contact,         // {{12}}
+    prop.map_url || '',                      // {{13}} maps link
+    contact,                                 // {{14}}
   ]).catch(() => {});
 }
 
 // ── Guest: check-in reminder (called by scheduler) ────────
-async function notifyGuestCheckinReminder(booking, propertyName, contactPhone) {
+async function notifyGuestCheckinReminder(booking, property) {
   if (!booking.guest_phone) return;
-  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+  const fmtD    = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+  const prop    = typeof property === 'string' ? { name: property } : (property || {});
+  const INR     = n => Number(n || 0).toLocaleString('en-IN');
+  const contact = process.env.BUSINESS_PHONE || '+91 87699 05983';
   return sendWhatsAppTemplate(booking.guest_phone, 'staydekho_checkin_reminder', [
-    booking.guest_name || 'Guest',
-    propertyName,
-    fmtD(booking.checkin),
-    contactPhone || process.env.BUSINESS_PHONE || '+91 87699 05983',
+    booking.guest_name || 'Guest',                          // {{1}}
+    prop.name || 'StayDekho Property',                      // {{2}}
+    fmtD(booking.checkin),                                  // {{3}}
+    fmtD(booking.checkout),                                 // {{4}}
+    prop.caretaker_name || 'StayDekho Team',                // {{5}}
+    prop.caretaker_phone || contact,                        // {{6}}
+    INR(booking.balance_amount || 0),                       // {{7}}
+    prop.travel_guide_url || contact,                       // {{8}}
+  ]);
+}
+
+// ── Caretaker: check-in reminder (called by scheduler) ────
+async function notifyCaretakerCheckinReminder(booking, property) {
+  if (!property?.caretaker_phone) return;
+  const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+  return sendWhatsAppTemplate(property.caretaker_phone, 'staydekho_caretaker_checkin_reminder', [
+    property.caretaker_name || 'ji',   // {{1}}
+    property.name || 'Property',        // {{2}}
+    booking.guest_name || '—',          // {{3}}
+    booking.guest_phone || '—',         // {{4}}
+    fmtD(booking.checkin),              // {{5}}
+    fmtD(booking.checkout),             // {{6}}
+    String(booking.guests || 1),        // {{7}}
   ]);
 }
 
@@ -189,6 +247,28 @@ async function notifyGuestBalanceDue(booking, propertyName) {
     booking.guest_name || 'Guest',
     propertyName,
     INR(booking.balance_amount),
+  ]);
+}
+
+// ── Guest: balance payment received (1 hr delay) ──────────
+async function notifyGuestPaymentReceived(booking, propertyName) {
+  if (!booking.guest_phone) return;
+  const INR = n => Number(n || 0).toLocaleString('en-IN');
+  return sendWhatsAppTemplate(booking.guest_phone, 'staydekho_payment_received', [
+    booking.guest_name || 'Guest',
+    INR(booking.balance_amount),
+    propertyName,
+    process.env.BUSINESS_PHONE || '+91 87699 05983',
+  ]);
+}
+
+// ── Guest: evening check-in day welfare check ─────────────
+async function notifyGuestStayCheckin(booking, propertyName, contactPhone) {
+  if (!booking.guest_phone) return;
+  return sendWhatsAppTemplate(booking.guest_phone, 'staydekho_stay_checkin', [
+    booking.guest_name || 'Guest',
+    propertyName,
+    contactPhone || process.env.BUSINESS_PHONE || '+91 87699 05983',
   ]);
 }
 
@@ -208,6 +288,9 @@ module.exports = {
   notifyTeamBookingCancelled,
   notifyGuestBookingConfirmed,
   notifyGuestCheckinReminder,
+  notifyCaretakerCheckinReminder,
   notifyGuestBalanceDue,
+  notifyGuestPaymentReceived,
+  notifyGuestStayCheckin,
   notifyGuestReviewRequest,
 };
