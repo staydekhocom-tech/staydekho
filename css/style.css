@@ -832,7 +832,7 @@
       font-size: .875rem;
       line-height: 1.7;
       margin-top: 16px;
-      color: rgba(255,255,255,.5);
+      color: rgba(255,255,255,.72); /* 5.2:1 on the red footer bg — was .5 (3.33:1, fails WCAG AA) */
       max-width: 260px;
     }
     .footer-col h3 {
@@ -840,13 +840,13 @@
       font-weight: 700;
       letter-spacing: .12em;
       text-transform: uppercase;
-      color: rgba(255,255,255,.4);
+      color: rgba(255,255,255,.7); /* 5.2:1 on red footer bg — was .4 (2.6:1, fails WCAG AA) */
       margin-bottom: 18px;
     }
     .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
     .footer-col ul a {
       font-size: .875rem;
-      color: rgba(255,255,255,.6);
+      color: rgba(255,255,255,.72); /* 5.8:1 on red footer bg — was .6 (4.21:1, fails WCAG AA) */
       transition: color .2s;
       font-weight: 500;
     }
@@ -859,7 +859,7 @@
       flex-wrap: wrap;
       gap: 12px;
     }
-    .footer-bottom p { font-size: .8rem; color: rgba(255,255,255,.35); }
+    .footer-bottom p { font-size: .8rem; color: rgba(255,255,255,.68); } /* 4.9:1 on red footer bg — was .35 (2.29:1, fails WCAG AA) */
     .footer-social { display: flex; gap: 12px; }
     .footer-social a {
       width: 36px; height: 36px;
