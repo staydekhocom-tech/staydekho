@@ -93,7 +93,7 @@ function buildFooter() {
             <p>Premium, directly managed group stays across India. Founded in Udaipur with a belief that every group deserves a beautiful, hassle-free stay.</p>
           </div>
           <div class="footer-col">
-            <h4>Discover</h4>
+            <h3>Discover</h3>
             <ul>
               <li><a href="listings.html">All Stays</a></li>
               <li><a href="listings.html">Pool Villas</a></li>
@@ -102,7 +102,7 @@ function buildFooter() {
             </ul>
           </div>
           <div class="footer-col">
-            <h4>Company</h4>
+            <h3>Company</h3>
             <ul>
               <li><a href="about.html">About Us</a></li>
               <li><a href="travel-guide.html">Travel Guide</a></li>
@@ -110,7 +110,7 @@ function buildFooter() {
             </ul>
           </div>
           <div class="footer-col">
-            <h4>Support</h4>
+            <h3>Support</h3>
             <ul>
               <li><a href="contact.html">Contact Us</a></li>
               <li><a href="help.html">Help Center</a></li>

@@ -4,7 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Edit Property — StayDekho Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.rel='stylesheet'"/>
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/></noscript>
   <style>
     :root {
       --red:#8B1717; --red-dark:#6b1010; --red-light:#fef2f2;
@@ -271,8 +272,8 @@
   </div>
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
+<script src="js/config.js?v=20260922"></script>
+<script src="js/api.js?v=20260922"></script>
 <script>
 if (!isLoggedIn() || !isAdmin()) {
   location.href = 'login.html';

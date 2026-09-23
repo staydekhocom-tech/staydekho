@@ -35,8 +35,10 @@
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@staydekho"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.rel='stylesheet'"/>
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/></noscript>
+  <link rel="stylesheet" href="css/style.css?v=20260922"/>
   <style>
     /* ── Page Hero ── */
     .page-hero {
@@ -460,8 +462,8 @@
 
 
 
-<script src="js/api.js"></script>
-<script src="js/components.js"></script>
+<script src="js/api.js?v=20260922"></script>
+<script src="js/components.js?v=20260922"></script>
 <script>
   function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtDate(d) {

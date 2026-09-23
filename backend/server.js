@@ -44,6 +44,15 @@ app.use(express.json({ limit: '50mb' }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many requests' } }));
 app.use('/api',      rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 
+// Raw JSON API responses should never be indexed as pages — GSC was
+// showing api.staydekho.com endpoints as "blocked/forbidden" pages; this
+// stops Google from treating them as indexable content in the first place.
+// (/api/sitemap.xml is exempt — it's a sitemap file, not page content.)
+app.use('/api', (req, res, next) => {
+  if (!req.path.startsWith('/sitemap')) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
+
 // ── Routes ───────────────────────────────────────────
 app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/properties',    require('./routes/properties'));

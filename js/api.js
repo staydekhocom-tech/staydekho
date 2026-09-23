@@ -5,6 +5,22 @@
    If primary network-errors → auto-switches to fallback
    Working URL is remembered for the whole browser session
 ═══════════════════════════════════════════════════════ */
+
+/* ── Cloudinary image transform helper ──────────────────
+   Every property/hero image comes back from the API as an untransformed
+   Cloudinary original. Insert f_auto,q_auto,w_<width> right after /upload/
+   so the browser gets a right-sized WebP/AVIF instead of the full original
+   (measured ~35% smaller). Use everywhere a Cloudinary URL is rendered as
+   an <img> — hero slides, property cards, detail galleries, guest photos,
+   reel posters — instead of using p.image / p.main_image directly. */
+function cldUrl(url, width) {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
+  if (/\/upload\/[^/]*f_auto/.test(url)) return url; // already transformed
+  return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+}
+window.cldUrl = cldUrl;
+
 const _h     = window.location.hostname;
 const _local = !_h || _h === 'localhost' || _h === '127.0.0.1';
 

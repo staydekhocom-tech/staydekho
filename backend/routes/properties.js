@@ -49,8 +49,11 @@ function normalize(p) {
 
 // GET /api/properties — public
 router.get('/', optionalAuth, async (req, res) => {
-  const { location, q, minPrice, maxPrice, guests, status, type } = req.query;
-  const search = location || q;
+  const { location, q, city, minPrice, maxPrice, guests, status, type } = req.query;
+  // `city` was previously silently ignored (unhandled param) — the filter
+  // stayed empty and every request returned all properties regardless of
+  // the requested city. Route it through the same location/name match.
+  const search = location || q || city;
   const isAdmin = req.user && req.user.role === 'admin';
 
   try {

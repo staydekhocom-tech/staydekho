@@ -23,6 +23,7 @@
   <title>Private Villas & Homestays in Udaipur for Groups | Pool Villas, 4BHK, 5BHK — StayDekho</title>
   <meta name="description" content="Browse private pool villas, 4BHK & 5BHK homestays in Udaipur for groups, families & celebrations. Direct owner prices — no Airbnb commission. Best villa rental in Udaipur for group trips, birthday parties & bachelorettes."/>
   <meta name="keywords" content="villa in udaipur for group, pool villa udaipur, 4bhk villa udaipur, 5bhk villa udaipur, private villa udaipur, homestay in udaipur for family, villa booking udaipur, birthday villa udaipur, bachelorette villa udaipur, group booking udaipur, villa rent udaipur, luxury villa udaipur, budget villa udaipur, udaipur villa with pool, staydekho"/>
+  <meta name="robots" id="robots-meta" content="index, follow"/>
   <link rel="canonical" href="https://www.staydekho.com/listings.html"/>
   <link rel="icon" type="image/png" href="images/favicon.png"/>
   <meta property="og:site_name" content="StayDekho"/>
@@ -31,11 +32,46 @@
   <meta property="og:title" content="Villas & Homestays in Udaipur — Book Direct | StayDekho"/>
   <meta property="og:description" content="Browse all StayDekho villas, pool homes & homestays in Udaipur. Live availability, instant booking, direct prices."/>
   <meta property="og:image" content="https://www.staydekho.com/images/og-cover.jpg"/>
+  <script>
+  /* Per-query SEO — set title/description/OG IMMEDIATELY from ?q=/?type=,
+     before any API call, so Google's SERP snippet differs per destination
+     instead of showing the same Udaipur-only title for every search. */
+  (function () {
+    var params = new URLSearchParams(location.search);
+    var q = params.get('q');
+    var type = params.get('type');
+    var TYPE_LABELS = {
+      pool:     'Pool Villas',
+      family:   'Family Stays',
+      bachelor: 'Bachelor Party Villas',
+      party:    'Party Villas'
+    };
+    var title, desc;
+    if (q) {
+      title = 'Villas & Homestays in ' + q + ' for Groups | Pool Villas — StayDekho';
+      desc  = 'Book private villas & homestays in ' + q + ' directly — pool villas, 4BHK & 5BHK for groups and families. Direct owner prices, no middlemen.';
+    } else if (type && TYPE_LABELS[type]) {
+      title = TYPE_LABELS[type] + ' in Udaipur for Groups | StayDekho';
+      desc  = 'Browse ' + TYPE_LABELS[type].toLowerCase() + ' in Udaipur — direct owner prices, verified stays, no middlemen. Book instantly with StayDekho.';
+    }
+    if (title) {
+      document.title = title;
+      var descEl = document.querySelector('meta[name="description"]');
+      if (descEl) descEl.setAttribute('content', desc);
+      var ogT = document.querySelector('meta[property="og:title"]');
+      if (ogT) ogT.setAttribute('content', title);
+      var ogD = document.querySelector('meta[property="og:description"]');
+      if (ogD) ogD.setAttribute('content', desc);
+    }
+  })();
+  </script>
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@staydekho"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital@1&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital@1&display=swap" onload="this.rel='stylesheet'"/>
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital@1&display=swap"/></noscript>
+  <link rel="stylesheet" href="css/style.css?v=20260922"/>
   <style>
 
     /* ════════════════════════════════════════════
@@ -143,7 +179,7 @@
     .suggest-drop.open { display:block; }
     .suggest-section {
       padding:8px 14px 4px; font-size:.62rem; font-weight:800;
-      text-transform:uppercase; letter-spacing:.1em; color:#9a9590;
+      text-transform:uppercase; letter-spacing:.1em; color:#6b6660;
     }
     .suggest-item {
       display:flex; align-items:center; gap:10px;
@@ -154,7 +190,7 @@
     .suggest-item:hover,.suggest-item.si-focused { background:#faf8f5; }
     .si-icon  { font-size:1rem; flex-shrink:0; line-height:1; }
     .si-name  { font-size:.88rem; font-weight:600; color:#1a0a0a; }
-    .si-sub   { font-size:.72rem; color:#9a9590; margin-top:1px; }
+    .si-sub   { font-size:.72rem; color:#6b6660; margin-top:1px; }
     .si-badge { font-size:.65rem; font-weight:700; color:#8B1717; background:#fff0f0; padding:2px 6px; border-radius:8px; margin-left:6px; }
 
     /* ════════════════════════════════════════════
@@ -278,7 +314,13 @@
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           Directly managed by us
         </div>
-        <h1 style="color:#fff;font-size:clamp(1.9rem,4vw,2.6rem);margin:0 0 10px;font-family:'Playfair Display',serif;font-style:italic;line-height:1.15">Our Stays</h1>
+        <h1 id="listings-h1" style="color:#fff;font-size:clamp(1.9rem,4vw,2.6rem);margin:0 0 10px;font-family:'Playfair Display',serif;font-style:italic;line-height:1.15">Our Stays</h1>
+        <script>
+          (function () {
+            var q = new URLSearchParams(location.search).get('q');
+            if (q) document.getElementById('listings-h1').textContent = 'Villas & Homestays in ' + q;
+          })();
+        </script>
         <p style="color:rgba(255,255,255,.80);margin:0;font-size:.97rem;line-height:1.7;max-width:420px">
           A small, carefully chosen collection — each property hosted by us personally, not a stranger.
         </p>
@@ -457,9 +499,9 @@
 <div id="footer-placeholder"></div>
 
 
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script src="js/components.js"></script>
+<script src="js/config.js?v=20260922"></script>
+<script src="js/api.js?v=20260922"></script>
+<script src="js/components.js?v=20260922"></script>
 <script>
   let currentSort   = 'recommended';
   let allProperties = [];
@@ -499,7 +541,7 @@
     return `
       <a href="${bookUrl}" class="property-card">
         <div class="card-img-wrap">
-          <img src="${p.main_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}" alt="${p.title}" loading="lazy"
+          <img src="${cldUrl(p.main_image, 800) || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}" alt="${p.title}" loading="lazy"
             onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'"/>
           <button class="card-wishlist ${wished?'active':''}" data-id="${p.id}"
             onclick="event.preventDefault();toggleWish(this,${p.id})">
@@ -618,6 +660,14 @@ const sorted = sortProps(list);
       grid.innerHTML = sorted.map(cardHTML).join('');
       document.getElementById('no-results').style.display = 'none';
       document.getElementById('growing-callout').style.display = 'block';
+    }
+
+    // Empty destination search (e.g. ?q=Goa where we have no properties yet) —
+    // noindex it so a thin/empty page doesn't rank and drag the domain down.
+    const robotsMeta = document.getElementById('robots-meta');
+    if (robotsMeta) {
+      const hasQuery = !!new URLSearchParams(location.search).get('q');
+      robotsMeta.setAttribute('content', (hasQuery && !sorted.length) ? 'noindex, follow' : 'index, follow');
     }
 
     document.getElementById('listings-count').innerHTML = sorted.length
@@ -746,6 +796,22 @@ const sorted = sortProps(list);
       badge.style.display = 'inline-flex';
     } else if (badge) {
       badge.style.display = 'none';
+    }
+
+    // Contextual internal link to the dedicated pool-villa landing page
+    let poolLink = document.getElementById('pool-guide-link');
+    if (activeTypeFilter === 'pool') {
+      if (!poolLink) {
+        poolLink = document.createElement('div');
+        poolLink.id = 'pool-guide-link';
+        poolLink.style.cssText = 'font-size:.85rem;color:var(--gray-600);margin-bottom:16px';
+        poolLink.innerHTML = 'Want prices &amp; details for all our pool villas first? See the <a href="udaipur-private-pool-villas.html" style="color:var(--red);font-weight:600">private pool villa in Udaipur guide</a>.';
+        const grid = document.getElementById('listings-grid');
+        grid && grid.parentNode.insertBefore(poolLink, grid);
+      }
+      poolLink.style.display = 'block';
+    } else if (poolLink) {
+      poolLink.style.display = 'none';
     }
   }
   applyTypeFilterUI();

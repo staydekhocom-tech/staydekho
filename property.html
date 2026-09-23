@@ -23,6 +23,7 @@
   <title>Property — StayDekho</title>
 
   <!-- SEO / OG — filled by JS after load -->
+  <meta name="robots" id="robots-meta" content="index, follow"/>
   <meta name="description" content="Premium group stay — StayDekho"/>
   <meta property="og:site_name" content="StayDekho"/>
   <meta property="og:type" content="website"/>
@@ -31,12 +32,19 @@
   <meta id="og-image"       property="og:image"       content=""/>
   <meta id="og-url"         property="og:url"         content=""/>
 
+  <!-- Static fallback canonical — overwritten by injectPropertySEO() with the
+       real ?id= URL once the property loads. Without this tag, crawlers that
+       don't wait for JS see no canonical at all. -->
+  <link rel="canonical" href="https://www.staydekho.com/property.html"/>
+
   <link rel="icon" type="image/png" href="images/favicon.png"/>
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@staydekho"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,700&display=swap" onload="this.rel='stylesheet'"/>
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,700&display=swap"/></noscript>
+  <link rel="stylesheet" href="css/style.css?v=20260922"/>
   <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
   <style>
@@ -900,9 +908,9 @@
 <div id="footer-placeholder"></div>
 
 
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script src="js/components.js"></script>
+<script src="js/config.js?v=20260922"></script>
+<script src="js/api.js?v=20260922"></script>
+<script src="js/components.js?v=20260922"></script>
 <script>
 /* ═══════════════════════════════════════════════════
    GLOBALS
@@ -1282,7 +1290,15 @@ function showToast(msg, type='') {
 ═══════════════════════════════════════════════════ */
 async function loadProperty() {
   const id = qs('id');
-  if (!id) { showError('Property id missing.'); return; }
+  if (!id) {
+    // Soft 404 — property.html with no ?id= has nothing to show. A static
+    // page can't return a real HTTP status, so noindex is the closest
+    // equivalent: it tells Google not to index this URL without needing
+    // server-side routing (Edge Middleware) for a literal 404/410.
+    noindexThisPage();
+    showError('Property id missing.');
+    return;
+  }
   try {
     const [{ property, host, reviews }, availRes, dpRes] = await Promise.all([
       api.getProperty(id),
@@ -1319,8 +1335,17 @@ async function loadProperty() {
       }
     }
   } catch (e) {
+    // Dead/invalid property id — true 410 Gone isn't possible from a static
+    // page, so noindex is the practical equivalent: it stops this URL from
+    // ranking and gets it dropped from the index on next crawl.
+    noindexThisPage();
     showError(e.message || 'Property not found.');
   }
+}
+
+function noindexThisPage() {
+  const meta = document.getElementById('robots-meta');
+  if (meta) meta.setAttribute('content', 'noindex, follow');
 }
 
 function showError(msg) {
@@ -1344,7 +1369,9 @@ function render(p, host, reviews) {
   // Fill to at least 4 slots so gallery grid always looks full
   while (IMAGES.length < 4) IMAGES.push(IMAGES[0]);
 
-  const img  = i => IMAGES[i] || IMAGES[0];
+  const img      = i => IMAGES[i] || IMAGES[0];
+  const imgMain  = i => cldUrl(img(i), 1200);
+  const imgThumb = i => cldUrl(img(i), 800);
   const avg  = p.rating ? Number(p.rating).toFixed(1) : '4.8';
   const rcnt = reviews.length || p.review_count || 0;
   const amens = Array.isArray(p.amenities) ? p.amenities : [];
@@ -1379,13 +1406,13 @@ function render(p, host, reviews) {
 
         <!-- Gallery -->
         <div class="gallery-wrap" id="gallery-wrap">
-          <img class="gallery-main" src="${esc(img(0))}" alt="${esc(p.title)}"
+          <img class="gallery-main" src="${esc(imgMain(0))}" alt="${esc(p.title)}"
             onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
-          <img class="gallery-thumb" src="${esc(img(1))}" alt=""
+          <img class="gallery-thumb" src="${esc(imgThumb(1))}" alt=""
             onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
-          <img class="gallery-thumb" src="${esc(img(2))}" alt=""
+          <img class="gallery-thumb" src="${esc(imgThumb(2))}" alt=""
             onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
-          <img class="gallery-thumb" src="${esc(img(3))}" alt=""
+          <img class="gallery-thumb" src="${esc(imgThumb(3))}" alt=""
             onerror="this.src='${FALLBACK_IMG}'" onclick="openCatGallery('All')"/>
           <button class="gallery-show-btn" onclick="openCatGallery('All')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -1758,7 +1785,7 @@ async function loadSimilarProperties(p) {
       document.getElementById('similar-section').style.display = 'none'; return;
     }
     grid.innerHTML = others.map(x => {
-      const img = x.main_image||FALLBACK_IMG;
+      const img = cldUrl(x.main_image, 800)||FALLBACK_IMG;
       return `<a class="sim-card" href="property.html?id=${x.id}">
         <img src="${esc(img)}" alt="${esc(x.title||x.name)}" onerror="this.src='${FALLBACK_IMG}'"/>
         <div class="sim-card-body">
@@ -2184,7 +2211,7 @@ function renderCatBody(cat) {
       <div class="cg-section">
         <div class="cg-section-title">${esc(c)} &thinsp;·&thinsp; ${imgs.length} photo${imgs.length!==1?'s':''}</div>
         <div class="cg-grid">
-          ${imgs.map(img => `<img src="${esc(img.url)}" alt="${esc(c)}"
+          ${imgs.map(img => `<img src="${esc(cldUrl(img.url, 800))}" alt="${esc(c)}"
             onerror="this.src='${FALLBACK_IMG}'"
             onclick="openLightboxFromCat(${img.flatIdx})"/>`).join('')}
         </div>
@@ -2197,7 +2224,7 @@ function renderCatBody(cat) {
       return;
     }
     bodyEl.innerHTML = `<div class="cg-section"><div class="cg-grid">
-      ${imgs.map(img => `<img src="${esc(img.url)}" alt="${esc(cat)}"
+      ${imgs.map(img => `<img src="${esc(cldUrl(img.url, 800))}" alt="${esc(cat)}"
         onerror="this.src='${FALLBACK_IMG}'"
         onclick="openLightboxFromCat(${img.flatIdx})"/>`).join('')}
     </div></div>`;
@@ -2237,7 +2264,7 @@ function closeLightbox() {
 function closeLightboxOutside(e) { if(e.target===document.getElementById('lightbox'))closeLightbox(); }
 function updateLightboxImg() {
   const img=document.getElementById('lb-img'), ctr=document.getElementById('lb-counter');
-  img.src=IMAGES[LB_IDX]||FALLBACK_IMG;
+  img.src=cldUrl(IMAGES[LB_IDX], 1600)||FALLBACK_IMG;
   img.onerror=()=>{img.src=FALLBACK_IMG;};
   ctr.textContent=`${LB_IDX+1} / ${IMAGES.length}`;
 }

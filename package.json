@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "build": "node scripts/build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
   "dependencies": {
     "cloudinary": "^1.41.3",
     "multer": "^2.1.1",

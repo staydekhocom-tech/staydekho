@@ -13,7 +13,7 @@
       --gray-50:    #f9f7f4;
       --gray-100:   #f0ece8;
       --gray-200:   #e0dbd5;
-      --gray-400:   #9a9590;
+      --gray-400:   #6b6660;
       --gray-500:   #716d68;
       --gray-600:   #4a4642;
       --dark:       #1a0a0a;
@@ -342,17 +342,21 @@
       gap: 8px;
     }
     .slider-dot {
-      width: 8px; height: 8px;
+      /* 24x24 tap target (WCAG touch-target minimum); the visible dot is
+         still ~8px, painted only inside the padding box via background-clip
+         so the extra tap area stays invisible. */
+      width: 24px; height: 24px;
+      padding: 8px;
+      background-clip: content-box;
       border-radius: 100px;
-      background: rgba(255,255,255,.4);
+      background-color: rgba(255,255,255,.4);
       border: none;
       cursor: pointer;
       transition: all .35s;
-      padding: 0;
     }
     .slider-dot.active {
-      width: 28px;
-      background: #fff;
+      width: 44px;
+      background-color: #fff;
     }
 
     /* â”€â”€ FLOATING SEARCH BAR (bottom of hero) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -831,7 +835,7 @@
       color: rgba(255,255,255,.5);
       max-width: 260px;
     }
-    .footer-col h4 {
+    .footer-col h3 {
       font-size: .78rem;
       font-weight: 700;
       letter-spacing: .12em;
