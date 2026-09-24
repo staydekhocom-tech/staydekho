@@ -36,8 +36,9 @@ async function sendWhatsApp(phone, message) {
       },
       { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } }
     );
-    console.log(`✅ WhatsApp sent to +${to}`);
-    return { success: true, messageId: r.data.messages?.[0]?.id };
+    const msg = r.data.messages?.[0] || {};
+    console.log(`✅ WhatsApp sent to +${to} | id=${msg.id || '?'} | status=${msg.message_status || 'accepted'}`);
+    return { success: true, messageId: msg.id };
   } catch (err) {
     console.error(`❌ WhatsApp failed to +${to}:`, err.response?.data?.error?.message || err.message);
     return { success: false, reason: err.message };
@@ -168,8 +169,13 @@ async function sendWhatsAppTemplate(phone, templateName, params = []) {
       },
       { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } }
     );
-    console.log(`✅ WA template '${templateName}' sent to +${to}`);
-    return { success: true, messageId: r.data.messages?.[0]?.id };
+    const msg = r.data.messages?.[0] || {};
+    // message_status can be "accepted" (normal) or "held_for_quality_assessment"
+    // (Meta is throttling this number/template pending a quality check) — the
+    // plain checkmark log was hiding this, which is exactly the kind of
+    // accepted-but-not-delivered case we've been chasing.
+    console.log(`✅ WA template '${templateName}' sent to +${to} | id=${msg.id || '?'} | status=${msg.message_status || 'accepted'}`);
+    return { success: true, messageId: msg.id };
   } catch (err) {
     console.error(`❌ WA template '${templateName}' failed +${to}:`, err.response?.data?.error?.message || err.message);
     return { success: false, reason: err.message };
