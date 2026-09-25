@@ -66,7 +66,10 @@ async function notifyTeamNewBooking(booking, property) {
       String(booking.guests || 1),
       INR(net),
       INR(ownerShare),
-      `${process.env.FRONTEND_URL || 'https://staydekho.com'}/payout/${booking._id}`,
+      // /payout/:id is served by THIS backend (routes/invoice.js), not the
+      // static frontend — FRONTEND_URL was pointing guests at staydekho.com
+      // which has no such route and 404s.
+      `${process.env.API_URL || 'https://api.staydekho.com'}/payout/${booking._id}`,
     ]).catch(() => {});
   }
 
@@ -192,7 +195,10 @@ async function notifyGuestBookingConfirmed(booking, property) {
   const propName    = prop.name || 'StayDekho Property';
   const bookingCode = `SD-${String(booking.booking_no || 0).padStart(4, '0')}`;
   const contact     = process.env.BUSINESS_PHONE || '+91 87699 05983';
-  const invoiceUrl  = `${process.env.FRONTEND_URL || 'https://staydekho.com'}/invoice/${booking._id || bookingCode}`;
+  // /invoice/:id is served by THIS backend (routes/invoice.js), not the
+  // static frontend — FRONTEND_URL was pointing guests at staydekho.com
+  // which has no such route and 404s.
+  const invoiceUrl  = `${process.env.API_URL || 'https://api.staydekho.com'}/invoice/${booking._id || bookingCode}`;
   sendWhatsAppTemplate(booking.guest_phone, 'staydekho_booking_confirmed', [
     booking.guest_name || 'Guest',          // {{1}}
     propName,                                // {{2}}
