@@ -72,6 +72,7 @@ app.use('/api/blog',          require('./routes/blog'));
 app.use('/api/operations',    require('./routes/operations'));
 app.use('/api/staff',         require('./routes/staff'));
 app.use('/api/checkin',       require('./routes/checkin'));
+app.use('/api/whatsapp/webhook', require('./routes/whatsappWebhook'));
 
 // ── Public invoice & payout pages (no auth needed) ───
 app.use('/',                  require('./routes/invoice'));
