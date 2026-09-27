@@ -187,6 +187,23 @@ async function sendWhatsAppTemplate(phone, templateName, params = []) {
 
 // ── Guest: booking confirmed ───────────────────────────────
 // property can be a Property object or just a name string (backwards compat)
+//
+// Direct/walk-in bookings show "Advance Paid / Balance at Check-in" because
+// StayDekho collected that payment directly. OTA bookings (Airbnb, Booking.com,
+// etc.) are paid to the platform, not to us — showing our own advance/balance
+// language there is just wrong, and the ₹ symbol is baked into the approved
+// template text (not the dynamic value), so we can't swap in "Paid via
+// Airbnb" without the currency symbol landing in front of it.
+// staydekho_booking_confirmed_ota is a SEPARATE template for this reason —
+// it must be created and approved in Meta Business Manager before this path
+// will actually send (Category: UTILITY). Suggested body:
+//   "Hello {{1}}! 🎉\nYour getaway is officially booked — and we can't wait
+//   to host you!\n\n🏠 {{2}}\n📅 Check-in: {{3}}\n📅 Check-out: {{4}}\n🌙
+//   {{5}} Nights | {{6}} Guests\n🎫 Booking ID: {{7}}\n\n✅ Booked & paid via
+//   {{8}} — no further payment needed to StayDekho.\n\n📄 Your Invoice:
+//   {{9}}\n📞 Your Caretaker: {{10}} — {{11}}\n📍 Location: {{12}}\n\n
+//   Questions? We're always here: {{13}}\n\nGet ready for a beautiful stay!
+//   🏖️\n— StayDekho"
 async function notifyGuestBookingConfirmed(booking, property) {
   if (!booking.guest_phone) return;
   const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
@@ -199,22 +216,45 @@ async function notifyGuestBookingConfirmed(booking, property) {
   // static frontend — FRONTEND_URL was pointing guests at staydekho.com
   // which has no such route and 404s.
   const invoiceUrl  = `${process.env.API_URL || 'https://api.staydekho.com'}/invoice/${booking._id || bookingCode}`;
-  sendWhatsAppTemplate(booking.guest_phone, 'staydekho_booking_confirmed', [
-    booking.guest_name || 'Guest',          // {{1}}
-    propName,                                // {{2}}
-    fmtD(booking.checkin),                   // {{3}}
-    fmtD(booking.checkout),                  // {{4}}
-    String(booking.nights || 1),             // {{5}}
-    String(booking.guests || 1),             // {{6}}
-    bookingCode,                             // {{7}}
-    INR(booking.amount || 0),                // {{8}} advance paid
-    INR(booking.balance_amount || 0),        // {{9}} balance
-    invoiceUrl,                              // {{10}} invoice link
-    prop.caretaker_name || 'StayDekho Team', // {{11}}
-    prop.caretaker_phone || contact,         // {{12}}
-    prop.map_url || '',                      // {{13}} maps link
-    contact,                                 // {{14}}
-  ]).catch(() => {});
+
+  const platform = booking.platform || 'direct';
+  const isDirect = platform === 'direct' || platform === 'walkin';
+  const PLATFORM_LABELS = { airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT / Goibibo' };
+
+  if (isDirect) {
+    sendWhatsAppTemplate(booking.guest_phone, 'staydekho_booking_confirmed', [
+      booking.guest_name || 'Guest',          // {{1}}
+      propName,                                // {{2}}
+      fmtD(booking.checkin),                   // {{3}}
+      fmtD(booking.checkout),                  // {{4}}
+      String(booking.nights || 1),             // {{5}}
+      String(booking.guests || 1),             // {{6}}
+      bookingCode,                             // {{7}}
+      INR(booking.amount || 0),                // {{8}} advance paid
+      INR(booking.balance_amount || 0),        // {{9}} balance
+      invoiceUrl,                              // {{10}} invoice link
+      prop.caretaker_name || 'StayDekho Team', // {{11}}
+      prop.caretaker_phone || contact,         // {{12}}
+      prop.map_url || '',                      // {{13}} maps link
+      contact,                                 // {{14}}
+    ]).catch(() => {});
+  } else {
+    sendWhatsAppTemplate(booking.guest_phone, 'staydekho_booking_confirmed_ota', [
+      booking.guest_name || 'Guest',                  // {{1}}
+      propName,                                        // {{2}}
+      fmtD(booking.checkin),                            // {{3}}
+      fmtD(booking.checkout),                           // {{4}}
+      String(booking.nights || 1),                      // {{5}}
+      String(booking.guests || 1),                      // {{6}}
+      bookingCode,                                      // {{7}}
+      PLATFORM_LABELS[platform] || platform,            // {{8}} "Airbnb" etc.
+      invoiceUrl,                                        // {{9}} invoice link
+      prop.caretaker_name || 'StayDekho Team',          // {{10}}
+      prop.caretaker_phone || contact,                  // {{11}}
+      prop.map_url || '',                                // {{12}} maps link
+      contact,                                            // {{13}}
+    ]).catch(() => {});
+  }
 }
 
 // ── Guest: check-in reminder (called by scheduler) ────────
