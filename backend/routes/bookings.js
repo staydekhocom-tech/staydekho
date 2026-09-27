@@ -625,12 +625,13 @@ router.get('/:id/owner-bill', (req, res, next) => {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
       baseLabel = `${PLATFORM_LABELS[platform]} Net Payout (after platform deductions)`;
     }
-    // Net Payout (OTA) is entered manually by admin and already reflects what
-    // the platform actually transfers after its own commission AND any
-    // occupancy tax it remits on our behalf — deducting remitted_tax again
-    // here would double-count it. Owner/StayDekho split is just 70/30 of base.
-    const ownerShare = Math.round(base * 0.70);
-    const sdShare    = base - ownerShare; // pure 30%
+    // Net Payout is the RAW amount the platform transfers (before tax) — the
+    // admin enters it that way deliberately. Occupancy tax the platform
+    // remits to govt on our behalf still needs to come out before the split.
+    const remittedTax = isDirect ? 0 : (booking.remitted_tax || 0);
+    const netRevenue  = Math.max(0, base - remittedTax);
+    const ownerShare  = Math.round(netRevenue * 0.70);
+    const sdShare     = netRevenue - ownerShare; // pure 30%
 
     let bookingNo = booking.booking_no;
     if (!bookingNo) {
@@ -713,6 +714,10 @@ router.get('/:id/owner-bill', (req, res, next) => {
     ${isDirect && gstCollected > 0 ? `
     <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: GST ${gstRate}% (collected &amp; remitted to govt by StayDekho)</span><span>− ${INR(gstCollected)}</span></div>
     <div class="split-row" style="color:#555;font-size:12px;font-weight:600"><span class="lbl">Base Fare (70:30 split base)</span><span>${INR(base)}</span></div>
+    ` : ''}
+    ${remittedTax > 0 ? `
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (collected &amp; remitted to govt by ${PLATFORM_LABELS[platform]})</span><span>− ${INR(remittedTax)}</span></div>
+    <div class="split-row" style="color:#555;font-size:12px;font-weight:600"><span class="lbl">Net Revenue (70:30 split base)</span><span>${INR(netRevenue)}</span></div>
     ` : ''}
     <div class="split-row owner"><span class="lbl">🏠 Owner Share (70%)</span><span>${INR(ownerShare)}</span></div>
     <div class="split-row sd"><span class="lbl">StayDekho Share (30%)</span><span>${INR(sdShare)}</span></div>

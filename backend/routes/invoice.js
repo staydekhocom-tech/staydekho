@@ -319,11 +319,12 @@ router.get('/payout/:id', async (req, res) => {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
       baseLabel = `${PLATFORM_LABELS[platform] || platform} Net Payout (after platform deductions)`;
     }
-    // Net Payout (for OTA bookings) is entered manually by admin and already
-    // reflects what the platform actually transfers after its own commission
-    // AND any occupancy tax it remits on our behalf — deducting remitted_tax
-    // again here would double-count it. Owner's 70% is just 70% of that.
-    const ownerShare = Math.round(base * 0.70);
+    // Net Payout is the RAW amount the platform transfers (before tax) — the
+    // admin enters it that way deliberately. Occupancy tax the platform
+    // remits to govt on our behalf still needs to come out before the split.
+    const remittedTax = isDirect ? 0 : (Number(booking.remitted_tax) || 0);
+    const netRevenue  = Math.max(0, base - remittedTax);
+    const ownerShare  = Math.round(netRevenue * 0.70);
 
     let bookingNo = booking.booking_no;
     if (!bookingNo) {
@@ -401,6 +402,9 @@ router.get('/payout/:id', async (req, res) => {
 
   <div class="split">
     <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${inr(base)}</span></div>
+    ${remittedTax > 0 ? `
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (collected &amp; remitted to govt by ${PLATFORM_LABELS[platform] || platform})</span><span>− ${inr(remittedTax)}</span></div>
+    ` : ''}
     <div class="split-row owner"><span class="lbl">🏠 Your Payout</span><span>${inr(ownerShare)}</span></div>
   </div>
 
