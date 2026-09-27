@@ -293,77 +293,121 @@ router.get('/invoice/:id', async (req, res) => {
   }
 });
 
-// ── Owner Payout Summary ───────────────────────────────
+// ── Owner Payout Statement (public — no auth, link goes out over WhatsApp) ──
+// Same design as /api/bookings/:id/owner-bill (admin, authenticated), minus
+// the exact commission split — a forwarded link shouldn't hand StayDekho's
+// commission structure to anyone who happens to see it.
+const PLATFORM_LABELS = { direct: 'Direct (Website)', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT / Goibibo', walkin: 'Walk-in' };
+
 router.get('/payout/:id', async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id).lean();
     if (!booking) return res.status(404).send('<h2>Payout record not found</h2>');
     const property = await Property.findById(booking.property_id).lean();
     const prop = property || {};
-    const code = bookingCode(booking);
 
-    const total      = Number(booking.total_amount || booking.amount || 0);
-    const remitted   = Number(booking.remitted_tax || 0);
-    const net        = total - remitted;
-    const ownerShare = Math.round(net * 0.7);
-    const staydekho  = net - ownerShare;
+    const nights   = booking.nights || 1;
+    const totalAmt = Number(booking.total_amount || booking.amount || 0);
+    const platform = booking.platform || 'direct';
+    const isDirect = platform === 'direct' || platform === 'walkin';
+
+    let base, baseLabel;
+    if (isDirect) {
+      base = totalAmt;
+      baseLabel = 'Guest Paid (Total)';
+    } else {
+      base = booking.net_payout != null ? booking.net_payout : totalAmt;
+      baseLabel = `${PLATFORM_LABELS[platform] || platform} Net Payout (after platform deductions)`;
+    }
+    const remittedTax = isDirect ? 0 : (Number(booking.remitted_tax) || 0);
+    const netRevenue  = Math.max(0, base - remittedTax);
+    const ownerShare  = Math.round(netRevenue * 0.70);
+
+    let bookingNo = booking.booking_no;
+    if (!bookingNo) {
+      bookingNo = await Booking.countDocuments({ created_at: { $lte: booking.created_at || new Date() } });
+      Booking.findByIdAndUpdate(booking._id, { booking_no: bookingNo }).catch(() => {});
+    }
+    const code   = `SD-${String(bookingNo).padStart(4, '0')}`;
+    const stmtNo = `OWN-${new Date(booking.created_at || Date.now()).getFullYear()}-${String(bookingNo).padStart(4, '0')}`;
+    const fullyPaid = booking.balance_paid || booking.status === 'checked_out';
+    const phone = process.env.BUSINESS_PHONE || '+91 87699 05983';
+    const email = process.env.BUSINESS_EMAIL || 'info@staydekho.com';
+    const inr   = n => '₹' + INR(n);
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Payout ${code} — StayDekho</title>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Owner Statement ${stmtNo} — StayDekho</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;color:#222;padding:20px}
-  .card{max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.1)}
-  .header{background:#2c4a3e;color:#fff;padding:24px 28px}
-  .header h1{font-size:22px;font-weight:700}
-  .header p{font-size:13px;opacity:.8;margin-top:4px}
-  .badge{display:inline-block;background:#a8d8a8;color:#1a3c34;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;letter-spacing:.5px}
-  .body{padding:24px 28px}
-  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:10px;margin-top:20px}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
-  .row:last-child{border-bottom:none}
-  .row .label{color:#555}
-  .row .value{font-weight:600;color:#222}
-  .row.highlight .label,.row.highlight .value{font-size:16px;font-weight:700;color:#2c4a3e;background:#f0faf0;padding:10px 12px;border-radius:8px;width:100%;display:flex;justify-content:space-between}
-  .row.highlight{padding:0;border:none;margin-top:8px}
-.footer{text-align:center;padding:16px;font-size:12px;color:#aaa;background:#fafafa;border-top:1px solid #f0f0f0}
-  @media print{body{background:#fff;padding:0}.card{box-shadow:none;border-radius:0}}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#f4f4f4}
+  .page{max-width:700px;margin:24px auto;background:#fff;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,.1)}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #1d4ed8}
+  .logo{font-size:22px;font-weight:800;color:#8B1717}.logo span{color:#1a1a1a}
+  .company-info{font-size:11px;color:#555;margin-top:4px;line-height:1.7}
+  .inv-title{font-size:18px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em}
+  .inv-no{font-size:13px;font-weight:700;margin-top:4px}.inv-date{font-size:11px;color:#777;margin-top:2px}
+  .info-box{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:16px;margin-bottom:20px}
+  .info-box h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1d4ed8;margin-bottom:10px}
+  .info-row{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;gap:8px}
+  .info-row .lbl{color:#777}.info-row .val{font-weight:600;text-align:right}
+  .split{margin-top:20px}
+  .split-row{display:flex;justify-content:space-between;padding:10px 14px;font-size:13px;border-bottom:1px solid #f0f0f0}
+  .split-row .lbl{color:#555}
+  .split-row.base{background:#f8fafc;font-weight:700;border-radius:8px 8px 0 0}
+  .split-row.owner{background:#f0fdf4;font-weight:800;font-size:15px;color:#15803d;border-radius:0 0 8px 8px}
+  .paid-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:${fullyPaid ? '#16a34a' : '#d97706'};margin-top:8px}
+  .footer{margin-top:28px;padding-top:16px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:11px;color:#aaa}
+  .print-btn{position:fixed;bottom:24px;right:24px;background:#1d4ed8;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;z-index:99}
+  @media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:28px}.print-btn{display:none}
+    .split-row,.paid-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="header">
-    <h1>StayDekho</h1>
-    <p>Owner Payout Summary</p>
-    <div class="badge">${code}</div>
-  </div>
-  <div class="body">
-    <div class="section-title">Booking Details</div>
-    <div class="row"><span class="label">Property</span><span class="value">${prop.name || 'StayDekho Property'}</span></div>
-    <div class="row"><span class="label">Guest</span><span class="value">${booking.guest_name || '—'}</span></div>
-    <div class="row"><span class="label">Check-in</span><span class="value">${fmtD(booking.checkin)}</span></div>
-    <div class="row"><span class="label">Check-out</span><span class="value">${fmtD(booking.checkout)}</span></div>
-    <div class="row"><span class="label">Nights · Guests</span><span class="value">${booking.nights || 1} nights · ${booking.guests || 1} guests</span></div>
-
-    <div class="section-title">Payout Breakdown</div>
-    <div class="row"><span class="label">Net Amount</span><span class="value">₹${INR(net)}</span></div>
-    <div class="row highlight">
-      <span class="label" style="color:#2c4a3e">Your Payout (70%)</span>
-      <span class="value" style="color:#2c4a3e">₹${INR(ownerShare)}</span>
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+<div class="page">
+  <div class="hdr">
+    <div>
+      <div class="logo">StayDekh<span>o</span></div>
+      <div class="company-info">Premium Group Stays · Udaipur, Rajasthan<br/>${phone} · ${email}</div>
     </div>
-    <div class="row" style="margin-top:8px"><span class="label" style="color:#999;font-size:12px">StayDekho Share (30%)</span><span class="value" style="color:#999;font-size:12px">₹${INR(staydekho)}</span></div>
-
-    <div class="section-title">Status</div>
-    <div class="row"><span class="label">Payment Status</span><span class="value" style="color:${booking.owner_paid ? '#27ae60' : '#e67e22'}">${booking.owner_paid ? '✓ Paid' : 'Pending'}</span></div>
-    ${booking.owner_paid_at ? `<div class="row"><span class="label">Paid On</span><span class="value">${fmtD(booking.owner_paid_at)}</span></div>` : ''}
+    <div style="text-align:right">
+      <div class="inv-title">Owner Payout Statement</div>
+      <div class="inv-no">${stmtNo}</div>
+      <div class="inv-date">Booking: ${code}</div>
+      <div><span class="paid-badge">${fullyPaid ? 'Guest Fully Paid ✓' : 'Payment Pending'}</span></div>
+    </div>
   </div>
+
+  <div class="info-box">
+    <h4>Booking Details</h4>
+    <div class="info-row"><span class="lbl">Property</span><span class="val">${prop.name || '—'}</span></div>
+    <div class="info-row"><span class="lbl">Guest Name</span><span class="val">${booking.guest_name || '—'}</span></div>
+    <div class="info-row"><span class="lbl">Check-in</span><span class="val">${fmtD(booking.checkin)}</span></div>
+    <div class="info-row"><span class="lbl">Check-out</span><span class="val">${fmtD(booking.checkout)}</span></div>
+    <div class="info-row"><span class="lbl">Nights</span><span class="val">${nights}</span></div>
+    <div class="info-row"><span class="lbl">Booking Source</span><span class="val">${PLATFORM_LABELS[platform] || platform}</span></div>
+    <div class="info-row"><span class="lbl">Guest Paid (Total)</span><span class="val">${inr(totalAmt)}</span></div>
+    ${isDirect
+      ? `<div class="info-row"><span class="lbl">Advance (Online)</span><span class="val">${inr(booking.amount || 0)}</span></div>
+         <div class="info-row"><span class="lbl">Balance (At Check-in)</span><span class="val">${inr(booking.balance_amount || 0)} ${booking.balance_paid ? '✓ Received' : '(Pending)'}</span></div>`
+      : `<div class="info-row"><span class="lbl">Platform Net Payout</span><span class="val">${inr(base)}</span></div>`}
+  </div>
+
+  <div class="split">
+    <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${inr(totalAmt)}</span></div>
+    ${remittedTax > 0 ? `
+    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (collected &amp; remitted to govt by ${PLATFORM_LABELS[platform] || platform})</span><span>− ${inr(remittedTax)}</span></div>
+    ` : ''}
+    <div class="split-row owner"><span class="lbl">🏠 Your Payout</span><span>${inr(ownerShare)}</span></div>
+  </div>
+
   <div class="footer">
-    StayDekho · ${process.env.BUSINESS_PHONE || '+91 87699 05983'} · staydekho.com
+    <span>StayDekho · Udaipur, Rajasthan · ${phone}</span>
+    <span>${stmtNo} · Generated ${new Date().toLocaleDateString('en-IN')}</span>
   </div>
 </div>
 </body>
