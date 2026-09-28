@@ -196,14 +196,16 @@ async function sendWhatsAppTemplate(phone, templateName, params = []) {
 // Airbnb" without the currency symbol landing in front of it.
 // staydekho_booking_confirmed_ota is a SEPARATE template for this reason —
 // it must be created and approved in Meta Business Manager before this path
-// will actually send (Category: UTILITY). Suggested body:
+// will actually send (Category: UTILITY). No invoice link here on purpose —
+// Airbnb/the OTA already gives the guest their own payment receipt; our
+// invoice shows Total/Advance/Balance in StayDekho's own terms, which would
+// just contradict what the guest sees on Airbnb. Suggested body:
 //   "Hello {{1}}! 🎉\nYour getaway is officially booked — and we can't wait
 //   to host you!\n\n🏠 {{2}}\n📅 Check-in: {{3}}\n📅 Check-out: {{4}}\n🌙
 //   {{5}} Nights | {{6}} Guests\n🎫 Booking ID: {{7}}\n\n✅ Booked & paid via
-//   {{8}} — no further payment needed to StayDekho.\n\n📄 Your Invoice:
-//   {{9}}\n📞 Your Caretaker: {{10}} — {{11}}\n📍 Location: {{12}}\n\n
-//   Questions? We're always here: {{13}}\n\nGet ready for a beautiful stay!
-//   🏖️\n— StayDekho"
+//   {{8}} — no further payment needed to StayDekho.\n\n📞 Your Caretaker:
+//   {{9}} — {{10}}\n📍 Location: {{11}}\n\nQuestions? We're always here:
+//   {{12}}\n\nGet ready for a beautiful stay! 🏖️\n— StayDekho"
 async function notifyGuestBookingConfirmed(booking, property) {
   if (!booking.guest_phone) return;
   const fmtD = s => { try { return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
@@ -248,11 +250,10 @@ async function notifyGuestBookingConfirmed(booking, property) {
       String(booking.guests || 1),                      // {{6}}
       bookingCode,                                      // {{7}}
       PLATFORM_LABELS[platform] || platform,            // {{8}} "Airbnb" etc.
-      invoiceUrl,                                        // {{9}} invoice link
-      prop.caretaker_name || 'StayDekho Team',          // {{10}}
-      prop.caretaker_phone || contact,                  // {{11}}
-      prop.map_url || '',                                // {{12}} maps link
-      contact,                                            // {{13}}
+      prop.caretaker_name || 'StayDekho Team',          // {{9}}
+      prop.caretaker_phone || contact,                  // {{10}}
+      prop.map_url || '',                                // {{11}} maps link
+      contact,                                            // {{12}}
     ]).catch(() => {});
   }
 }
