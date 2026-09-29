@@ -317,13 +317,14 @@ router.get('/payout/:id', async (req, res) => {
       baseLabel = 'Guest Paid (Total)';
     } else {
       base = booking.net_payout != null ? booking.net_payout : totalAmt;
-      baseLabel = `${PLATFORM_LABELS[platform] || platform} Net Payout (after platform deductions)`;
+      baseLabel = `${PLATFORM_LABELS[platform] || platform} Net Payout`;
     }
-    // Net Payout is the RAW amount the platform transfers (before tax) — the
-    // admin enters it that way deliberately. Occupancy tax the platform
-    // remits to govt on our behalf still needs to come out before the split.
+    // Net Payout entered by admin is the RAW amount the platform transfers
+    // (before tax). Occupancy tax the platform remits to govt on our behalf
+    // comes out here, silently — the bill only ever shows the post-tax figure.
     const remittedTax = isDirect ? 0 : (Number(booking.remitted_tax) || 0);
     const netRevenue  = Math.max(0, base - remittedTax);
+    const displayBase = isDirect ? base : netRevenue;
     const ownerShare  = Math.round(netRevenue * 0.70);
 
     let bookingNo = booking.booking_no;
@@ -397,14 +398,11 @@ router.get('/payout/:id', async (req, res) => {
       ? `<div class="info-row"><span class="lbl">Guest Paid (Total)</span><span class="val">${inr(totalAmt)}</span></div>
          <div class="info-row"><span class="lbl">Advance (Online)</span><span class="val">${inr(booking.amount || 0)}</span></div>
          <div class="info-row"><span class="lbl">Balance (At Check-in)</span><span class="val">${inr(booking.balance_amount || 0)} ${booking.balance_paid ? '✓ Received' : '(Pending)'}</span></div>`
-      : `<div class="info-row"><span class="lbl">Platform Net Payout</span><span class="val">${inr(base)}</span></div>`}
+      : `<div class="info-row"><span class="lbl">Platform Net Payout</span><span class="val">${inr(displayBase)}</span></div>`}
   </div>
 
   <div class="split">
-    <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${inr(base)}</span></div>
-    ${remittedTax > 0 ? `
-    <div class="split-row" style="color:#777;font-size:12px"><span class="lbl">Less: Remitted Occupancy Tax (collected &amp; remitted to govt by ${PLATFORM_LABELS[platform] || platform})</span><span>− ${inr(remittedTax)}</span></div>
-    ` : ''}
+    <div class="split-row base"><span class="lbl">${baseLabel}</span><span>${inr(displayBase)}</span></div>
     <div class="split-row owner"><span class="lbl">🏠 Your Payout</span><span>${inr(ownerShare)}</span></div>
   </div>
 
