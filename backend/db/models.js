@@ -324,6 +324,25 @@ const staffIssueSchema = new Schema({
   status:      { type: String, default: 'open', enum: ['open', 'resolved'] },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
+// ── 25. WhatsAppLead — Interakt WABA ka har unique phone number ──
+const whatsappLeadSchema = new Schema({
+  phone:          { type: String, required: true, unique: true },  // E.164, jaise 919876543210
+  name:           { type: String, default: '' },
+  last_message:   { type: String, default: '' },
+  last_direction: { type: String, default: 'inbound', enum: ['inbound', 'outbound'] },
+  unread:         { type: Boolean, default: true },
+  last_msg_at:    { type: Date, default: Date.now },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
+// ── 26. WhatsAppMessage — ek lead ki poori chat, message-by-message ──
+const whatsappMessageSchema = new Schema({
+  lead_id:   { type: Schema.Types.ObjectId, ref: 'WhatsAppLead', required: true },
+  direction: { type: String, required: true, enum: ['inbound', 'outbound'] },
+  text:      { type: String, default: '' },
+  sender:    { type: String, default: '' },   // 'guest' | admin user name | 'ai'
+  status:    { type: String, default: 'received', enum: ['received', 'sent', 'delivered', 'read', 'failed'] },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
+
 module.exports = {
   User:         mongoose.model('User',         userSchema),
   Property:     mongoose.model('Property',     propertySchema),
@@ -349,4 +368,6 @@ module.exports = {
   CheckinToken:    mongoose.model('CheckinToken',    checkinTokenSchema),
   PropertySOP:     mongoose.model('PropertySOP',     propertySopSchema),
   StaffIssue:      mongoose.model('StaffIssue',      staffIssueSchema),
+  WhatsAppLead:    mongoose.model('WhatsAppLead',    whatsappLeadSchema),
+  WhatsAppMessage: mongoose.model('WhatsAppMessage', whatsappMessageSchema),
 };

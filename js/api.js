@@ -301,6 +301,12 @@ const api = {
   opsMonthlyReport: (property_id) => request('GET', `/operations/monthly-report${property_id ? '?property_id=' + property_id : ''}`),
   opsPayoutSummary: (property_id) => request('GET', `/operations/payout-summary${property_id ? '?property_id=' + property_id : ''}`),
 
+  // ── WhatsApp Inbox (Interakt) ─────────────────────────
+  waLeads:     () => request('GET',  '/interakt/leads'),
+  waMessages:  (leadId) => request('GET',  `/interakt/leads/${leadId}/messages`),
+  waReply:     (leadId, text) => request('POST', `/interakt/leads/${leadId}/reply`, { text }),
+  waMarkRead:  (leadId) => request('POST', `/interakt/leads/${leadId}/read`),
+
   getSiteSettings:    () => request('GET', '/site-settings'),
   getPublicStats:     () => request('GET', '/site-settings/public-stats'),
   updateSiteSettings: (settings) => request('PUT', '/site-settings', { settings }),
