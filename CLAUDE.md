@@ -38,10 +38,12 @@ Group-stay villa/homestay booking platform, Udaipur, Rajasthan. Read this file a
 - Pattern for new SEO landing pages: static HTML page (not the dynamic `/travel-guide.html` system), e.g. `udaipur-private-pool-villas.html`, `udaipur-travel-guide.html` — add to `sitemap-static.xml` + internal links from `index.html` footer
 
 ## Known pending items
+- **WhatsApp Inbox not live yet** — code is pushed (`backend/routes/interakt.js`, `WhatsAppLead`/`WhatsAppMessage` models in `db/models.js`, admin.html "💬 WhatsApp Inbox" tab, `api.wa*` methods in `js/api.js`), but needs 2 manual steps from the user before it works: (1) set `INTERAKT_API_KEY` in Railway env vars (from Interakt dashboard → Settings → API Key), (2) set webhook URL `https://api.staydekho.com/api/interakt/webhook` in Interakt dashboard → Settings → Webhook. Until both are done, leads won't flow in and replies will fail.
 - `staydekho_booking_confirmed_ota` WhatsApp template — needs creation/approval in Meta Business Manager (user's task, not code)
 - PDF-as-WhatsApp-attachment for invoices — explained, not built; needs Puppeteer PDF gen + new Meta "Document Header" template
 - Udaipur travel guide rental section — deferred, add later
 - 11 properties with thin/missing descriptions — user needs to write these
+- Travel guide SEO strategy (itinerary sub-pages, group-trip angle, backlinks) — discussed as a plan, not yet built
 
 ## Working conventions
 - User (Sanskar) writes in Hinglish — respond in Hinglish for chat, English for code/comments
