@@ -436,8 +436,8 @@
           <option value="checked_out">Checked Out</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="openAddBookingModal()" style="white-space:nowrap">+ Add Booking</button>
-        <button class="btn btn-primary btn-sm" onclick="exportBookingsExcel()" style="white-space:nowrap">📊 Export Excel</button>
+        <button class="btn btn-primary btn-sm" id="btn-add-booking" onclick="openAddBookingModal()" style="white-space:nowrap">+ Add Booking</button>
+        <button class="btn btn-primary btn-sm" id="btn-export-bookings" onclick="exportBookingsExcel()" style="white-space:nowrap">📊 Export Excel</button>
       </div>
     </div>
     <div class="card">
@@ -1502,6 +1502,12 @@ function applyTeamRestrictions() {
     const requiredPerm = SIDEBAR_PERM_PAGES[page];
     const allowed = requiredPerm === undefined ? true : (requiredPerm !== null && teamHas(requiredPerm));
     if (!allowed) link.style.display = 'none';
+  });
+  // Buttons that only make sense with amounts attached (creating a booking,
+  // exporting a sheet full of them) — hide rather than let them hit a 403.
+  ['btn-add-booking', 'btn-export-bookings'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   });
 }
 
