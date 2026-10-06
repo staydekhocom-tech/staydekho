@@ -37,6 +37,14 @@ Group-stay villa/homestay booking platform, Udaipur, Rajasthan. Read this file a
 - Per-page meta/titles, JSON-LD (LodgingBusiness/FAQPage/TouristDestination), `sitemap-static.xml`, canonical tags already done for main pages
 - Pattern for new SEO landing pages: static HTML page (not the dynamic `/travel-guide.html` system), e.g. `udaipur-private-pool-villas.html`, `udaipur-travel-guide.html` — add to `sitemap-static.xml` + internal links from `index.html` footer
 
+## Team access (restricted admin dashboard, no financial data)
+- `User.role` can be `user` | `admin` | `team`. `team` also has `User.permissions: string[]` from `['bookings','properties','operations','reviews','reels']`.
+- `middleware/auth.js` → `teamOrAdmin(perm)` gates a route for admin OR a team user with that permission. `stripBookingMoney(data, role)` deletes `amount/total_amount/balance_amount/net_payout/remitted_tax/advance_amount` from booking objects for non-admins — used in `GET /api/admin/bookings`.
+- Financial routes (stats, users, accounts, expenses, payout-summary, dashboard, monthly-report, bookings-log, Interakt inbox) stay `adminOnly` — team never gets these regardless of permissions.
+- Frontend: `admin.html` → `applyTeamRestrictions()` hides sidebar links per `SIDEBAR_PERM_PAGES` map; `fmtMoney()` returns `—` for team accounts (defense in depth — real numbers are already stripped server-side, this just avoids a misleading `₹0`).
+- Admin grants access via Users page → "👥 Team Access" button → checkboxes modal (`openTeamAccessModal`/`saveTeamAccess`) → `PUT /api/admin/users/:id/role`. A user must sign up normally first, then be promoted.
+- Known gap: "Operations / PMS" sidebar page bundles cleaning tasks with expenses/payout UI in one hub — not split yet, so team gets zero access to it even though the `operations` permission exists on the backend (`/api/operations/cleaning`, `/api/staff/tasks/*`) for future use.
+
 ## Known pending items
 - **WhatsApp Inbox not live yet** — code is pushed (`backend/routes/interakt.js`, `WhatsAppLead`/`WhatsAppMessage` models in `db/models.js`, admin.html "💬 WhatsApp Inbox" tab, `api.wa*` methods in `js/api.js`), but needs 2 manual steps from the user before it works: (1) set `INTERAKT_API_KEY` in Railway env vars (from Interakt dashboard → Settings → API Key), (2) set webhook URL `https://api.staydekho.com/api/interakt/webhook` in Interakt dashboard → Settings → Webhook. Until both are done, leads won't flow in and replies will fail.
 - `staydekho_booking_confirmed_ota` WhatsApp template — needs creation/approval in Meta Business Manager (user's task, not code)

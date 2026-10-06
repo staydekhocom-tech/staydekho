@@ -24,6 +24,26 @@ function adminOnly(req, res, next) {
   next();
 }
 
+// Lets 'admin' through unconditionally, and 'team' through only if they were
+// granted this specific permission. Use ONLY on routes that are safe to hand
+// to a restricted team account — never as a drop-in replacement for adminOnly.
+function teamOrAdmin(perm) {
+  return (req, res, next) => {
+    if (req.user?.role === 'admin') return next();
+    if (req.user?.role === 'team' && req.user.permissions?.includes(perm)) return next();
+    return res.status(403).json({ error: 'Access required: ' + perm });
+  };
+}
+
+// Strips money fields from a lean booking doc/array for non-admin viewers —
+// call explicitly inside a teamOrAdmin('bookings') route before res.json().
+const BOOKING_MONEY_FIELDS = ['amount', 'total_amount', 'balance_amount', 'net_payout', 'remitted_tax', 'advance_amount'];
+function stripBookingMoney(data, role) {
+  if (role === 'admin') return data;
+  const strip = (b) => { const c = { ...b }; BOOKING_MONEY_FIELDS.forEach(f => delete c[f]); return c; };
+  return Array.isArray(data) ? data.map(strip) : strip(data);
+}
+
 async function optionalAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) return next();
@@ -60,4 +80,4 @@ async function staffProtect(req, res, next) {
   }
 }
 
-module.exports = { protect, adminOnly, optionalAuth, staffProtect };
+module.exports = { protect, adminOnly, optionalAuth, staffProtect, teamOrAdmin, stripBookingMoney };

@@ -1,16 +1,17 @@
 const router   = require('express').Router();
 const mongoose = require('mongoose');
 const { User, Property, Booking, Review } = require('../db/models');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, teamOrAdmin, stripBookingMoney } = require('../middleware/auth');
 const { notifyStaffNewBooking } = require('../services/notify');
 const { blockCalendarForBooking, createCleaningTaskForCheckout } = require('../services/bookingAutomation');
 const { notifyTeamNewBooking, notifyGuestBookingConfirmed } = require('../services/whatsapp');
 
-// All admin routes require auth + admin role
-router.use(protect, adminOnly);
+// All admin routes require auth; role/permission is checked per-route below
+// so restricted 'team' accounts can be let into specific non-financial routes.
+router.use(protect);
 
 // GET /api/admin/stats
-router.get('/stats', async (req, res) => {
+router.get('/stats', adminOnly, async (req, res) => {
   try {
     const now           = new Date();
     const startOfMonth  = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -203,7 +204,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // GET /api/admin/today  — today's check-ins and check-outs
-router.get('/today', async (_req, res) => {
+router.get('/today', teamOrAdmin('bookings'), async (_req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
@@ -243,7 +244,7 @@ router.get('/today', async (_req, res) => {
 });
 
 // GET /api/admin/bookings  — filterable list (status, from, to)
-router.get('/bookings', async (req, res) => {
+router.get('/bookings', teamOrAdmin('bookings'), async (req, res) => {
   const { status, from, to } = req.query;
   try {
     const filter = {};
@@ -257,11 +258,11 @@ router.get('/bookings', async (req, res) => {
       .sort({ checkin: -1 })
       .lean();
 
-    const bookings = docs.map(b => ({
+    const bookings = stripBookingMoney(docs.map(b => ({
       ...b,
       user_name:     b.user_id?.name,
       property_name: b.property_id?.name,
-    }));
+    })), req.user.role);
 
     res.json({ bookings });
   } catch (err) {
@@ -270,7 +271,7 @@ router.get('/bookings', async (req, res) => {
 });
 
 // GET /api/admin/users
-router.get('/users', async (req, res) => {
+router.get('/users', adminOnly, async (req, res) => {
   try {
     const users = await User.aggregate([
       {
@@ -297,7 +298,7 @@ router.get('/users', async (req, res) => {
 });
 
 // GET /api/admin/reviews — all reviews with user + property info
-router.get('/reviews', async (req, res) => {
+router.get('/reviews', teamOrAdmin('reviews'), async (req, res) => {
   try {
     const docs = await Review.find()
       .populate('user_id', 'name')
@@ -318,12 +319,19 @@ router.get('/reviews', async (req, res) => {
 });
 
 // PUT /api/admin/users/:id/role
-router.put('/users/:id/role', async (req, res) => {
-  const { role } = req.body;
-  if (!['user', 'admin'].includes(role))
-    return res.status(400).json({ error: 'Role must be user or admin' });
+router.put('/users/:id/role', adminOnly, async (req, res) => {
+  const { role, permissions } = req.body;
+  if (!['user', 'admin', 'team'].includes(role))
+    return res.status(400).json({ error: 'Role must be user, admin or team' });
+  const VALID_PERMS = ['bookings', 'properties', 'operations', 'reviews', 'reels'];
   try {
-    await User.findByIdAndUpdate(req.params.id, { role });
+    const update = { role };
+    if (role === 'team') {
+      update.permissions = Array.isArray(permissions) ? permissions.filter(p => VALID_PERMS.includes(p)) : [];
+    } else {
+      update.permissions = [];
+    }
+    await User.findByIdAndUpdate(req.params.id, update);
     res.json({ message: 'Role updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -331,7 +339,7 @@ router.put('/users/:id/role', async (req, res) => {
 });
 
 // DELETE /api/admin/users/:id
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', adminOnly, async (req, res) => {
   if (req.params.id === req.user.id)
     return res.status(400).json({ error: 'Cannot delete yourself' });
   try {
@@ -343,7 +351,7 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 // POST /api/admin/booking  — admin manually creates a booking
-router.post('/booking', async (req, res) => {
+router.post('/booking', adminOnly, async (req, res) => {
   try {
     const { guest_name, guest_phone, guest_email, property_id, checkin, checkout, guests, amount, advance_amount, payment_method, notes, source, net_payout, remitted_tax } = req.body;
 

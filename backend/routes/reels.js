@@ -3,7 +3,7 @@ const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
 const { GuestReel } = require('../db/models');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, teamOrAdmin } = require('../middleware/auth');
 
 // ── Multer Storage ────────────────────────────────────
 const storage = multer.diskStorage({
@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /api/reels/all  (admin — includes inactive) ───
-router.get('/all', protect, adminOnly, async (req, res) => {
+router.get('/all', protect, teamOrAdmin('reels'), async (req, res) => {
   try {
     const reels = await GuestReel.find()
       .sort({ sort_order: 1, _id: 1 })
@@ -65,7 +65,7 @@ router.get('/all', protect, adminOnly, async (req, res) => {
 });
 
 // ── POST /api/reels  (admin — create new reel) ────────
-router.post('/', protect, adminOnly, fields, async (req, res) => {
+router.post('/', protect, teamOrAdmin('reels'), fields, async (req, res) => {
   const { name, location, stay, quote, stars, video_url, poster_url, sort_order } = req.body;
   if (!name || !stay)
     return res.status(400).json({ error: 'name aur stay required hain' });
@@ -97,7 +97,7 @@ router.post('/', protect, adminOnly, fields, async (req, res) => {
 });
 
 // ── PUT /api/reels/:id  (admin — update reel) ─────────
-router.put('/:id', protect, adminOnly, fields, async (req, res) => {
+router.put('/:id', protect, teamOrAdmin('reels'), fields, async (req, res) => {
   try {
     const existing = await GuestReel.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Reel nahi mila' });
@@ -133,7 +133,7 @@ router.put('/:id', protect, adminOnly, fields, async (req, res) => {
 });
 
 // ── DELETE /api/reels/:id  (admin) ────────────────────
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+router.delete('/:id', protect, teamOrAdmin('reels'), async (req, res) => {
   try {
     const existing = await GuestReel.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Reel nahi mila' });

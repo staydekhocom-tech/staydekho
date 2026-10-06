@@ -2,7 +2,7 @@ const router   = require('express').Router();
 const Razorpay  = require('razorpay');
 const jwt       = require('jsonwebtoken');
 const { Booking, Property, Payment, DatePrice, User, Staff } = require('../db/models');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, teamOrAdmin } = require('../middleware/auth');
 const { sendEmail, bookingCancelledHtml } = require('../services/email');
 const { blockCalendarForBooking, unblockCalendarIfFree, createCleaningTaskForCheckout, notifyGuestBookingCancelled } = require('../services/bookingAutomation');
 const { notifyTeamBookingCancelled, notifyGuestPaymentReceived } = require('../services/whatsapp');
@@ -215,7 +215,7 @@ router.put('/:id/balance-paid', protect, adminOnly, async (req, res) => {
 });
 
 // PUT /api/bookings/:id/status  — admin update status
-router.put('/:id/status', protect, adminOnly, async (req, res) => {
+router.put('/:id/status', protect, teamOrAdmin('bookings'), async (req, res) => {
   const { status } = req.body;
   const allowed = ['pending', 'confirmed', 'cancelled', 'checked_in', 'checked_out'];
   if (!allowed.includes(status))

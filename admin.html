@@ -1071,6 +1071,29 @@
 
 <!-- 🔥 MODALS 🔥 -->
 
+<!-- ── Team Access modal (restricted dashboard login, no money) ── -->
+<div class="modal-bd" id="team-access-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">Team Access — <span id="ta-user-name"></span></div>
+      <button class="modal-close" onclick="closeModal('team-access-modal')">✕</button>
+    </div>
+    <input type="hidden" id="ta-user-id"/>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-weight:600;font-size:13.5px">
+      <input type="checkbox" id="ta-enabled" style="width:16px;height:16px"/> Enable dashboard access for this user
+    </label>
+    <div style="font-size:11.5px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Can see (no payment/amount data ever shown)</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-bookings" style="width:16px;height:16px"/> Bookings — guest, dates, status</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-properties" style="width:16px;height:16px"/> Properties — add/edit, availability</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-operations" style="width:16px;height:16px"/> Operations — cleaning tasks</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-reviews" style="width:16px;height:16px"/> Reviews</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-reels" style="width:16px;height:16px"/> Guest Reels</label>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveTeamAccess()">Save</button>
+  </div>
+</div>
+
 <!-- ── Add Staff modal ── -->
 <div class="modal-bd" id="add-staff-modal">
   <div class="modal" style="max-width:480px">
@@ -1448,8 +1471,38 @@ function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<
 function checkAdminAccess() {
   if (typeof api === 'undefined' || !api.isLoggedIn()) { window.location.href = 'login.html'; return false; }
   const user = JSON.parse(localStorage.getItem('sd_user') || 'null');
-  if (!user || user.role !== 'admin') { alert('Admin access required.'); window.location.href = 'index.html'; return false; }
+  if (!user || (user.role !== 'admin' && user.role !== 'team')) { alert('Admin access required.'); window.location.href = 'index.html'; return false; }
   return true;
+}
+
+function currentUser() { return JSON.parse(localStorage.getItem('sd_user') || 'null') || {}; }
+function isTeamOnly()  { return currentUser().role === 'team'; }
+function teamHas(perm) { return currentUser().permissions?.includes(perm); }
+
+// Maps each sidebar page to the permission a 'team' account needs to see it.
+// null = never shown to team regardless of permissions (financial or sensitive-admin pages).
+const SIDEBAR_PERM_PAGES = {
+  dashboard: null,   // financial stat cards — team never sees the overview page
+  accounts:  null,
+  bookings: 'bookings', calendar: 'bookings', today: 'bookings',
+  properties: 'properties', ical: 'properties',
+  operations: null,  // hub page mixes cleaning with expenses/payout UI — not split yet, so team doesn't get it even with the 'operations' API permission
+  reviews: 'reviews', reels: 'reviews',
+  'wa-inbox': null,  // guest/owner chat can reveal payment context
+  users: null, staff: null, 'site-settings': null, guides: null, addons: null, blog: null,
+};
+
+// Hides sidebar links + money columns a 'team' account shouldn't see. No-ops for 'admin'.
+function applyTeamRestrictions() {
+  if (!isTeamOnly()) return;
+  document.querySelectorAll('.sidebar-link[onclick]').forEach(link => {
+    const m = (link.getAttribute('onclick') || '').match(/showPage\('([^']+)'\)/);
+    if (!m) return;
+    const page = m[1];
+    const requiredPerm = SIDEBAR_PERM_PAGES[page];
+    const allowed = requiredPerm === undefined ? true : (requiredPerm !== null && teamHas(requiredPerm));
+    if (!allowed) link.style.display = 'none';
+  });
 }
 
 // ── NAVIGATION & MODALS ──
@@ -1503,6 +1556,12 @@ function getApiBase() {
 // ── INIT ADMIN ──
 async function initAdmin() {
   if (!checkAdminAccess()) return;
+  applyTeamRestrictions();
+  if (isTeamOnly()) {
+    const landing = teamHas('bookings') ? 'bookings' : teamHas('properties') ? 'properties' : teamHas('reviews') ? 'reviews' : null;
+    if (landing) showPage(landing);
+    else { alert('Koi permission assigned nahi hai. Admin se baat karo.'); }
+  }
   try {
     const [statsRes, propsRes, booksRes, usersRes, reelsRes] = await Promise.all([
       api && api.adminStats ? api.adminStats().catch(()=>({stats:{}, recentBookings:[], monthlyRevenue:[]})) : Promise.resolve({stats:{}, recentBookings:[], monthlyRevenue:[]}), 
@@ -2354,7 +2413,10 @@ let opsCleaningTasks = [];
 let opsExpenses = [];
 
 const PLATFORM_LABELS = { direct: 'StayDekho Direct', airbnb: 'Airbnb', booking_com: 'Booking.com', agoda: 'Agoda', mmt_goibibo: 'MMT/Goibibo', walkin: 'Walk-in' };
-function fmtMoney(n) { return '₹' + Math.round(n || 0).toLocaleString('en-IN'); }
+function fmtMoney(n) {
+  if (isTeamOnly()) return '—'; // amounts are stripped server-side for team accounts; never render a fake ₹0
+  return '₹' + Math.round(n || 0).toLocaleString('en-IN');
+}
 
 async function loadOpsProps() {
   try {
@@ -3629,7 +3691,39 @@ async function markBalancePaid(bookingId) {
     await initAdmin();
   } catch(e) { alert(e.message); }
 }
-function renderUsers(list) { document.getElementById('users-tbody').innerHTML = list.map(u => `<tr><td style="color:var(--gray-400);font-size:11.5px">#${u.id}</td><td><b>${u.name}</b>${u.role==='admin'?'<span class="badge b-confirmed" style="margin-left:6px;font-size:10px">Admin</span>':''}</td><td>${u.email}</td><td>${u.phone || '—'}</td><td>${u.bookings || 0} bookings</td><td style="color:var(--gray-400)">${u.joined}</td><td><div style="display:flex;gap:5px"><a class="btn btn-outline btn-sm" href="mailto:${u.email}">Email</a></div></td></tr>`).join(''); }
+const TEAM_PERM_LABELS = { bookings: 'Bookings', properties: 'Properties', operations: 'Operations (cleaning)', reviews: 'Reviews', reels: 'Guest Reels' };
+function renderUsers(list) {
+  usersList = list;
+  document.getElementById('users-tbody').innerHTML = list.map(u => `<tr><td style="color:var(--gray-400);font-size:11.5px">#${u.id}</td><td><b>${u.name}</b>${
+    u.role==='admin' ? '<span class="badge b-confirmed" style="margin-left:6px;font-size:10px">Admin</span>'
+    : u.role==='team' ? `<span class="badge" style="margin-left:6px;font-size:10px;background:#dbeafe;color:#1d4ed8">Team · ${(u.permissions||[]).map(p=>TEAM_PERM_LABELS[p]||p).join(', ') || 'no access yet'}</span>`
+    : ''
+  }</td><td>${u.email}</td><td>${u.phone || '—'}</td><td>${u.bookings || 0} bookings</td><td style="color:var(--gray-400)">${u.joined}</td><td><div style="display:flex;gap:5px"><a class="btn btn-outline btn-sm" href="mailto:${u.email}">Email</a>${u.role!=='admin' ? `<button class="btn btn-outline btn-sm" onclick="openTeamAccessModal('${u.id}')">👥 Team Access</button>` : ''}</div></td></tr>`).join('');
+}
+
+let usersList = [];
+function openTeamAccessModal(userId) {
+  const u = usersList.find(x => String(x.id) === String(userId));
+  if (!u) return;
+  document.getElementById('ta-user-id').value = u.id;
+  document.getElementById('ta-user-name').textContent = u.name;
+  Object.keys(TEAM_PERM_LABELS).forEach(p => {
+    document.getElementById('ta-perm-' + p).checked = (u.permissions || []).includes(p);
+  });
+  document.getElementById('ta-enabled').checked = u.role === 'team';
+  showModal('team-access-modal');
+}
+async function saveTeamAccess() {
+  const id = document.getElementById('ta-user-id').value;
+  const enabled = document.getElementById('ta-enabled').checked;
+  const permissions = Object.keys(TEAM_PERM_LABELS).filter(p => document.getElementById('ta-perm-' + p).checked);
+  try {
+    await api.setUserRole(id, enabled ? 'team' : 'user', permissions);
+    showAdminToast(enabled ? 'Team access saved ✅' : 'Team access removed', 'success');
+    closeModal('team-access-modal');
+    await initAdmin();
+  } catch (e) { alert(e.message); }
+}
 function renderReels() { const STAR = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#FFD700"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`; const grid = document.getElementById('reels-admin-grid'); const empty = document.getElementById('reels-empty-msg'); if (!grid) return; if (!reels.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; } if (empty) empty.style.display = 'none'; grid.innerHTML = reels.map(r => `<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.1);position:relative"><div style="position:relative;aspect-ratio:9/16;background:#1a0a0a;overflow:hidden">${r.poster_url ? `<img src="${r.poster_url}" alt="${r.name}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.3);font-size:2rem">🎬</div>`}<span style="position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:20px;font-size:.6rem;font-weight:700; background:${r.active ? 'rgba(34,197,94,.9)' : 'rgba(239,68,68,.9)'};color:#fff">${r.active ? 'Active' : 'Hidden'}</span>${r.video_url ? `<span style="position:absolute;top:8px;left:8px;background:rgba(139,23,23,.85);color:#fff;font-size:.58rem;font-weight:700;padding:3px 8px;border-radius:20px">🎬 Video</span>` : ''}</div><div style="padding:12px"><div style="font-size:.7rem;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${r.stay}</div><div style="font-weight:700;font-size:.85rem;margin-bottom:2px">${r.name}</div><div style="font-size:.72rem;color:var(--gray-400);margin-bottom:6px">${r.location || '—'}</div><div style="display:flex;gap:2px;margin-bottom:6px">${STAR.repeat(r.stars || 5)}</div>${r.quote ? `<div style="font-size:.68rem;color:var(--gray-500);line-height:1.4;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">"${r.quote}"</div>` : ''}<div style="display:flex;gap:6px"><button onclick="openEditReel('${r.id}')" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">✏️ Edit</button><button onclick="toggleReelActive('${r.id}', ${r.active ? 0 : 1})" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">${r.active ? '🙈 Hide' : '👁 Show'}</button><button onclick="deleteReel('${r.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:.72rem;cursor:pointer">🗑</button></div></div></div>`).join(''); }
 function renderChartFromData(monthlyRevenue) { const data = [...(monthlyRevenue||[])].reverse().slice(0, 6).map(m => ({ l: m.month ? new Date(m.month + '-01').toLocaleDateString('en-IN', { month:'short' }) : '?', v: Math.round((m.revenue || 0) / 100000 * 10) / 10, })); const max = Math.max(...data.map(d => d.v), 1); document.getElementById('rev-chart').innerHTML = data.map(d => `<div class="bar-col"><div style="font-size:10px;color:var(--gray-600);font-weight:600;margin-bottom:4px">${d.v > 0 ? '₹'+d.v+'L' : ''}</div><div class="bar" style="height:${Math.round((d.v/max)*85)||4}px" title="₹${d.v}L"></div><div class="bar-lbl">${d.l}</div></div>`).join(''); }
 

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const mongoose = require('mongoose');
 const { Property, Review, DatePrice, Booking } = require('../db/models');
-const { protect, adminOnly, optionalAuth } = require('../middleware/auth');
+const { protect, adminOnly, optionalAuth, teamOrAdmin } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 // Map DB doc → frontend-friendly shape
@@ -156,7 +156,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/properties — admin only
-router.post('/', protect, adminOnly, upload.array('images', 70), async (req, res) => {
+router.post('/', protect, teamOrAdmin('properties'), upload.array('images', 70), async (req, res) => {
   const data = req.body;
 
   if (!data.name || !data.location || !data.price)
@@ -216,7 +216,7 @@ router.post('/', protect, adminOnly, upload.array('images', 70), async (req, res
 });
 
 // PUT /api/properties/:id — admin only
-router.put('/:id', protect, adminOnly, upload.array('images', 70), async (req, res) => {
+router.put('/:id', protect, teamOrAdmin('properties'), upload.array('images', 70), async (req, res) => {
   try {
     const existing = await Property.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Property not found' });
@@ -317,7 +317,7 @@ router.get('/:id/date-prices', async (req, res) => {
 });
 
 // POST /api/properties/:id/date-prices
-router.post('/:id/date-prices', protect, adminOnly, async (req, res) => {
+router.post('/:id/date-prices', protect, teamOrAdmin('properties'), async (req, res) => {
   const { prices } = req.body;
   if (!Array.isArray(prices)) return res.status(400).json({ error: 'prices array required' });
 
@@ -356,7 +356,7 @@ router.post('/:id/date-prices', protect, adminOnly, async (req, res) => {
 });
 
 // DELETE /api/properties/:id
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+router.delete('/:id', protect, teamOrAdmin('properties'), async (req, res) => {
   try {
     const existing = await Property.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Property not found' });

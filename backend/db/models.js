@@ -16,7 +16,10 @@ const userSchema = new Schema({
   email:      { type: String, required: true, unique: true, lowercase: true, trim: true },
   phone:      { type: String, default: null },
   password:   { type: String, required: true },
-  role:       { type: String, default: 'user', enum: ['user', 'admin'] },
+  role:       { type: String, default: 'user', enum: ['user', 'admin', 'team'] },
+  // Only read when role === 'team' — which non-financial admin sections they can see.
+  // Values: 'bookings' | 'properties' | 'operations' | 'reviews' | 'reels'
+  permissions:{ type: [String], default: [] },
   avatar_url: { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 

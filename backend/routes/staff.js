@@ -5,7 +5,7 @@ const crypto  = require('crypto');
 const mongoose = require('mongoose');
 const { Staff, StaffTask, CheckinToken, PropertySOP, StaffIssue, Booking, Property, DatePrice } = require('../db/models');
 const { blockCalendarForBooking } = require('../services/bookingAutomation');
-const { protect, adminOnly, staffProtect } = require('../middleware/auth');
+const { protect, adminOnly, staffProtect, teamOrAdmin } = require('../middleware/auth');
 const { notifyGuestRoomReady, notifyAdminGuestSigned, notifyAdminIssue } = require('../services/notify');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://staydekho.com';
@@ -347,7 +347,7 @@ router.delete('/delete/:id', protect, adminOnly, async (req, res) => {
 
 // ── Admin: tasks management ───────────────────────────────
 
-router.post('/tasks/create', protect, adminOnly, async (req, res) => {
+router.post('/tasks/create', protect, teamOrAdmin('operations'), async (req, res) => {
   try {
     const { staff_id, property_id, booking_id, task_type, title, due_date } = req.body;
     if (!property_id || !title || !due_date) return res.status(400).json({ error: 'property_id, title and due_date required' });
@@ -366,7 +366,7 @@ router.post('/tasks/create', protect, adminOnly, async (req, res) => {
   }
 });
 
-router.get('/tasks/all', protect, adminOnly, async (req, res) => {
+router.get('/tasks/all', protect, teamOrAdmin('operations'), async (req, res) => {
   try {
     const filter = {};
     if (req.query.property_id) filter.property_id = req.query.property_id;

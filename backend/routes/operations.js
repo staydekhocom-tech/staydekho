@@ -1,17 +1,19 @@
 const router = require('express').Router();
 const { Booking, Property, Expense, CleaningTask, PlatformSetting } = require('../db/models');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, teamOrAdmin } = require('../middleware/auth');
 const {
   blockCalendarForBooking, unblockCalendarIfFree,
   createCleaningTaskForCheckout, notifyGuestBookingCreated, notifyGuestBookingCancelled,
 } = require('../services/bookingAutomation');
 const { notifyTeamNewBooking, notifyTeamBookingCancelled } = require('../services/whatsapp');
 
-router.use(protect, adminOnly);
+// Auth is checked per-route below: financial routes stay adminOnly, cleaning
+// tasks are opened up to a restricted 'team' account via teamOrAdmin.
+router.use(protect);
 
 // ── Bookings Log (multi-platform — manual OTA entries) ─
 // Net Payout is entered manually by the admin (no auto commission formula — too error-prone with varying OTA deals)
-router.get('/bookings-log', async (req, res) => {
+router.get('/bookings-log', adminOnly, async (req, res) => {
   try {
     const { platform, property_id } = req.query;
     const q = {};
@@ -30,7 +32,7 @@ router.get('/bookings-log', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/bookings-log', async (req, res) => {
+router.post('/bookings-log', adminOnly, async (req, res) => {
   try {
     const {
       property_id, guest_name, guest_phone, guest_email, guests, checkin, checkout,
@@ -107,7 +109,7 @@ router.post('/bookings-log', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/bookings-log/:id', async (req, res) => {
+router.put('/bookings-log/:id', adminOnly, async (req, res) => {
   try {
     const existing = await Booking.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ error: 'Booking nahi mili' });
@@ -197,7 +199,7 @@ router.put('/bookings-log/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/bookings-log/:id', async (req, res) => {
+router.delete('/bookings-log/:id', adminOnly, async (req, res) => {
   try {
     const existing = await Booking.findById(req.params.id).lean();
     if (existing) {
@@ -209,7 +211,7 @@ router.delete('/bookings-log/:id', async (req, res) => {
 });
 
 // ── Cleaning Tracker ───────────────────────────────────
-router.get('/cleaning', async (req, res) => {
+router.get('/cleaning', teamOrAdmin('operations'), async (req, res) => {
   try {
     const { property_id } = req.query;
     const q = property_id ? { property_id } : {};
@@ -218,7 +220,7 @@ router.get('/cleaning', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/cleaning', async (req, res) => {
+router.post('/cleaning', teamOrAdmin('operations'), async (req, res) => {
   try {
     const { property_id, date, checkout_today, status, cleaned_by, notes } = req.body;
     if (!property_id || !date) return res.status(400).json({ error: 'Property aur date required hain' });
@@ -231,13 +233,13 @@ router.post('/cleaning', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/cleaning/:id', async (req, res) => {
+router.delete('/cleaning/:id', teamOrAdmin('operations'), async (req, res) => {
   try { await CleaningTask.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Expenses ───────────────────────────────────────────
-router.get('/expenses', async (req, res) => {
+router.get('/expenses', adminOnly, async (req, res) => {
   try {
     const { property_id } = req.query;
     const q = property_id ? { property_id } : {};
@@ -246,7 +248,7 @@ router.get('/expenses', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/expenses', async (req, res) => {
+router.post('/expenses', adminOnly, async (req, res) => {
   try {
     const { property_id, date, category, description, amount, paid_by, notes } = req.body;
     if (!date || !amount) return res.status(400).json({ error: 'Date aur amount required hain' });
@@ -255,20 +257,20 @@ router.post('/expenses', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/expenses/:id', async (req, res) => {
+router.put('/expenses/:id', adminOnly, async (req, res) => {
   try {
     const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
     res.json({ expense });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/expenses/:id', async (req, res) => {
+router.delete('/expenses/:id', adminOnly, async (req, res) => {
   try { await Expense.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Dashboard / Reports ────────────────────────────────
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', adminOnly, async (req, res) => {
   try {
     const { from, to, property_id } = req.query;
     const q = { status: { $ne: 'cancelled' } };
@@ -342,7 +344,7 @@ router.get('/dashboard', async (req, res) => {
 });
 
 // ── Monthly Revenue Report ─────────────────────────────
-router.get('/monthly-report', async (req, res) => {
+router.get('/monthly-report', adminOnly, async (req, res) => {
   try {
     const { property_id } = req.query;
     const q = { status: { $ne: 'cancelled' } };
@@ -366,7 +368,7 @@ router.get('/monthly-report', async (req, res) => {
 });
 
 // ── Owner Payout Summary (platform-wise) ───────────────
-router.get('/payout-summary', async (req, res) => {
+router.get('/payout-summary', adminOnly, async (req, res) => {
   try {
     const { property_id } = req.query;
     const q = { status: { $ne: 'cancelled' } };
