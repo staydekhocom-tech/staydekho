@@ -42,7 +42,7 @@ Group-stay villa/homestay booking platform, Udaipur, Rajasthan. Read this file a
 - `middleware/auth.js` → `teamOrAdmin(perm)` gates a route for admin OR a team user with that permission. `stripBookingMoney(data, role)` deletes `amount/total_amount/balance_amount/net_payout/remitted_tax/advance_amount` from booking objects for non-admins — used in `GET /api/admin/bookings`.
 - Financial routes (stats, users, accounts, expenses, payout-summary, dashboard, monthly-report, bookings-log, Interakt inbox) stay `adminOnly` — team never gets these regardless of permissions.
 - Frontend: `admin.html` → `applyTeamRestrictions()` hides sidebar links per `SIDEBAR_PERM_PAGES` map; `fmtMoney()` returns `—` for team accounts (defense in depth — real numbers are already stripped server-side, this just avoids a misleading `₹0`).
-- Admin grants access via Users page → "👥 Team Access" button → checkboxes modal (`openTeamAccessModal`/`saveTeamAccess`) → `PUT /api/admin/users/:id/role`. A user must sign up normally first, then be promoted.
+- Two ways to grant access from the Users page: (1) "+ Add Team Member" button → `POST /api/admin/team` — admin sets name/email/password/permissions directly, no self-signup needed, shown once in an alert to copy/share; (2) "👥 Team Access" button on an existing user's row → `PUT /api/admin/users/:id/role` — promotes someone who already signed up as a guest.
 - Known gap: "Operations / PMS" sidebar page bundles cleaning tasks with expenses/payout UI in one hub — not split yet, so team gets zero access to it even though the `operations` permission exists on the backend (`/api/operations/cleaning`, `/api/staff/tasks/*`) for future use.
 
 ## Known pending items

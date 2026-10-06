@@ -618,7 +618,10 @@
   <div class="page-view" id="page-users">
     <div class="topbar">
       <div><div class="page-title">Users</div><div class="page-subtitle">All registered guests on StayDekho</div></div>
-      <div class="topbar-right"><input class="search-inp" placeholder="Search users…" oninput="filterUsers(this.value)"/></div>
+      <div class="topbar-right">
+        <input class="search-inp" placeholder="Search users…" oninput="filterUsers(this.value)"/>
+        <button class="btn btn-primary btn-sm" onclick="openAddTeamModal()">+ Add Team Member</button>
+      </div>
     </div>
     <div class="card">
       <div class="table-wrap">
@@ -1091,6 +1094,37 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-reels" style="width:16px;height:16px"/> Guest Reels</label>
     </div>
     <button class="btn btn-primary" style="width:100%" onclick="saveTeamAccess()">Save</button>
+  </div>
+</div>
+
+<!-- ── Add Team Member modal (admin creates the account directly) ── -->
+<div class="modal-bd" id="add-team-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hdr">
+      <div class="modal-title">Add Team Member</div>
+      <button class="modal-close" onclick="closeModal('add-team-modal')">✕</button>
+    </div>
+    <div class="form-grp"><label class="form-lbl">Full Name *</label><input class="form-ctrl" id="atm-name" placeholder="e.g. Priya Sharma"/></div>
+    <div class="form-row">
+      <div class="form-grp"><label class="form-lbl">Email *</label><input class="form-ctrl" id="atm-email" type="email" placeholder="priya@example.com"/></div>
+      <div class="form-grp"><label class="form-lbl">Phone</label><input class="form-ctrl" id="atm-phone" placeholder="10-digit number" maxlength="10" inputmode="numeric"/></div>
+    </div>
+    <div class="form-grp">
+      <label class="form-lbl">Password *</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-ctrl" id="atm-password" placeholder="Share this with them" style="flex:1"/>
+        <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('atm-password').value = Math.random().toString(36).slice(-4) + Math.random().toString(36).slice(-4).toUpperCase()">🎲 Generate</button>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px">Can see (no payment/amount data ever shown)</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="atm-perm-bookings" style="width:16px;height:16px"/> Bookings — guest, dates, status</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="atm-perm-properties" style="width:16px;height:16px"/> Properties — add/edit, availability</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="atm-perm-operations" style="width:16px;height:16px"/> Operations — cleaning tasks</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="atm-perm-reviews" style="width:16px;height:16px"/> Reviews</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="atm-perm-reels" style="width:16px;height:16px"/> Guest Reels</label>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="submitAddTeamMember()">Create Account</button>
   </div>
 </div>
 
@@ -3727,6 +3761,30 @@ async function saveTeamAccess() {
     await api.setUserRole(id, enabled ? 'team' : 'user', permissions);
     showAdminToast(enabled ? 'Team access saved ✅' : 'Team access removed', 'success');
     closeModal('team-access-modal');
+    await initAdmin();
+  } catch (e) { alert(e.message); }
+}
+
+function openAddTeamModal() {
+  ['name','email','phone','password'].forEach(f => document.getElementById('atm-' + f).value = '');
+  Object.keys(TEAM_PERM_LABELS).forEach(p => document.getElementById('atm-perm-' + p).checked = false);
+  showModal('add-team-modal');
+}
+async function submitAddTeamMember() {
+  const name     = document.getElementById('atm-name').value.trim();
+  const email    = document.getElementById('atm-email').value.trim();
+  const phone    = document.getElementById('atm-phone').value.trim();
+  const password = document.getElementById('atm-password').value;
+  const permissions = Object.keys(TEAM_PERM_LABELS).filter(p => document.getElementById('atm-perm-' + p).checked);
+
+  if (!name || !email || !password) { alert('Name, email aur password zaroori hai'); return; }
+  if (password.length < 6) { alert('Password kam se kam 6 characters ka hona chahiye'); return; }
+  if (!permissions.length && !confirm('Koi permission select nahi ki — ye account login karke kuch nahi dekh payega. Phir bhi banau?')) return;
+
+  try {
+    await api.createTeamMember({ name, email, phone, password, permissions });
+    closeModal('add-team-modal');
+    alert(`Account ban gaya ✅\n\nEmail: ${email}\nPassword: ${password}\n\nYe credentials team member ko de do — wo admin.html pe isi se login karega.`);
     await initAdmin();
   } catch (e) { alert(e.message); }
 }
