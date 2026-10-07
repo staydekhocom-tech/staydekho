@@ -3804,10 +3804,13 @@ async function saveTeamAccess() {
   } catch (e) { alert(e.message); }
 }
 
-function openAddTeamModal() {
+function openAddTeamModal(prefillName, prefillPhone) {
   ['name','email','phone','password'].forEach(f => document.getElementById('atm-' + f).value = '');
+  if (prefillName)  document.getElementById('atm-name').value  = prefillName;
+  if (prefillPhone) document.getElementById('atm-phone').value = prefillPhone;
   Object.keys(TEAM_PERM_LABELS).forEach(p => document.getElementById('atm-perm-' + p).checked = false);
   showModal('add-team-modal');
+  if (prefillName) document.getElementById('atm-email').focus(); // name/phone already filled — email is the next thing they need to type
 }
 async function submitAddTeamMember() {
   const name     = document.getElementById('atm-name').value.trim();
@@ -4116,6 +4119,7 @@ async function loadStaffList() {
         </td>
         <td style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="openEditStaffModal('${s.id}')">Edit</button>
+          <button class="btn btn-outline btn-sm" onclick="openAddTeamModal('${s.name.replace(/'/g,"\\'")}','${s.phone || ''}')">🔑 Dashboard Access</button>
           ${s.status === 'active'
             ? `<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c" onclick="deactivateStaff('${s.id}','${s.name}')">Deactivate</button>`
             : `<button class="btn btn-sm" style="background:#dcfce7;color:#15803d" onclick="activateStaff('${s.id}')">Activate</button>`
