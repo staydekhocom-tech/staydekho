@@ -1111,7 +1111,15 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-reviews" style="width:16px;height:16px"/> Reviews</label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="ta-perm-reels" style="width:16px;height:16px"/> Guest Reels</label>
     </div>
-    <button class="btn btn-primary" style="width:100%" onclick="saveTeamAccess()">Save</button>
+    <div class="form-grp">
+      <label class="form-lbl">Set/Reset Password <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+      <div style="display:flex;gap:8px">
+        <input class="form-ctrl" id="ta-password" placeholder="Leave blank to keep as-is" style="flex:1"/>
+        <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('ta-password').value = Math.random().toString(36).slice(-4) + Math.random().toString(36).slice(-4).toUpperCase()">🎲 Generate</button>
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Zaroori hai agar ye user pehle phone/OTP se signup kiya tha — unka password koi nahi jaanta, login tabhi chalega jab yahan se naya set karo.</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="saveTeamAccess()">Save</button>
   </div>
 </div>
 
@@ -3786,6 +3794,7 @@ function openTeamAccessModal(userId) {
   if (!u) return;
   document.getElementById('ta-user-id').value = u.id;
   document.getElementById('ta-user-name').textContent = u.name;
+  document.getElementById('ta-password').value = '';
   Object.keys(TEAM_PERM_LABELS).forEach(p => {
     document.getElementById('ta-perm-' + p).checked = (u.permissions || []).includes(p);
   });
@@ -3796,9 +3805,12 @@ async function saveTeamAccess() {
   const id = document.getElementById('ta-user-id').value;
   const enabled = document.getElementById('ta-enabled').checked;
   const permissions = Object.keys(TEAM_PERM_LABELS).filter(p => document.getElementById('ta-perm-' + p).checked);
+  const password = document.getElementById('ta-password').value.trim();
+  if (password && password.length < 6) { alert('Password kam se kam 6 characters ka hona chahiye'); return; }
   try {
-    await api.setUserRole(id, enabled ? 'team' : 'user', permissions);
+    await api.setUserRole(id, enabled ? 'team' : 'user', permissions, password || undefined);
     showAdminToast(enabled ? 'Team access saved ✅' : 'Team access removed', 'success');
+    if (password) alert(`Naya password set hogya:\n\n${password}\n\nYe team member ko de do.`);
     closeModal('team-access-modal');
     await loadTeamAccessTab();
   } catch (e) { alert(e.message); }

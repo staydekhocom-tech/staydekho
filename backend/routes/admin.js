@@ -355,10 +355,15 @@ router.post('/team', adminOnly, async (req, res) => {
 });
 
 // PUT /api/admin/users/:id/role
+// password is optional — pass it when promoting someone who originally signed
+// up via phone/OTP, since those accounts carry a random dummy password only
+// the system knows (they can never otherwise log in with email+password).
 router.put('/users/:id/role', adminOnly, async (req, res) => {
-  const { role, permissions } = req.body;
+  const { role, permissions, password } = req.body;
   if (!['user', 'admin', 'team'].includes(role))
     return res.status(400).json({ error: 'Role must be user, admin or team' });
+  if (password && password.length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
   const VALID_PERMS = ['bookings', 'properties', 'operations', 'reviews', 'reels'];
   try {
     const update = { role };
@@ -367,6 +372,7 @@ router.put('/users/:id/role', adminOnly, async (req, res) => {
     } else {
       update.permissions = [];
     }
+    if (password) update.password = bcrypt.hashSync(password, 10);
     await User.findByIdAndUpdate(req.params.id, update);
     res.json({ message: 'Role updated' });
   } catch (err) {

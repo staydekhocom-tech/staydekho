@@ -268,7 +268,7 @@ const api = {
 
   adminStats:    () => request('GET', '/admin/stats'),
   adminUsers:    () => request('GET', '/admin/users'),
-  setUserRole:   (id, role, permissions) => request('PUT', `/admin/users/${id}/role`, { role, permissions }),
+  setUserRole:   (id, role, permissions, password) => request('PUT', `/admin/users/${id}/role`, { role, permissions, password }),
   createTeamMember: (body) => request('POST', '/admin/team', body),
   adminReviews:  () => request('GET', '/admin/reviews'),
   adminToday:    () => request('GET', '/admin/today'),
