@@ -280,14 +280,18 @@ router.get('/users', adminOnly, async (req, res) => {
           from:         'bookings',
           localField:   '_id',
           foreignField: 'user_id',
-          as:           'bookings',
+          as:           'bookings_arr',
         },
       },
       {
-        $addFields: { booking_count: { $size: '$bookings' } },
+        $addFields: {
+          id:       { $toString: '$_id' },
+          bookings: { $size: '$bookings_arr' },
+          joined:   { $dateToString: { format: '%d %b %Y', date: '$created_at' } },
+        },
       },
       {
-        $project: { password: 0, bookings: 0, __v: 0 },
+        $project: { password: 0, bookings_arr: 0, __v: 0 },
       },
       { $sort: { created_at: -1 } },
     ]);
