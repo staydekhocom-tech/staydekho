@@ -620,7 +620,6 @@
       <div><div class="page-title">Users</div><div class="page-subtitle">All registered guests on StayDekho</div></div>
       <div class="topbar-right">
         <input class="search-inp" placeholder="Search users…" oninput="filterUsers(this.value)"/>
-        <button class="btn btn-primary btn-sm" onclick="openAddTeamModal()">+ Add Team Member</button>
       </div>
     </div>
     <div class="card">
@@ -954,6 +953,7 @@
       <button class="btn btn-outline ops-tab-btn" id="staff-tab-tasks"    onclick="switchStaffTab('tasks')">Tasks</button>
       <button class="btn btn-outline ops-tab-btn" id="staff-tab-issues"   onclick="switchStaffTab('issues')">Issues</button>
       <button class="btn btn-outline ops-tab-btn" id="staff-tab-sales"    onclick="switchStaffTab('sales')">Sales</button>
+      <button class="btn btn-outline ops-tab-btn" id="staff-tab-access"   onclick="switchStaffTab('access')">Dashboard Access</button>
     </div>
 
     <!-- ── People tab ── -->
@@ -1037,6 +1037,24 @@
               <tbody id="sales-detail-tbody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Dashboard Access tab (restricted admin.html accounts) ── -->
+    <div id="staff-panel-access" style="display:none">
+      <div class="card" style="margin-bottom:16px;padding:14px 16px">
+        <button class="btn btn-primary btn-sm" onclick="openAddTeamModal()">+ Add Team Member</button>
+        <span style="font-size:12px;color:var(--gray-400);margin-left:10px">Gives someone a login for this admin dashboard, with chosen sections only — payment/amount data is never shown to them.</span>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Can See</th><th>Actions</th></tr></thead>
+            <tbody id="team-access-tbody">
+              <tr><td colspan="4" style="text-align:center;color:var(--gray-400)">Loading…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -3734,14 +3752,35 @@ async function markBalancePaid(bookingId) {
 const TEAM_PERM_LABELS = { bookings: 'Bookings', properties: 'Properties', operations: 'Operations (cleaning)', reviews: 'Reviews', reels: 'Guest Reels' };
 function renderUsers(list) {
   usersList = list;
-  document.getElementById('users-tbody').innerHTML = list.map(u => `<tr><td style="color:var(--gray-400);font-size:11.5px">#${u.id}</td><td><b>${u.name}</b>${
-    u.role==='admin' ? '<span class="badge b-confirmed" style="margin-left:6px;font-size:10px">Admin</span>'
-    : u.role==='team' ? `<span class="badge" style="margin-left:6px;font-size:10px;background:#dbeafe;color:#1d4ed8">Team · ${(u.permissions||[]).map(p=>TEAM_PERM_LABELS[p]||p).join(', ') || 'no access yet'}</span>`
-    : ''
-  }</td><td>${u.email}</td><td>${u.phone || '—'}</td><td>${u.bookings || 0} bookings</td><td style="color:var(--gray-400)">${u.joined}</td><td><div style="display:flex;gap:5px"><a class="btn btn-outline btn-sm" href="mailto:${u.email}">Email</a>${u.role!=='admin' ? `<button class="btn btn-outline btn-sm" onclick="openTeamAccessModal('${u.id}')">👥 Team Access</button>` : ''}</div></td></tr>`).join('');
+  document.getElementById('users-tbody').innerHTML = list.map(u => `<tr><td style="color:var(--gray-400);font-size:11.5px">#${u.id}</td><td><b>${u.name}</b></td><td>${u.email}</td><td>${u.phone || '—'}</td><td>${u.bookings || 0} bookings</td><td style="color:var(--gray-400)">${u.joined}</td><td><a class="btn btn-outline btn-sm" href="mailto:${u.email}">Email</a></td></tr>`).join('');
 }
 
 let usersList = [];
+
+// ── Staff page → "Dashboard Access" sub-tab (team/admin accounts) ──
+async function loadTeamAccessTab() {
+  try {
+    const { users } = await api.adminUsers();
+    usersList = users; // keep in sync so openTeamAccessModal (called from here) can look users up
+    renderTeamAccessTable(users.filter(u => u.role === 'team' || u.role === 'admin'));
+  } catch (e) {
+    document.getElementById('team-access-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center;color:#dc2626">Load nahi hua: ${e.message}</td></tr>`;
+  }
+}
+function renderTeamAccessTable(list) {
+  const tbody = document.getElementById('team-access-tbody');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--gray-400)">Koi team member nahi hai abhi</td></tr>'; return; }
+  tbody.innerHTML = list.map(u => `<tr>
+      <td><b>${u.name}</b></td>
+      <td>${u.email}</td>
+      <td>${
+        u.role === 'admin' ? '<span class="badge b-confirmed" style="font-size:10px">Full Admin</span>'
+        : (u.permissions || []).length ? (u.permissions||[]).map(p=>TEAM_PERM_LABELS[p]||p).join(', ')
+        : '<span style="color:var(--gray-400)">No access yet</span>'
+      }</td>
+      <td>${u.role === 'admin' ? '—' : `<button class="btn btn-outline btn-sm" onclick="openTeamAccessModal('${u.id}')">✏️ Edit Access</button>`}</td>
+    </tr>`).join('');
+}
 function openTeamAccessModal(userId) {
   const u = usersList.find(x => String(x.id) === String(userId));
   if (!u) return;
@@ -3761,7 +3800,7 @@ async function saveTeamAccess() {
     await api.setUserRole(id, enabled ? 'team' : 'user', permissions);
     showAdminToast(enabled ? 'Team access saved ✅' : 'Team access removed', 'success');
     closeModal('team-access-modal');
-    await initAdmin();
+    await loadTeamAccessTab();
   } catch (e) { alert(e.message); }
 }
 
@@ -3785,7 +3824,7 @@ async function submitAddTeamMember() {
     await api.createTeamMember({ name, email, phone, password, permissions });
     closeModal('add-team-modal');
     alert(`Account ban gaya ✅\n\nEmail: ${email}\nPassword: ${password}\n\nYe credentials team member ko de do — wo admin.html pe isi se login karega.`);
-    await initAdmin();
+    await loadTeamAccessTab();
   } catch (e) { alert(e.message); }
 }
 function renderReels() { const STAR = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#FFD700"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`; const grid = document.getElementById('reels-admin-grid'); const empty = document.getElementById('reels-empty-msg'); if (!grid) return; if (!reels.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; } if (empty) empty.style.display = 'none'; grid.innerHTML = reels.map(r => `<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.1);position:relative"><div style="position:relative;aspect-ratio:9/16;background:#1a0a0a;overflow:hidden">${r.poster_url ? `<img src="${r.poster_url}" alt="${r.name}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.3);font-size:2rem">🎬</div>`}<span style="position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:20px;font-size:.6rem;font-weight:700; background:${r.active ? 'rgba(34,197,94,.9)' : 'rgba(239,68,68,.9)'};color:#fff">${r.active ? 'Active' : 'Hidden'}</span>${r.video_url ? `<span style="position:absolute;top:8px;left:8px;background:rgba(139,23,23,.85);color:#fff;font-size:.58rem;font-weight:700;padding:3px 8px;border-radius:20px">🎬 Video</span>` : ''}</div><div style="padding:12px"><div style="font-size:.7rem;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${r.stay}</div><div style="font-weight:700;font-size:.85rem;margin-bottom:2px">${r.name}</div><div style="font-size:.72rem;color:var(--gray-400);margin-bottom:6px">${r.location || '—'}</div><div style="display:flex;gap:2px;margin-bottom:6px">${STAR.repeat(r.stars || 5)}</div>${r.quote ? `<div style="font-size:.68rem;color:var(--gray-500);line-height:1.4;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">"${r.quote}"</div>` : ''}<div style="display:flex;gap:6px"><button onclick="openEditReel('${r.id}')" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">✏️ Edit</button><button onclick="toggleReelActive('${r.id}', ${r.active ? 0 : 1})" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer">${r.active ? '🙈 Hide' : '👁 Show'}</button><button onclick="deleteReel('${r.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:.72rem;cursor:pointer">🗑</button></div></div></div>`).join(''); }
@@ -3958,7 +3997,7 @@ let staffCurrentTab = 'people';
 
 function switchStaffTab(tab) {
   staffCurrentTab = tab;
-  ['people','tasks','issues','sales'].forEach(t => {
+  ['people','tasks','issues','sales','access'].forEach(t => {
     document.getElementById('staff-panel-' + t).style.display = t === tab ? '' : 'none';
     const btn = document.getElementById('staff-tab-' + t);
     if (btn) {
@@ -3969,6 +4008,7 @@ function switchStaffTab(tab) {
   if (tab === 'tasks')  loadStaffTasks();
   if (tab === 'issues') loadStaffIssues();
   if (tab === 'sales')  loadSalesStats();
+  if (tab === 'access') loadTeamAccessTab();
 }
 
 async function loadStaffPage() {
