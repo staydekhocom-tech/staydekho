@@ -1423,8 +1423,11 @@ function render(p, host, reviews) {
         <!-- Urgency strip (admin-controlled via fomo_enabled / fomo_bookings / fomo_viewers) -->
         ${(() => {
           if (p.fomo_enabled === false) return '';
-          const bookings = (p.fomo_bookings != null) ? p.fomo_bookings : (3 + (p.id % 5));
-          const viewers  = (p.fomo_viewers  != null) ? p.fomo_viewers  : (8 + ((p.id * 7) % 14));
+          // p.id is a Mongo ObjectId string — hash it to a stable number instead of
+          // using %/* directly on it, which silently coerces to NaN.
+          const idHash = String(p.id || '').split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
+          const bookings = (p.fomo_bookings != null) ? p.fomo_bookings : (3 + (idHash % 5));
+          const viewers  = (p.fomo_viewers  != null) ? p.fomo_viewers  : (8 + ((idHash * 7) % 14));
           return `<div class="urgency-strip">
             <span class="urgency-item">🔥 <strong>${bookings} bookings</strong> this week</span>
             <span class="urgency-item">👁 <strong>${viewers} people</strong> viewing right now</span>
