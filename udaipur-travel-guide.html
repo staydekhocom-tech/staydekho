@@ -118,8 +118,12 @@
     }
     .tg-place-card {
       background: #fff; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);
-      padding: 20px;
+      overflow: hidden;
     }
+    .tg-place-card img {
+      width: 100%; height: 170px; object-fit: cover; display: block;
+    }
+    .tg-place-card .body { padding: 20px; }
     .tg-place-card .num {
       font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.6rem;
       color: var(--red); opacity: .35; line-height: 1; margin-bottom: 6px;
@@ -201,44 +205,68 @@
     <p class="tg-narrow">Most of these sit within a short walk or auto ride of each other around Lake Pichola — you don't need a full day for any single one.</p>
     <div class="tg-places-grid">
       <div class="tg-place-card">
-        <div class="num">01</div>
-        <h3>City Palace</h3>
-        <p>The largest palace complex in Rajasthan, built over nearly 400 years. Courtyards, mirror-work halls, and views straight down onto Lake Pichola from the upper terraces.</p>
+        <img src="https://images.unsplash.com/photo-1615836245337-f5b9b2303f10?w=600&q=80" alt="City Palace, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">01</div>
+          <h3>City Palace</h3>
+          <p>The largest palace complex in Rajasthan, built over nearly 400 years. Courtyards, mirror-work halls, and views straight down onto Lake Pichola from the upper terraces.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">02</div>
-        <h3>Lake Pichola</h3>
-        <p>Take an evening boat ride for the best view of the City Palace and the Lake Palace lit up against the water — the classic Udaipur photo.</p>
+        <img src="https://images.unsplash.com/photo-1633702738734-443da2c18f3c?w=600&q=80" alt="Lake Pichola and the Lake Palace, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">02</div>
+          <h3>Lake Pichola</h3>
+          <p>Take an evening boat ride for the best view of the City Palace and the Lake Palace lit up against the water — the classic Udaipur photo.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">03</div>
-        <h3>Jag Mandir</h3>
-        <p>A marble island palace reachable only by boat from the City Palace jetty — quieter than the mainland sights, good for an unhurried hour.</p>
+        <img src="https://images.unsplash.com/photo-1695956353120-54ce5e91632b?w=600&q=80" alt="Jag Mandir island palace, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">03</div>
+          <h3>Jag Mandir</h3>
+          <p>A marble island palace reachable only by boat from the City Palace jetty — quieter than the mainland sights, good for an unhurried hour.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">04</div>
-        <h3>Saheliyon ki Bari</h3>
-        <p>A garden of fountains built for royal attendants, with a lotus pool and marble elephants — a relaxed stop, especially good early morning.</p>
+        <img src="https://images.unsplash.com/photo-1631805981630-b0970cd97e82?w=600&q=80" alt="Saheliyon ki Bari garden, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">04</div>
+          <h3>Saheliyon ki Bari</h3>
+          <p>A garden of fountains built for royal attendants, with a lotus pool and marble elephants — a relaxed stop, especially good early morning.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">05</div>
-        <h3>Fateh Sagar Lake</h3>
-        <p>Less crowded than Pichola, with a cable car up Karni Mata temple hill for a full city view and sunset over the water.</p>
+        <img src="https://images.unsplash.com/photo-1718799340126-59ca9e145907?w=600&q=80" alt="Fateh Sagar Lake, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">05</div>
+          <h3>Fateh Sagar Lake</h3>
+          <p>Less crowded than Pichola, with a cable car up Karni Mata temple hill for a full city view and sunset over the water.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">06</div>
-        <h3>Bagore ki Haveli</h3>
-        <p>A restored 18th-century haveli on the Gangaur Ghat waterfront — worth timing your visit for the evening Rajasthani folk dance show.</p>
+        <img src="https://images.unsplash.com/photo-1722080711528-095791cd14d4?w=600&q=80" alt="Bagore ki Haveli entrance, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">06</div>
+          <h3>Bagore ki Haveli</h3>
+          <p>A restored 18th-century haveli on the Gangaur Ghat waterfront — worth timing your visit for the evening Rajasthani folk dance show.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">07</div>
-        <h3>Monsoon Palace</h3>
-        <p>A hilltop palace above the city, best reached just before sunset for panoramic views over Udaipur and the surrounding lakes.</p>
+        <img src="https://images.unsplash.com/photo-1773730681917-746399eb20c7?w=600&q=80" alt="Monsoon Palace hilltop view, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">07</div>
+          <h3>Monsoon Palace</h3>
+          <p>A hilltop palace above the city, best reached just before sunset for panoramic views over Udaipur and the surrounding lakes.</p>
+        </div>
       </div>
       <div class="tg-place-card">
-        <div class="num">08</div>
-        <h3>Ambrai Ghat</h3>
-        <p>The quietest, most local spot for a lakeside evening — locals, chai stalls, and arguably the best unobstructed view of the City Palace at dusk.</p>
+        <img src="https://images.unsplash.com/photo-1696032503546-209bfdd36833?w=600&q=80" alt="Sunset at Ambrai Ghat, Udaipur" loading="lazy"/>
+        <div class="body">
+          <div class="num">08</div>
+          <h3>Ambrai Ghat</h3>
+          <p>The quietest, most local spot for a lakeside evening — locals, chai stalls, and arguably the best unobstructed view of the City Palace at dusk.</p>
+        </div>
       </div>
     </div>
   </div>
