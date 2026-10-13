@@ -20,11 +20,11 @@
   <!-- End Meta Pixel Code -->
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Udaipur Travel Guide — Places to Visit, Itinerary & Tips | StayDekho</title>
-  <meta name="description" content="Complete Udaipur travel guide: best places to visit, 3-day itinerary, where to stay, what to eat, and travel tips. Plan your perfect Udaipur trip with StayDekho."/>
+  <title>India Travel Guides — City Guides for Group Trips | StayDekho</title>
+  <meta name="description" content="StayDekho's destination guides for group and family trips across India — what to see, where to eat, and where to stay, city by city."/>
   <link rel="canonical" href="https://www.staydekho.com/travel-guide.html"/>
   <meta name="robots" content="index, follow"/>
-  <meta name="keywords" content="udaipur travel guide, places to visit in udaipur, udaipur itinerary, udaipur trip plan, udaipur tourism, udaipur sightseeing, udaipur me ghumne ki jagah"/>
+  <meta name="keywords" content="india travel guides, city travel guides, group trip destinations, staydekho travel guide"/>
   <meta name="geo.region" content="IN-RJ"/>
   <meta name="geo.placename" content="Udaipur, Rajasthan"/>
   <link rel="icon" type="image/png" href="images/favicon.png"/>
@@ -133,7 +133,7 @@
         const guideUrl = `https://www.staydekho.com/travel-guide.html?slug=${encodeURIComponent(guide.slug || slug)}`;
         const guideImg = guide.hero_image || 'https://www.staydekho.com/images/og-cover.jpg';
         const guideDesc = (guide.summary || guide.title || '').slice(0, 160);
-        document.title = `${guide.title} — Udaipur Travel Guide | StayDekho`;
+        document.title = `${guide.title} — ${guide.city || 'Travel'} Guide | StayDekho`;
         const setM = (sel, val) => { const el = document.querySelector(sel); if (el) el.setAttribute('content', val); };
         setM('meta[name="description"]', guideDesc);
         setM('meta[property="og:title"]', guide.title);
