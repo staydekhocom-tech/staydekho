@@ -116,6 +116,31 @@
       margin-top: 20px;
     }
     .ppv-list { margin: 0 0 16px 20px; color: var(--gray-600); line-height: 1.9; }
+    .ppv-types-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px; margin: 20px 0 8px;
+    }
+    .ppv-type-card {
+      background: #fff; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); padding: 22px;
+    }
+    .ppv-type-card .lbl { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--red); margin-bottom: 8px; }
+    .ppv-type-card p { font-size: .9rem; line-height: 1.7; margin: 0; max-width: none; }
+    .faq-list { max-width: 820px; margin: 24px auto 0; }
+    .faq-item {
+      background: #fff; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);
+      margin-bottom: 12px; overflow: hidden;
+    }
+    .faq-q {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 18px 22px; cursor: pointer; font-weight: 700; font-size: .96rem; color: var(--dark);
+    }
+    .faq-icon { flex: none; font-size: 1.2rem; color: var(--red); transition: transform .2s ease; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height .25s ease, padding .25s ease;
+      padding: 0 22px; color: var(--gray-600); font-size: .9rem; line-height: 1.75;
+    }
+    .faq-item.open .faq-a { max-height: 300px; padding: 0 22px 20px; }
     @media (max-width: 700px) {
       .ppv-hero { padding: 80px 0 44px; }
       .ppv-section { padding: 40px 0; }
@@ -239,11 +264,20 @@
 
     <h2>Types of Private Pool Villas Available</h2>
     <p>Depending on your group size and the kind of trip you're planning, our six pool villas roughly split into three categories:</p>
-    <ul class="ppv-list">
-      <li><strong>Compact groups (2BHK–3BHK, up to 9 guests)</strong> — the Badi pool villa and the Aravalli farm villa are built for close friend groups and small families who want privacy without paying for rooms they won't use.</li>
-      <li><strong>Mid-size groups (4BHK–6BHK, 10–12 guests)</strong> — Jungle Escape and Indra Valley suit college reunions, cousin trips and birthday weekends where the pool and garden get as much use as the rooms.</li>
-      <li><strong>Large groups (8BHK, up to 16 guests)</strong> — Hilltop Haven is our largest villa, built for destination-style family functions and bigger group bookings that would otherwise need two or three hotel rooms.</li>
-    </ul>
+    <div class="ppv-types-grid">
+      <div class="ppv-type-card">
+        <div class="lbl">Compact · 2–3 BHK, up to 9</div>
+        <p>The Badi pool villa and the Aravalli farm villa are built for close friend groups and small families who want privacy without paying for rooms they won't use.</p>
+      </div>
+      <div class="ppv-type-card">
+        <div class="lbl">Mid-size · 4–6 BHK, 10–12</div>
+        <p>Jungle Escape and Indra Valley suit college reunions, cousin trips and birthday weekends where the pool and garden get as much use as the rooms.</p>
+      </div>
+      <div class="ppv-type-card">
+        <div class="lbl">Large · 8 BHK, up to 16</div>
+        <p>Hilltop Haven is our largest villa, built for destination-style family functions and bigger group bookings that would otherwise need two or three hotel rooms.</p>
+      </div>
+    </div>
 
     <h2>Best Time to Book a Pool Villa in Udaipur</h2>
     <p>
@@ -267,7 +301,7 @@
   <div class="container ppv-narrow">
     <h2>Frequently Asked Questions</h2>
     <div class="faq-list" id="ppv-faq-list">
-      <div class="faq-item open">
+      <div class="faq-item">
         <div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>What does "private pool villa" mean on StayDekho?</span><span class="faq-icon">+</span></div>
         <div class="faq-a">It means the swimming pool belongs only to your booking — no shared or public pool with other guests. Every villa listed on this page has a private, gated pool that only your group can use for the length of your stay.</div>
       </div>
