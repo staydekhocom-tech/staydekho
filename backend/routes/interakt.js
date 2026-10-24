@@ -58,16 +58,20 @@ router.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
+// .lean() skips the schema's toJSON transform (no virtual "id", _id stays as
+// an ObjectId) — add a plain string id back on so the frontend's l.id works.
+const withId = doc => ({ ...doc, id: doc._id.toString() });
+
 // ── Admin: list all leads, newest first ─────────────────
 router.get('/leads', protect, adminOnly, async (req, res) => {
   const leads = await WhatsAppLead.find().sort({ last_msg_at: -1 }).lean();
-  res.json(leads);
+  res.json(leads.map(withId));
 });
 
 // ── Admin: full thread for one lead ─────────────────────
 router.get('/leads/:id/messages', protect, adminOnly, async (req, res) => {
   const messages = await WhatsAppMessage.find({ lead_id: req.params.id }).sort({ created_at: 1 }).lean();
-  res.json(messages);
+  res.json(messages.map(withId));
 });
 
 // ── Admin: send a reply through Interakt ────────────────
