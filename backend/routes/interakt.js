@@ -23,7 +23,7 @@ async function upsertInbound(phone, name, text) {
   const p = normalizePhone(phone);
   let lead = await WhatsAppLead.findOne({ phone: p });
   if (!lead) {
-    lead = await WhatsAppLead.create({ phone: p, name: name || '' });
+    lead = await WhatsAppLead.create({ phone: p, name: name || '', last_message: text, last_direction: 'inbound', last_msg_at: new Date() });
   } else {
     lead.name           = name || lead.name;
     lead.last_message    = text;
@@ -117,6 +117,21 @@ router.post('/leads/:id/reply', protect, adminOnly, async (req, res) => {
 // ── Admin: mark a lead's thread as read ─────────────────
 router.post('/leads/:id/read', protect, adminOnly, async (req, res) => {
   await WhatsAppLead.findByIdAndUpdate(req.params.id, { unread: false });
+  res.json({ success: true });
+});
+
+// ── Admin: update a lead's pipeline status (New/Contacted/Quoted/Converted/Lost) ──
+const VALID_STATUSES = ['new', 'contacted', 'quoted', 'converted', 'lost'];
+router.put('/leads/:id/status', protect, adminOnly, async (req, res) => {
+  const { status } = req.body;
+  if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  await WhatsAppLead.findByIdAndUpdate(req.params.id, { status });
+  res.json({ success: true });
+});
+
+// ── Admin: save a private note on a lead (not sent to the guest) ──
+router.put('/leads/:id/notes', protect, adminOnly, async (req, res) => {
+  await WhatsAppLead.findByIdAndUpdate(req.params.id, { notes: String(req.body.notes || '') });
   res.json({ success: true });
 });
 

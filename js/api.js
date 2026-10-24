@@ -308,6 +308,8 @@ const api = {
   waMessages:  (leadId) => request('GET',  `/interakt/leads/${leadId}/messages`),
   waReply:     (leadId, text) => request('POST', `/interakt/leads/${leadId}/reply`, { text }),
   waMarkRead:  (leadId) => request('POST', `/interakt/leads/${leadId}/read`),
+  waSetStatus: (leadId, status) => request('PUT', `/interakt/leads/${leadId}/status`, { status }),
+  waSetNotes:  (leadId, notes) => request('PUT', `/interakt/leads/${leadId}/notes`, { notes }),
 
   getSiteSettings:    () => request('GET', '/site-settings'),
   getPublicStats:     () => request('GET', '/site-settings/public-stats'),
