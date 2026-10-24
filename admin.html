@@ -4040,7 +4040,7 @@ async function loadWaLeads() {
   try {
     waLeads = await api.waLeads();
     if (!waLeads.length) {
-      list.innerHTML = '<div style="text-align:center;color:var(--gray-400);padding:20px;font-size:13px">Koi lead abhi tak nahi hai</div>';
+      list.innerHTML = '<div style="text-align:center;color:var(--gray-400);padding:20px;font-size:13px">No leads yet</div>';
       document.getElementById('wa-unread-badge').style.display = 'none';
       return;
     }
@@ -4060,7 +4060,7 @@ async function loadWaLeads() {
       </div>
     `).join('');
   } catch (e) {
-    list.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:13px">Load nahi hua: ' + e.message + '</div>';
+    list.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:13px">Failed to load: ' + e.message + '</div>';
   }
 }
 
@@ -4083,12 +4083,12 @@ async function openWaThread(leadId) {
     `).join('') || '<div style="text-align:center;color:var(--gray-400)">No messages yet</div>';
     body.scrollTop = body.scrollHeight;
   } catch (e) {
-    body.innerHTML = '<div style="text-align:center;color:#dc2626">Load nahi hua: ' + e.message + '</div>';
+    body.innerHTML = '<div style="text-align:center;color:#dc2626">Failed to load: ' + e.message + '</div>';
   }
 }
 
 async function sendWaReply() {
-  if (!waActiveLeadId) { alert('Pehle ek lead select karo'); return; }
+  if (!waActiveLeadId) { alert('Select a lead first'); return; }
   const input = document.getElementById('wa-reply-input');
   const text = input.value.trim();
   if (!text) return;
@@ -4097,7 +4097,7 @@ async function sendWaReply() {
     await api.waReply(waActiveLeadId, text);
     await openWaThread(waActiveLeadId);
   } catch (e) {
-    alert('Reply bhejne mein error: ' + e.message);
+    alert('Error sending reply: ' + e.message);
   }
 }
 
