@@ -341,11 +341,13 @@ const whatsappLeadSchema = new Schema({
 
 // ── 26. WhatsAppMessage — ek lead ki poori chat, message-by-message ──
 const whatsappMessageSchema = new Schema({
-  lead_id:   { type: Schema.Types.ObjectId, ref: 'WhatsAppLead', required: true },
-  direction: { type: String, required: true, enum: ['inbound', 'outbound'] },
-  text:      { type: String, default: '' },
-  sender:    { type: String, default: '' },   // 'guest' | admin user name | 'ai'
-  status:    { type: String, default: 'received', enum: ['received', 'sent', 'delivered', 'read', 'failed'] },
+  lead_id:    { type: Schema.Types.ObjectId, ref: 'WhatsAppLead', required: true },
+  direction:  { type: String, required: true, enum: ['inbound', 'outbound'] },
+  text:       { type: String, default: '' },
+  media_url:  { type: String, default: '' },   // set when this message is a photo/document
+  media_type: { type: String, default: '', enum: ['', 'image', 'document'] },
+  sender:     { type: String, default: '' },   // 'guest' | admin user name | 'ai'
+  status:     { type: String, default: 'received', enum: ['received', 'sent', 'delivered', 'read', 'failed'] },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 module.exports = {

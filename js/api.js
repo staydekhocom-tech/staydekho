@@ -310,6 +310,7 @@ const api = {
   waMarkRead:  (leadId) => request('POST', `/interakt/leads/${leadId}/read`),
   waSetStatus: (leadId, status) => request('PUT', `/interakt/leads/${leadId}/status`, { status }),
   waSetNotes:  (leadId, notes) => request('PUT', `/interakt/leads/${leadId}/notes`, { notes }),
+  waSendMedia: (leadId, url, caption, media_type) => request('POST', `/interakt/leads/${leadId}/send-media`, { url, caption, media_type }),
 
   getSiteSettings:    () => request('GET', '/site-settings'),
   getPublicStats:     () => request('GET', '/site-settings/public-stats'),

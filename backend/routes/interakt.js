@@ -143,6 +143,51 @@ router.post('/leads/:id/reply', protect, adminOnly, async (req, res) => {
   }
 });
 
+// ── Admin: send a photo/document (already uploaded to Cloudinary via
+// POST /api/uploads/image) through Interakt ──
+// NOTE: Interakt's exact field names for media messages aren't confirmed —
+// this follows their documented "Text" shape (type + data.message) with the
+// media url added the same way most WhatsApp BSPs do it. If Interakt rejects
+// this shape, check Railway logs — axios logs e.response?.data below, which
+// will show Interakt's validation error naming the field it actually wants.
+router.post('/leads/:id/send-media', protect, adminOnly, async (req, res) => {
+  try {
+    const { url, caption, media_type } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+    const type = media_type === 'document' ? 'Document' : 'Image';
+
+    const lead = await WhatsAppLead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (!INTERAKT_API_KEY) return res.status(500).json({ error: 'INTERAKT_API_KEY not configured on server' });
+
+    await axios.post(INTERAKT_SEND_URL, {
+      countryCode: '+91',
+      phoneNumber: lead.phone.replace(/^91/, ''),
+      type,
+      data: { message: caption || '', url },
+    }, {
+      headers: { Authorization: `Basic ${INTERAKT_API_KEY}`, 'Content-Type': 'application/json' },
+    });
+
+    lead.last_message   = caption || (type === 'Document' ? '📄 Document' : '📷 Photo');
+    lead.last_direction = 'outbound';
+    lead.unread         = false;
+    lead.last_msg_at    = new Date();
+    await lead.save();
+
+    await WhatsAppMessage.create({
+      lead_id: lead._id, direction: 'outbound', text: caption || '',
+      media_url: url, media_type: media_type === 'document' ? 'document' : 'image',
+      sender: req.user?.name || 'admin', status: 'sent',
+    });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Interakt media send error:', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data?.message || e.message });
+  }
+});
+
 // ── Admin: mark a lead's thread as read ─────────────────
 router.post('/leads/:id/read', protect, adminOnly, async (req, res) => {
   await WhatsAppLead.findByIdAndUpdate(req.params.id, { unread: false });
