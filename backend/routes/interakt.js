@@ -38,19 +38,48 @@ async function upsertInbound(phone, name, text) {
   return lead;
 }
 
+// For replies sent from Interakt's own dashboard/app (not through our admin
+// panel) — the "echo" webhook event. Same bookkeeping as a reply sent via
+// POST /leads/:id/reply, except the lead must already exist (an echo always
+// follows an inbound message, so there's nothing to create here).
+async function upsertOutbound(phone, text) {
+  const p = normalizePhone(phone);
+  const lead = await WhatsAppLead.findOne({ phone: p });
+  if (!lead) return null;
+  lead.last_message   = text;
+  lead.last_direction = 'outbound';
+  lead.unread         = false;
+  lead.last_msg_at    = new Date();
+  await lead.save();
+  await WhatsAppMessage.create({
+    lead_id: lead._id, direction: 'outbound', text, sender: 'interakt-app', status: 'sent',
+  });
+  return lead;
+}
+
 // ── Interakt inbound webhook (set this URL in Interakt dashboard) ──
 router.post('/webhook', async (req, res) => {
   try {
     const body  = req.body || {};
-    // Interakt sends { type: 'message_received', data: { customer: {...}, message: {...} } }
-    // for an inbound text; other event types (message status, etc.) are ignored here.
     if (body.type === 'message_received') {
+      // A customer's inbound message.
       const customer = body.data?.customer || {};
       const message  = body.data?.message  || {};
       const phone    = customer.phone_number || customer.countryCode + customer.phoneNumber || '';
       const name     = customer.full_name || customer.traits?.name || '';
       const text     = message.message || message.text || '';
       if (phone && text) await upsertInbound(phone, name, text);
+    } else if (/echo/i.test(body.type || '') || /message_sent/i.test(body.type || '')) {
+      // A reply sent from Interakt's own dashboard/app, not through us —
+      // exact payload shape unconfirmed yet, so log it and try our best guess.
+      console.log('📤 Interakt echo webhook payload:', JSON.stringify(body));
+      const customer = body.data?.customer || {};
+      const message  = body.data?.message  || {};
+      const phone    = customer.phone_number || customer.countryCode + customer.phoneNumber || '';
+      const text     = message.message || message.text || '';
+      if (phone && text) await upsertOutbound(phone, text);
+    } else {
+      console.log('ℹ️ Unhandled Interakt webhook type:', body.type, JSON.stringify(body).slice(0, 500));
     }
   } catch (e) {
     console.error('Interakt webhook processing error:', e.message);
