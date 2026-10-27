@@ -1092,6 +1092,7 @@
         <div style="display:flex;gap:8px;padding:0 12px 12px">
           <input type="file" id="wa-media-input" accept="image/*" style="display:none" onchange="sendWaMedia(this.files[0])">
           <button class="btn btn-outline" title="Attach photo" onclick="document.getElementById('wa-media-input').click()">📎</button>
+          <button class="btn btn-outline" title="Send an approved template (works outside the 24h window)" onclick="openWaTemplateModal()">📋</button>
           <input class="form-ctrl" id="wa-reply-input" placeholder="Type a reply…" style="flex:1" onkeydown="if(event.key==='Enter')sendWaReply()">
           <button class="btn btn-primary" onclick="sendWaReply()">Send</button>
         </div>
@@ -1108,6 +1109,24 @@
 </main>
 
 <!-- 🔥 MODALS 🔥 -->
+
+<!-- ── WhatsApp Send Template modal (the only way to message outside the 24h window) ── -->
+<div class="modal-bd" id="wa-template-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">Send Template</div>
+      <button class="modal-close" onclick="closeModal('wa-template-modal')">✕</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--gray-400);margin-bottom:14px">Only an approved WhatsApp template can reach a guest who hasn't messaged in the last 24 hours. Use the exact template name from Interakt → Templates.</div>
+    <div class="form-grp"><label class="form-lbl">Template Name *</label><input class="form-ctrl" id="wat-name" placeholder="e.g. booking_confirmation"/></div>
+    <div class="form-grp"><label class="form-lbl">Language Code</label><input class="form-ctrl" id="wat-lang" value="en" placeholder="en"/></div>
+    <div class="form-grp">
+      <label class="form-lbl">Body Variables <span style="color:var(--gray-400);font-weight:400">(one per line, in order — leave blank if none)</span></label>
+      <textarea class="form-ctrl" id="wat-params" rows="4" placeholder="Jenish&#10;12 November&#10;13 November" style="resize:vertical"></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="submitWaTemplate()">Send Template</button>
+  </div>
+</div>
 
 <!-- ── Team Access modal (restricted dashboard login, no money) ── -->
 <div class="modal-bd" id="team-access-modal">
@@ -4133,7 +4152,10 @@ async function openWaThread(leadId) {
   if (lead) {
     const statusOpts = Object.entries(WA_STATUS_META).map(([k,m]) => `<option value="${k}" ${((lead.status||'new')===k)?'selected':''}>${m.label}</option>`).join('');
     hdr.innerHTML = `<span style="font-weight:700;font-size:14px">${esc(lead.name || lead.phone)} · ${esc(lead.phone)}</span>
-      <select class="form-ctrl" style="width:auto;font-size:12px;padding:4px 8px" onchange="setWaStatus('${leadId}', this.value)">${statusOpts}</select>`;
+      <span style="display:flex;gap:8px;align-items:center">
+        <input class="form-ctrl" placeholder="Assign to…" value="${esc(lead.assigned_to || '')}" style="width:120px;font-size:12px;padding:4px 8px" onchange="setWaAssign('${leadId}', this.value)"/>
+        <select class="form-ctrl" style="width:auto;font-size:12px;padding:4px 8px" onchange="setWaStatus('${leadId}', this.value)">${statusOpts}</select>
+      </span>`;
   } else {
     hdr.innerHTML = '<span style="font-weight:700;font-size:14px">Select a lead</span>';
   }
@@ -4182,6 +4204,39 @@ async function setWaStatus(leadId, status) {
     renderWaLeadList();
   } catch (e) {
     alert('Error updating status: ' + e.message);
+  }
+}
+
+async function setWaAssign(leadId, assigned_to) {
+  try {
+    await api.waAssign(leadId, assigned_to);
+    const lead = waLeads.find(l => l.id === leadId);
+    if (lead) lead.assigned_to = assigned_to;
+    showAdminToast(assigned_to ? `Assigned to ${assigned_to}` : 'Unassigned', 'success');
+  } catch (e) {
+    alert('Error assigning lead: ' + e.message);
+  }
+}
+
+function openWaTemplateModal() {
+  if (!waActiveLeadId) { alert('Select a lead first'); return; }
+  document.getElementById('wat-name').value = '';
+  document.getElementById('wat-lang').value = 'en';
+  document.getElementById('wat-params').value = '';
+  showModal('wa-template-modal');
+}
+
+async function submitWaTemplate() {
+  const template_name = document.getElementById('wat-name').value.trim();
+  const language = document.getElementById('wat-lang').value.trim() || 'en';
+  const params = document.getElementById('wat-params').value.split('\n').map(s => s.trim());
+  if (!template_name) { alert('Template name is required'); return; }
+  try {
+    await api.waSendTemplate(waActiveLeadId, template_name, language, params);
+    closeModal('wa-template-modal');
+    await openWaThread(waActiveLeadId);
+  } catch (e) {
+    alert('Error sending template: ' + e.message);
   }
 }
 

@@ -337,6 +337,7 @@ const whatsappLeadSchema = new Schema({
   last_msg_at:    { type: Date, default: Date.now },
   status:         { type: String, default: 'new', enum: ['new', 'contacted', 'quoted', 'converted', 'lost'] },
   notes:          { type: String, default: '' },
+  assigned_to:    { type: String, default: '' },  // team member's name — free text, not a user lookup
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 // ── 26. WhatsAppMessage — ek lead ki poori chat, message-by-message ──

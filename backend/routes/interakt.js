@@ -188,6 +188,56 @@ router.post('/leads/:id/send-media', protect, adminOnly, async (req, res) => {
   }
 });
 
+// ── Admin: send an approved WhatsApp template — the only thing that works
+// outside the 24-hour customer-messaged window ──
+// NOTE: Interakt's exact field names for template sends aren't confirmed
+// from official docs (couldn't reach them). This follows the general shape
+// their resource-center article describes (template name + ordered body
+// variable values). If Interakt rejects this shape, Railway logs will show
+// their validation error naming the field it actually wants — fix from there.
+router.post('/leads/:id/send-template', protect, adminOnly, async (req, res) => {
+  try {
+    const { template_name, language, params } = req.body;
+    if (!template_name) return res.status(400).json({ error: 'template_name is required' });
+
+    const lead = await WhatsAppLead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (!INTERAKT_API_KEY) return res.status(500).json({ error: 'INTERAKT_API_KEY not configured on server' });
+
+    const bodyValues = Array.isArray(params) ? params.filter(p => p !== '') : [];
+
+    await axios.post(INTERAKT_SEND_URL, {
+      countryCode: '+91',
+      phoneNumber: lead.phone.replace(/^91/, ''),
+      type: 'Template',
+      template: {
+        name: template_name,
+        languageCode: language || 'en',
+        bodyValues,
+      },
+    }, {
+      headers: { Authorization: `Basic ${INTERAKT_API_KEY}`, 'Content-Type': 'application/json' },
+    });
+
+    const preview = `📋 Template: ${template_name}` + (bodyValues.length ? ` (${bodyValues.join(', ')})` : '');
+    lead.last_message   = preview;
+    lead.last_direction = 'outbound';
+    lead.unread         = false;
+    lead.last_msg_at    = new Date();
+    await lead.save();
+
+    await WhatsAppMessage.create({
+      lead_id: lead._id, direction: 'outbound', text: preview,
+      sender: req.user?.name || 'admin', status: 'sent',
+    });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Interakt template send error:', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data?.message || e.message });
+  }
+});
+
 // ── Admin: mark a lead's thread as read ─────────────────
 router.post('/leads/:id/read', protect, adminOnly, async (req, res) => {
   await WhatsAppLead.findByIdAndUpdate(req.params.id, { unread: false });
@@ -200,6 +250,12 @@ router.put('/leads/:id/status', protect, adminOnly, async (req, res) => {
   const { status } = req.body;
   if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
   await WhatsAppLead.findByIdAndUpdate(req.params.id, { status });
+  res.json({ success: true });
+});
+
+// ── Admin: assign a lead to a team member (free text name) ──
+router.put('/leads/:id/assign', protect, adminOnly, async (req, res) => {
+  await WhatsAppLead.findByIdAndUpdate(req.params.id, { assigned_to: String(req.body.assigned_to || '') });
   res.json({ success: true });
 });
 

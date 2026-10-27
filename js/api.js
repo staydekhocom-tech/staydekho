@@ -311,6 +311,8 @@ const api = {
   waSetStatus: (leadId, status) => request('PUT', `/interakt/leads/${leadId}/status`, { status }),
   waSetNotes:  (leadId, notes) => request('PUT', `/interakt/leads/${leadId}/notes`, { notes }),
   waSendMedia: (leadId, url, caption, media_type) => request('POST', `/interakt/leads/${leadId}/send-media`, { url, caption, media_type }),
+  waSendTemplate: (leadId, template_name, language, params) => request('POST', `/interakt/leads/${leadId}/send-template`, { template_name, language, params }),
+  waAssign: (leadId, assigned_to) => request('PUT', `/interakt/leads/${leadId}/assign`, { assigned_to }),
 
   getSiteSettings:    () => request('GET', '/site-settings'),
   getPublicStats:     () => request('GET', '/site-settings/public-stats'),
