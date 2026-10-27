@@ -222,6 +222,31 @@
       .topbar-right{flex-wrap:wrap;}
       .search-inp{width:100%;}
     }
+
+    /* ── WhatsApp Inbox ── */
+    .wa-card{border-radius:16px;box-shadow:0 2px 18px rgba(0,0,0,.07);border:1px solid var(--gray-100,#f1f1f1)}
+    .wa-metric{border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.05);transition:transform .15s ease,box-shadow .15s ease}
+    .wa-metric:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.08)}
+    .wa-metric-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+    .wa-search-wrap{position:relative}
+    .wa-search-wrap input{width:100%;padding:9px 12px 9px 32px;border-radius:10px;border:1px solid var(--gray-200,#e5e7eb);font-size:13px;background:#fafafa}
+    .wa-search-wrap input:focus{outline:none;border-color:var(--red);background:#fff}
+    .wa-search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.45;font-size:13px;pointer-events:none}
+    .wa-chip{cursor:pointer;font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;transition:background .15s ease,color .15s ease}
+    .wa-lead-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f3f3f3;cursor:pointer;border-left:3px solid transparent;transition:background .12s ease}
+    .wa-lead-item:hover{background:#fafafa}
+    .wa-lead-item.active{background:#f0f6ff}
+    .wa-avatar{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+    .wa-chat-bg{background:#e9e3d8;background-image:radial-gradient(rgba(0,0,0,.025) 1px,transparent 1px);background-size:16px 16px}
+    .wa-bubble{box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative}
+    .wa-bubble-out{background:#d9fdd3;border-radius:13px 13px 3px 13px}
+    .wa-bubble-in{background:#fff;border-radius:13px 13px 13px 3px}
+    .wa-composer{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--gray-200,#e5e7eb);border-radius:24px;padding:5px 6px 5px 16px}
+    .wa-composer input{flex:1;border:none;outline:none;background:transparent;font-size:13.5px;padding:7px 0}
+    .wa-icon-btn{flex:none;width:36px;height:36px;border-radius:50%;border:none;background:var(--off-white,#f7f7f8);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:background .15s ease}
+    .wa-icon-btn:hover{background:#ececec}
+    .wa-send-btn{flex:none;width:38px;height:38px;border-radius:50%;border:none;background:var(--red);color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .12s ease}
+    .wa-send-btn:hover{transform:scale(1.07)}
   </style>
 </head>
 <body>
@@ -1071,13 +1096,16 @@
         <button class="btn btn-outline btn-sm" onclick="loadWaLeads()">↻ Refresh</button>
       </div>
     </div>
-    <div id="wa-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:18px"></div>
-    <div class="card" style="display:flex;height:72vh;overflow:hidden;padding:0">
+    <div id="wa-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px"></div>
+    <div class="wa-card" style="display:flex;height:72vh;overflow:hidden;background:#fff">
       <!-- Lead list -->
-      <div style="width:300px;flex:none;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0">
-        <div style="padding:10px;border-bottom:1px solid var(--border);flex:none">
-          <input class="form-ctrl" id="wa-search" placeholder="🔍 Search name or number…" style="font-size:13px" oninput="renderWaLeadList()">
-          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px" id="wa-status-filters"></div>
+      <div style="width:300px;flex:none;border-right:1px solid #f0f0f0;display:flex;flex-direction:column;min-height:0">
+        <div style="padding:12px;border-bottom:1px solid #f0f0f0;flex:none">
+          <div class="wa-search-wrap">
+            <span class="wa-search-icon">🔍</span>
+            <input id="wa-search" placeholder="Search name or number…" oninput="renderWaLeadList()">
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:10px" id="wa-status-filters"></div>
         </div>
         <div style="flex:1;overflow-y:auto" id="wa-lead-list">
           <div style="text-align:center;color:var(--gray-400);padding:20px">Loading…</div>
@@ -1085,28 +1113,30 @@
       </div>
       <!-- Thread -->
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
-        <div id="wa-thread-hdr" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:42px">
+        <div id="wa-thread-hdr" style="padding:12px 18px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:46px;background:#fff">
           <span style="font-weight:700;font-size:14px;color:var(--gray-400)">Select a conversation</span>
         </div>
-        <div id="wa-thread-body" style="flex:1;overflow-y:auto;padding:16px;background:#f7f7f8;display:flex;flex-direction:column;gap:8px">
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--gray-300)">
-            <span style="font-size:40px">💬</span>
-            <span style="font-size:13px;color:var(--gray-400)">Pick a lead from the left to see the conversation</span>
+        <div id="wa-thread-body" class="wa-chat-bg" style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:9px">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#00000030">
+            <span style="font-size:46px">💬</span>
+            <span style="font-size:13px;color:#00000055;font-weight:600">Pick a lead from the left to see the conversation</span>
           </div>
         </div>
-        <div id="wa-quick-replies" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--border)"></div>
-        <div style="display:flex;gap:8px;padding:0 12px 12px">
-          <input type="file" id="wa-media-input" accept="image/*" style="display:none" onchange="sendWaMedia(this.files[0])">
-          <button class="btn btn-outline" title="Attach photo" onclick="document.getElementById('wa-media-input').click()">📎</button>
-          <button class="btn btn-outline" title="Send an approved template (works outside the 24h window)" onclick="openWaTemplateModal()">📋</button>
-          <input class="form-ctrl" id="wa-reply-input" placeholder="Type a reply…" style="flex:1" onkeydown="if(event.key==='Enter')sendWaReply()">
-          <button class="btn btn-primary" onclick="sendWaReply()">Send</button>
+        <div id="wa-quick-replies" style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 0"></div>
+        <div style="padding:10px 14px 14px">
+          <div class="wa-composer">
+            <input type="file" id="wa-media-input" accept="image/*" style="display:none" onchange="sendWaMedia(this.files[0])">
+            <button class="wa-icon-btn" title="Attach photo" onclick="document.getElementById('wa-media-input').click()">📎</button>
+            <button class="wa-icon-btn" title="Send an approved template (works outside the 24h window)" onclick="openWaTemplateModal()">📋</button>
+            <input id="wa-reply-input" placeholder="Type a reply…" onkeydown="if(event.key==='Enter')sendWaReply()">
+            <button class="wa-send-btn" title="Send" onclick="sendWaReply()">➤</button>
+          </div>
         </div>
       </div>
       <!-- Notes sidebar -->
-      <div style="width:220px;flex:none;border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px" id="wa-notes-panel">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400)">Private Notes</div>
-        <textarea id="wa-notes-input" placeholder="Internal notes about this lead (guest never sees this)…" style="flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12.5px;font-family:inherit" disabled></textarea>
+      <div style="width:220px;flex:none;border-left:1px solid #f0f0f0;padding:16px;display:flex;flex-direction:column;gap:10px;background:#fcfcfc" id="wa-notes-panel">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400)">📝 Private Notes</div>
+        <textarea id="wa-notes-input" placeholder="Internal notes about this lead (guest never sees this)…" style="flex:1;resize:none;border:1px solid var(--gray-200,#e5e7eb);border-radius:10px;padding:10px;font-size:12.5px;font-family:inherit;background:#fff" disabled></textarea>
         <button class="btn btn-outline btn-sm" onclick="saveWaNotes()" id="wa-notes-save-btn" disabled>Save Notes</button>
       </div>
     </div>
@@ -4114,8 +4144,8 @@ function renderWaStatusFilters() {
   const box = document.getElementById('wa-status-filters');
   const counts = { all: waLeads.length };
   Object.keys(WA_STATUS_META).forEach(s => counts[s] = waLeads.filter(l => (l.status || 'new') === s).length);
-  const chip = (key, label) => `<span onclick="waStatusFilter='${key}';renderWaLeadList();renderWaStatusFilters()"
-    style="cursor:pointer;font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;${waStatusFilter===key?'background:var(--red);color:#fff':'background:var(--off-white);color:var(--gray-600)'}">${label} ${counts[key]||0}</span>`;
+  const chip = (key, label) => `<span class="wa-chip" onclick="waStatusFilter='${key}';renderWaLeadList();renderWaStatusFilters()"
+    style="${waStatusFilter===key?'background:var(--red);color:#fff':'background:var(--off-white);color:var(--gray-600)'}">${label} ${counts[key]||0}</span>`;
   box.innerHTML = chip('all', 'All') + Object.entries(WA_STATUS_META).map(([k,m]) => chip(k, m.label)).join('');
 }
 
@@ -4141,8 +4171,8 @@ function renderWaLeadList() {
     const initial = displayName.trim().charAt(0).toUpperCase() || '?';
     const preview = (l.last_message && l.last_message !== 'None') ? l.last_message : 'No messages yet';
     return `
-    <div onclick="openWaThread('${l.id}')" style="display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);border-left:3px solid ${sm.color};cursor:pointer;background:${waActiveLeadId===l.id?'#eff6ff':'transparent'}">
-      <div style="flex:none;width:36px;height:36px;border-radius:50%;background:${sm.bg};color:${sm.color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">${initial}</div>
+    <div onclick="openWaThread('${l.id}')" class="wa-lead-item${waActiveLeadId===l.id?' active':''}" style="border-left-color:${sm.color}">
+      <div class="wa-avatar" style="background:${sm.bg};color:${sm.color}">${initial}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
           <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(displayName)}</strong>
@@ -4169,9 +4199,9 @@ function renderWaMetrics() {
   const thisWeek = waLeads.filter(l => new Date(l.created_at || l.last_msg_at).getTime() >= weekAgo).length;
   const rate = total ? Math.round((converted/total)*100) : 0;
   const tile = (icon, label, val, color) => `
-    <div class="card" style="padding:14px 16px;display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:${color}1a;color:${color};display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">${icon}</div>
-      <div><div style="font-size:19px;font-weight:800;line-height:1.1">${val}</div><div style="font-size:11px;color:var(--gray-400);font-weight:600">${label}</div></div>
+    <div class="wa-metric">
+      <div class="wa-metric-icon" style="background:${color}1a;color:${color}">${icon}</div>
+      <div><div style="font-size:20px;font-weight:800;line-height:1.1">${val}</div><div style="font-size:11px;color:var(--gray-400);font-weight:600">${label}</div></div>
     </div>`;
   box.innerHTML =
     tile('💬', 'Total Leads', total, '#2563eb') +
@@ -4187,8 +4217,14 @@ async function openWaThread(leadId) {
 
   const hdr = document.getElementById('wa-thread-hdr');
   if (lead) {
+    const sm = WA_STATUS_META[lead.status || 'new'];
+    const displayName = lead.name || lead.phone;
+    const initial = displayName.trim().charAt(0).toUpperCase() || '?';
     const statusOpts = Object.entries(WA_STATUS_META).map(([k,m]) => `<option value="${k}" ${((lead.status||'new')===k)?'selected':''}>${m.label}</option>`).join('');
-    hdr.innerHTML = `<span style="font-weight:700;font-size:14px">${esc(lead.name || lead.phone)} · ${esc(lead.phone)}</span>
+    hdr.innerHTML = `<span style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span class="wa-avatar" style="background:${sm.bg};color:${sm.color};width:32px;height:32px;font-size:12px">${initial}</span>
+        <span style="min-width:0"><div style="font-weight:700;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(displayName)}</div><div style="font-size:11px;color:var(--gray-400)">${esc(lead.phone)}</div></span>
+      </span>
       <span style="display:flex;gap:8px;align-items:center">
         <input class="form-ctrl" placeholder="Assign to…" value="${esc(lead.assigned_to || '')}" style="width:120px;font-size:12px;padding:4px 8px" onchange="setWaAssign('${leadId}', this.value)"/>
         <select class="form-ctrl" style="width:auto;font-size:12px;padding:4px 8px" onchange="setWaStatus('${leadId}', this.value)">${statusOpts}</select>
@@ -4198,7 +4234,7 @@ async function openWaThread(leadId) {
   }
 
   document.getElementById('wa-quick-replies').innerHTML = WA_QUICK_REPLIES.map((q, i) =>
-    `<button class="btn btn-outline btn-sm" style="font-size:11.5px" onclick="fillWaQuickReply(${i})">${q.label}</button>`
+    `<button class="wa-chip" style="background:var(--off-white);color:var(--gray-600);border:1px solid var(--gray-200,#e5e7eb)" onclick="fillWaQuickReply(${i})">${q.label}</button>`
   ).join('');
 
   const notesInput = document.getElementById('wa-notes-input');
@@ -4213,7 +4249,7 @@ async function openWaThread(leadId) {
     if (lead && lead.unread) { await api.waMarkRead(leadId); lead.unread = false; renderWaLeadList(); }
     const messages = await api.waMessages(leadId);
     body.innerHTML = messages.map(m => `
-      <div style="align-self:${m.direction==='outbound'?'flex-end':'flex-start'};max-width:70%;background:${m.direction==='outbound'?'#dcf8c6':'#fff'};border-radius:10px;padding:8px 12px;box-shadow:0 1px 2px rgba(0,0,0,.08)">
+      <div class="wa-bubble ${m.direction==='outbound'?'wa-bubble-out':'wa-bubble-in'}" style="align-self:${m.direction==='outbound'?'flex-end':'flex-start'};max-width:68%;padding:8px 12px">
         ${m.media_url ? (m.media_type === 'document'
           ? `<a href="${esc(m.media_url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--red);font-weight:600">📄 Document</a>`
           : `<img src="${esc(m.media_url)}" style="max-width:220px;border-radius:8px;display:block;margin-bottom:${m.text?'6px':'0'}"/>`
