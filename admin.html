@@ -4138,8 +4138,8 @@ async function openWaThread(leadId) {
     hdr.innerHTML = '<span style="font-weight:700;font-size:14px">Select a lead</span>';
   }
 
-  document.getElementById('wa-quick-replies').innerHTML = WA_QUICK_REPLIES.map(q =>
-    `<button class="btn btn-outline btn-sm" style="font-size:11.5px" onclick="document.getElementById('wa-reply-input').value=${JSON.stringify(q.text)}">${q.label}</button>`
+  document.getElementById('wa-quick-replies').innerHTML = WA_QUICK_REPLIES.map((q, i) =>
+    `<button class="btn btn-outline btn-sm" style="font-size:11.5px" onclick="fillWaQuickReply(${i})">${q.label}</button>`
   ).join('');
 
   const notesInput = document.getElementById('wa-notes-input');
@@ -4167,6 +4167,10 @@ async function openWaThread(leadId) {
   } catch (e) {
     body.innerHTML = '<div style="text-align:center;color:#dc2626">Failed to load: ' + e.message + '</div>';
   }
+}
+
+function fillWaQuickReply(i) {
+  document.getElementById('wa-reply-input').value = WA_QUICK_REPLIES[i].text;
 }
 
 async function setWaStatus(leadId, status) {
