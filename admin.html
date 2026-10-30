@@ -1994,7 +1994,9 @@ function getBookedDaysForProp(propName, year, month) {
   );
   filtered.forEach(b => {
     const start = new Date(b.checkin); const end = new Date(b.checkout);
-    for (let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
+    // d<end (not <=) — checkout day is a departure morning, not an occupied night;
+    // a new guest can check in that same day, so it shouldn't read as "booked".
+    for (let d=new Date(start); d<end; d.setDate(d.getDate()+1)) {
       if (d.getFullYear()===year && d.getMonth()===month) {
         const day = d.getDate(); if (!result[day]) result[day] = []; result[day].push(b);
       }
@@ -2048,12 +2050,14 @@ function renderAdvCalendar() {
   if(!calendarModifications[selectedProp]) calendarModifications[selectedProp] = {};
   const mods = calendarModifications[selectedProp];
 
-  // Map: dateStr → [bookings covering that date] (checkout day included so back-to-back is visible)
+  // Map: dateStr → [bookings covering that date]. Checkout day is excluded —
+  // it's a departure morning, not an occupied night, and a new guest can
+  // check in the same day, so marking it "booked" misrepresents availability.
   calBookedMap = {};
   bookings.forEach(b => {
     if(b.property === selectedProp && b.status !== 'cancelled') {
       let d = new Date(b.checkin); let end = new Date(b.checkout);
-      while(d <= end) {
+      while(d < end) {
         const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         (calBookedMap[ds] = calBookedMap[ds] || []).push(b);
         d.setDate(d.getDate()+1);
