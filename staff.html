@@ -312,6 +312,35 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
     </div>
   </div>
 
+  <!-- ── Guest ID ── -->
+  <div class="page" id="page-guestid">
+    <div class="ready-hero">
+      <div style="font-size:40px;margin-bottom:10px">🪪</div>
+      <h2>Save Guest ID</h2>
+      <p>Select the booking and capture a photo of the guest's valid govt ID at check-in.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <p style="font-size:13px;font-weight:500;margin-bottom:8px;color:#444">Select Booking</p>
+        <select class="booking-select" id="guestid-booking-select">
+          <option value="">— Select a booking —</option>
+        </select>
+
+        <p style="font-size:13px;font-weight:500;margin-bottom:8px;color:#444">Guest ID Photo(s)</p>
+        <div class="upload-zone" id="guestid-upload-zone" onclick="document.getElementById('guestid-photo-input').click()">
+          <div style="font-size:36px">📷</div>
+          <p>Tap to take a photo of the guest's ID or select from gallery</p>
+        </div>
+        <input type="file" id="guestid-photo-input" accept="image/*" multiple capture="environment" style="display:none" onchange="handleGuestIdPhotos(event)">
+
+        <div class="photo-preview" id="guestid-photo-preview"></div>
+
+        <button class="btn-primary" id="guestid-btn" onclick="submitGuestId()">Save Guest ID</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Report Issue ── -->
   <div class="page" id="page-issue">
     <div class="card">
@@ -360,6 +389,9 @@ textarea.issue-input{resize:none;height:80px;font-family:inherit}
     </button>
     <button class="nav-item" id="nav-ready" onclick="showPage('ready')">
       <span class="nav-icon">📸</span>Room Ready
+    </button>
+    <button class="nav-item" id="nav-guestid" onclick="showPage('guestid')">
+      <span class="nav-icon">🪪</span>Guest ID
     </button>
     <button class="nav-item" id="nav-issue" onclick="showPage('issue')">
       <span class="nav-icon">⚠️</span>Issue
@@ -833,6 +865,7 @@ let staffData  = JSON.parse(localStorage.getItem('sd_staff_data') || 'null');
 let dashData   = null;
 let readyPhotos = [];
 let issuePhotos = [];
+let guestIdPhotos = [];
 
 function toast(msg, dur = 2500) {
   const el = document.getElementById('toast');
@@ -930,7 +963,7 @@ if (staffToken) {
 }
 
 // ── Navigation ─────────────────────────────────────────────
-const pages = ['home', 'tasks', 'ready', 'issue', 'profile'];
+const pages = ['home', 'tasks', 'ready', 'guestid', 'issue', 'profile'];
 function showPage(p) {
   pages.forEach(id => {
     document.getElementById(`page-${id}`).classList.toggle('active', id === p);
@@ -939,6 +972,7 @@ function showPage(p) {
   });
   if (p === 'tasks') loadTasks();
   if (p === 'ready') loadReadyBookings();
+  if (p === 'guestid') loadGuestIdBookings();
 }
 
 // ── Dashboard ──────────────────────────────────────────────
@@ -1182,6 +1216,66 @@ async function submitRoomReady() {
     }
   } catch { toast('Could not connect. Try again.'); }
   finally { btn.disabled = false; btn.textContent = 'Mark Room Ready & Notify Guest'; }
+}
+
+// ── Guest ID ───────────────────────────────────────────────
+async function loadGuestIdBookings() {
+  if (!dashData) await loadDashboard();
+  const sel = document.getElementById('guestid-booking-select');
+  const bookings = [...(dashData?.checkins || []), ...(dashData?.upcoming || []), ...(dashData?.staying || [])];
+  const seen = new Set();
+  const unique = bookings.filter(b => !seen.has(b.id) && seen.add(b.id));
+  sel.innerHTML = '<option value="">— Select a booking —</option>' +
+    unique.map(b => `<option value="${b.id}">${b.guest_name} — ${fmt(b.checkin)}</option>`).join('');
+}
+
+function handleGuestIdPhotos(e) {
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      guestIdPhotos.push(ev.target.result);
+      renderGuestIdPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+function renderGuestIdPreviews() {
+  document.getElementById('guestid-photo-preview').innerHTML = guestIdPhotos.map((src, i) => `
+    <div class="preview-wrap">
+      <img class="preview-img" src="${src}" alt="ID photo ${i+1}">
+      <button class="preview-del" onclick="removeGuestIdPhoto(${i})">×</button>
+    </div>`).join('');
+}
+
+function removeGuestIdPhoto(i) { guestIdPhotos.splice(i, 1); renderGuestIdPreviews(); }
+
+async function submitGuestId() {
+  const booking_id = document.getElementById('guestid-booking-select').value;
+  if (!booking_id) { toast('Please select a booking'); return; }
+  if (!guestIdPhotos.length) { toast('Please add at least 1 ID photo'); return; }
+
+  const btn = document.getElementById('guestid-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  try {
+    const r = await fetch(`${API}/api/staff/guest-id`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${staffToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id, photos: guestIdPhotos }),
+    });
+    const data = await r.json();
+    if (r.ok) {
+      toast('Guest ID saved ✅', 3000);
+      guestIdPhotos = [];
+      document.getElementById('guestid-photo-preview').innerHTML = '';
+      document.getElementById('guestid-booking-select').value = '';
+    } else {
+      toast(data.error || 'Something went wrong');
+    }
+  } catch { toast('Could not connect. Try again.'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Guest ID'; }
 }
 
 // ── Issue ──────────────────────────────────────────────────

@@ -224,6 +224,29 @@ router.post('/room-ready', staffProtect, async (req, res) => {
   }
 });
 
+// ── POST /api/staff/guest-id ───────────────────────────────
+// Staff captures a photo of the guest's valid govt ID at check-in — saved on the booking itself,
+// so it's in one place for any future requirement (no separate lookup needed).
+router.post('/guest-id', staffProtect, async (req, res) => {
+  try {
+    const { booking_id, photos } = req.body;
+    if (!booking_id) return res.status(400).json({ error: 'booking_id required' });
+    if (!Array.isArray(photos) || !photos.length) return res.status(400).json({ error: 'At least 1 ID photo required' });
+
+    const propIds = staffPropIds(req.staff);
+    const propFilter = propIds.length === 1 ? propIds[0] : { $in: propIds };
+    const booking = await Booking.findOne({ _id: booking_id, property_id: propFilter });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    booking.guest_id_photos = JSON.stringify(photos);
+    await booking.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/staff/sop ────────────────────────────────────
 router.get('/sop', staffProtect, async (req, res) => {
   try {

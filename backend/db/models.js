@@ -94,6 +94,7 @@ const bookingSchema = new Schema({
   notes:               { type: String, default: '' },
   booked_by_staff_id:  { type: Schema.Types.ObjectId, ref: 'Staff', default: null },
   booked_by_name:      { type: String, default: null },
+  guest_id_photos:     { type: String, default: '[]' },  // JSON-string array of Cloudinary URLs — guest's govt ID, captured by staff at check-in
 }, { timestamps: { createdAt: 'created_at', updatedAt: false }, toJSON });
 
 bookingSchema.index({ property_id: 1, checkin: 1 });
